@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"my_project/internal/database"
+	"new-spbatc-drone-platform/internal/database"
 )
 
 type FiberServer struct {
@@ -15,8 +15,8 @@ type FiberServer struct {
 func New() *FiberServer {
 	server := &FiberServer{
 		App: fiber.New(fiber.Config{
-			ServerHeader: "my_project",
-			AppName:      "my_project",
+			ServerHeader: "new-spbatc-drone-platform",
+			AppName:      "new-spbatc-drone-platform",
 		}),
 
 		db: database.New(),

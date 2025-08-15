@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"my_project/internal/server"
+	"new-spbatc-drone-platform/internal/server"
 	"os"
 	"os/signal"
 	"strconv"
