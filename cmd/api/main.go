@@ -16,27 +16,27 @@ import (
 )
 
 func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
-	// Create context that listens for the interrupt signal from the OS.
+	// 创建监听来自操作系统的中断信号的上下文。
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Listen for the interrupt signal.
+	// 监听中断信号。
 	<-ctx.Done()
 
-	log.Println("shutting down gracefully, press Ctrl+C again to force")
-	stop() // Allow Ctrl+C to force shutdown
+	log.Println("优雅地关闭，再次按Ctrl+C强制关闭")
+	stop() // 允许Ctrl+C强制关闭
 
-	// The context is used to inform the server it has 5 seconds to finish
-	// the request it is currently handling
+	// 上下文用于通知服务器它有5秒钟的时间来完成
+	// 它当前正在处理的请求
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := fiberServer.ShutdownWithContext(ctx); err != nil {
-		log.Printf("Server forced to shutdown with error: %v", err)
+		log.Printf("服务器强制关闭，错误: %v", err)
 	}
 
-	log.Println("Server exiting")
+	log.Println("服务器正在退出")
 
-	// Notify the main goroutine that the shutdown is complete
+	// 通知主goroutine关闭已完成
 	done <- true
 }
 
@@ -47,21 +47,21 @@ func main() {
 	router := routes.NewRouter(server)
 	router.RegisterRoutes()
 
-	// Create a done channel to signal when the shutdown is complete
+	// 创建一个完成通道，在关机完成后发出信号
 	done := make(chan bool, 1)
 
 	go func() {
 		port, _ := strconv.Atoi(os.Getenv("PORT"))
 		err := server.Listen(fmt.Sprintf(":%d", port))
 		if err != nil {
-			panic(fmt.Sprintf("http server error: %s", err))
+			panic(fmt.Sprintf("HTTP服务器错误: %s", err))
 		}
 	}()
 
-	// Run graceful shutdown in a separate goroutine
+	// 在单独的goroutine中运行优雅关闭
 	go gracefulShutdown(server, done)
 
-	// Wait for the graceful shutdown to complete
+	// 等待优雅关闭完成
 	<-done
-	log.Println("Graceful shutdown complete.")
+	log.Println("优雅关闭完成。")
 }

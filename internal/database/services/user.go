@@ -5,6 +5,7 @@ import (
 	"new-spbatc-drone-platform/internal/database/models"
 	"new-spbatc-drone-platform/internal/routes/dto"
 
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -86,6 +87,7 @@ func (s *userService) GetUser(id uuid.UUID) (*models.UserModel, error) {
 func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) error {
 	user, err := s.GetUser(userId)
 	if err != nil {
+		log.Errorf("获取用户失败: %v", err)
 		return errors.New("用户不存在")
 	}
 

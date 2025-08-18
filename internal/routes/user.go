@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // UserHandler 用户处理器
@@ -90,6 +91,9 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	// 获取用户
 	user, err := h.DB.ServiceManager.UserService.GetUser(userUUID)
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(404).JSON(dto.ErrorResponse(404, "用户不存在"))
+		}
 		log.Errorf("获取用户失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "获取用户失败"))
 	}
