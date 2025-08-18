@@ -4,6 +4,7 @@ import (
 	"new-spbatc-drone-platform/internal/routes/dto"
 	"strconv"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 )
@@ -45,15 +46,40 @@ func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
 
 // CreateMenu 创建菜单
 func (h *MenuHandler) CreateMenu(c *fiber.Ctx) error {
-	var menuData map[string]interface{}
-	if err := c.BodyParser(&menuData); err != nil {
-		return c.Status(400).JSON(dto.ErrorResponse(400, "Invalid request body"))
+	// 解析请求体到 DTO
+	var req dto.CreateMenuRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(dto.ErrorResponse(400, "请求体格式错误"))
 	}
 
-	// TODO: 实现创建菜单逻辑
-	menuData["id"] = 3
+	// 验证请求数据
+	if errors := h.Validator.ValidateStruct(&req); len(errors) > 0 {
+		return c.Status(400).JSON(dto.ErrorResponse(400, errors[0]))
+	}
 
-	return c.Status(201).JSON(dto.SuccessResponse(menuData))
+	// 创建菜单
+	if err := h.DB.ServiceManager.MenuService.CreateMenu(&req); err != nil {
+		log.Errorf("创建菜单失败: %#v", err)
+
+		// 我如何捕获这个错误并返回一个友好的错误消息？
+		if mysqlErr, ok := err.(*mysql.MySQLError); ok {
+			if mysqlErr.Number == 1062 {
+				return c.Status(400).JSON(dto.ErrorResponse(400, "菜单已存在"))
+			}
+		}
+
+		log.Errorf("创建菜单失败: %v", err)
+		return c.Status(500).JSON(dto.ErrorResponse(500, "创建菜单失败"))
+		// switch err {
+		// case gorm.ErrDuplicatedKey:
+		// 	return c.Status(400).JSON(dto.ErrorResponse(400, "菜单已存在"))
+		// default:
+		// 	log.Errorf("创建菜单失败: %v", err)
+		// 	return c.Status(500).JSON(dto.ErrorResponse(500, "创建菜单失败"))
+		// }
+	}
+
+	return c.Status(201).JSON(dto.SuccessResponse(req))
 }
 
 // GetMenu 获取单个菜单

@@ -90,6 +90,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 
 	// 获取用户
 	user, err := h.DB.ServiceManager.UserService.GetUser(userUUID)
+	log.Infof("err: %+#v", err)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(404).JSON(dto.ErrorResponse(404, "用户不存在"))

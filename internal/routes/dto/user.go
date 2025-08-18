@@ -13,7 +13,7 @@ type CreateUserRequest struct {
 	Password     string         `json:"password" validate:"required,min=6,max=128"`
 	Email        string         `json:"email" validate:"required,email,max=128"`
 	Phone        string         `json:"phone" validate:"required,phone"`
-	Avatar       string         `json:"avatar" validate:"omitempty,max=255"`
+	Avatar       *string        `json:"avatar" validate:"omitempty,max=255"`
 	Status       *models.Status `json:"status" validate:"omitempty,oneof=0 1"`
 	RoleID       *uuid.UUID     `json:"role_id" validate:"omitempty,uuid"`
 	TenantID     *uuid.UUID     `json:"tenant_id" validate:"omitempty,uuid"`

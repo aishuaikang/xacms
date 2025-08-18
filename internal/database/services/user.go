@@ -42,7 +42,7 @@ func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse
 
 	offset := (page - 1) * pageSize
 
-	if err := query.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Find(&users).Order("created_at DESC").Error; err != nil {
 		return nil, err
 	}
 	return &dto.PaginatedResponse[models.UserModel]{
@@ -108,7 +108,7 @@ func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) er
 	}
 
 	if req.Avatar != nil {
-		user.Avatar = *req.Avatar
+		user.Avatar = req.Avatar
 	}
 
 	if req.Status != nil {

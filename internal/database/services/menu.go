@@ -2,6 +2,7 @@ package services
 
 import (
 	"new-spbatc-drone-platform/internal/database/models"
+	"new-spbatc-drone-platform/internal/routes/dto"
 
 	"gorm.io/gorm"
 )
@@ -10,7 +11,7 @@ import (
 type MenuService interface {
 	GetMenus() ([]models.MenuModel, error)
 	GetMenuByID(id string) (*models.MenuModel, error)
-	CreateMenu(menu *models.MenuModel) error
+	CreateMenu(req *dto.CreateMenuRequest) error
 	UpdateMenu(menu *models.MenuModel) error
 	DeleteMenu(id string) error
 }
@@ -46,7 +47,20 @@ func (s *menuService) GetMenuByID(id string) (*models.MenuModel, error) {
 }
 
 // CreateMenu 创建菜单
-func (s *menuService) CreateMenu(menu *models.MenuModel) error {
+func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) error {
+
+	menu := &models.MenuModel{
+		Name:         req.Name,
+		RouteName:    req.RouteName,
+		RoutePath:    req.RoutePath,
+		IsHidden:     req.IsHidden,
+		IsFullScreen: req.IsFullScreen,
+		IsTabs:       req.IsTabs,
+		Component:    req.Component,
+		Icon:         req.Icon,
+		Order:        req.Order,
+	}
+
 	if err := s.db.Create(menu).Error; err != nil {
 		return err
 	}

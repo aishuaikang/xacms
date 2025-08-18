@@ -12,7 +12,7 @@ type UserModel struct {
 	Password string    `json:"password" gorm:"size:128;not null;comment:用户密码" validate:"required,min=6,max=128"`                            // 用户密码
 	Email    string    `json:"email" gorm:"uniqueIndex:idx_user_email;size:128;not null;comment:用户邮箱" validate:"required,email,max=128"`    // 用户邮箱
 	Phone    string    `json:"phone" gorm:"uniqueIndex:idx_user_phone;size:20;not null;comment:用户电话" validate:"required,phone"`             // 用户电话
-	Avatar   string    `json:"avatar" gorm:"size:255;comment:用户头像" validate:"omitempty,max=255"`                                            // 用户头像
+	Avatar   *string   `json:"avatar" gorm:"size:255;comment:用户头像" validate:"omitempty,max=255"`                                            // 用户头像
 	Status   *Status   `json:"status" gorm:"type:tinyint;not null;default:1;comment:状态"`                                                    // 状态，1-启用，0-禁用
 
 	RoleID *uuid.UUID `json:"role_id" gorm:"type:char(36);comment:角色ID"`  // 角色ID
