@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 )
 
 // MenuHandler 菜单处理器
@@ -35,6 +36,7 @@ func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
 	menus, err := h.DB.ServiceManager.MenuService.GetMenus()
 	if err != nil {
+		log.Errorf("获取菜单列表失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "获取菜单列表失败"))
 	}
 

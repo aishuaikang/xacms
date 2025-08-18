@@ -4,6 +4,7 @@ import (
 	"new-spbatc-drone-platform/internal/routes/dto"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -43,8 +44,10 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 		return c.Status(400).JSON(dto.ErrorResponse(400, errors[0]))
 	}
 
+	// 获取用户列表
 	users, err := h.DB.ServiceManager.UserService.GetUsers(req)
 	if err != nil {
+		log.Errorf("获取用户列表失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "获取用户列表失败"))
 	}
 
@@ -67,6 +70,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	// 创建用户
 	if err := h.DB.ServiceManager.UserService.CreateUser(req); err != nil {
+		log.Errorf("创建用户失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "创建用户失败"))
 	}
 
@@ -86,6 +90,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	// 获取用户
 	user, err := h.DB.ServiceManager.UserService.GetUser(userUUID)
 	if err != nil {
+		log.Errorf("获取用户失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "获取用户失败"))
 	}
 
@@ -115,6 +120,7 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 
 	// 更新用户
 	if err := h.DB.ServiceManager.UserService.UpdateUser(userUUID, req); err != nil {
+		log.Errorf("更新用户失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "更新用户失败"))
 	}
 
@@ -133,6 +139,7 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 
 	// 删除用户
 	if err := h.DB.ServiceManager.UserService.DeleteUser(userUUID); err != nil {
+		log.Errorf("删除用户失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "删除用户失败"))
 	}
 

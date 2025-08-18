@@ -53,7 +53,7 @@ func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse
 // CreateUser 创建用户
 func (s *userService) CreateUser(req dto.CreateUserRequest) error {
 	// 转换为数据库模型
-	userData := models.UserModel{
+	userData := &models.UserModel{
 		ID:           uuid.New(),
 		Nickname:     req.Nickname,
 		Username:     req.Username,
