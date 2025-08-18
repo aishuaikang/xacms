@@ -27,6 +27,9 @@ type Service interface {
 	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) error
 	// 删除用户
 	DeleteUser(userId uuid.UUID) error
+
+	// 获取菜单列表
+	GetMenus() ([]models.MenuModel, error)
 }
 
 type service struct {
@@ -168,4 +171,13 @@ func (s *service) DeleteUser(userId uuid.UUID) error {
 		return err
 	}
 	return nil
+}
+
+// GetMenus 获取菜单列表
+func (s *service) GetMenus() ([]models.MenuModel, error) {
+	var menus []models.MenuModel
+	if err := s.db.Find(&menus).Error; err != nil {
+		return nil, err
+	}
+	return menus, nil
 }

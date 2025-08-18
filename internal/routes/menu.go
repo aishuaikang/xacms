@@ -33,10 +33,9 @@ func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 
 // GetMenus 获取菜单列表
 func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
-	// TODO: 实现获取菜单列表逻辑
-	menus := []map[string]interface{}{
-		{"id": 1, "name": "Dashboard", "path": "/dashboard", "parent_id": nil},
-		{"id": 2, "name": "Users", "path": "/users", "parent_id": nil},
+	menus, err := h.DB.GetMenus()
+	if err != nil {
+		return c.Status(500).JSON(dto.ErrorResponse(500, "获取菜单列表失败"))
 	}
 
 	return c.JSON(dto.SuccessResponse(menus))
