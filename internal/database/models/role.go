@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type RoleModel struct {
@@ -20,4 +21,12 @@ type RoleModel struct {
 // TableName 设置表名
 func (RoleModel) TableName() string {
 	return "roles"
+}
+
+// BeforeCreate GORM钩子，在创建记录之前调用
+func (u *RoleModel) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return
 }

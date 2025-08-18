@@ -20,32 +20,28 @@ type CommonNotDeletedModel struct {
 type Status uint8
 
 const (
-	StatusEnabled  Status = iota // 禁用
-	StatusDisabled               // 启用
+	StatusDisabled Status = iota // 禁用
+	StatusEnabled                // 启用
 )
 
-// type CustomTime time.Time
+// IsEnabled 检查状态是否为启用
+func (s Status) IsEnabled() bool {
+	return s == StatusEnabled
+}
 
-// func (ct *CustomTime) Scan(value interface{}) error {
-// 	if t, ok := value.(time.Time); ok {
-// 		*ct = CustomTime(t)
-// 		return nil
-// 	}
-// 	return fmt.Errorf("failed to scan CustomTime: %v", value)
-// }
+// IsDisabled 检查状态是否为禁用
+func (s Status) IsDisabled() bool {
+	return s == StatusDisabled
+}
 
-// func (ct CustomTime) Value() (driver.Value, error) {
-// 	t := time.Time(ct)
-// 	if t.IsZero() {
-// 		return nil, nil
-// 	}
-// 	return t, nil
-// }
-
-// func (ct CustomTime) MarshalJSON() ([]byte, error) {
-// 	t := time.Time(ct)
-// 	if t.IsZero() {
-// 		return json.Marshal(nil)
-// 	}
-// 	return json.Marshal(t.Format("2006-01-02 15:04:05"))
-// }
+// String 返回状态的字符串表示
+func (s Status) String() string {
+	switch s {
+	case StatusEnabled:
+		return "enabled"
+	case StatusDisabled:
+		return "disabled"
+	default:
+		return "unknown"
+	}
+}

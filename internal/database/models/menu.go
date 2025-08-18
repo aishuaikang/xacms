@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type MenuModel struct {
@@ -22,4 +23,12 @@ type MenuModel struct {
 // TableName 设置表名
 func (MenuModel) TableName() string {
 	return "menus"
+}
+
+// BeforeCreate GORM钩子，在创建记录之前调用
+func (u *MenuModel) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return
 }

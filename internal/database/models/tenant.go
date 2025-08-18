@@ -3,6 +3,7 @@ package models
 import (
 	"github.com/dromara/carbon/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // 租户类型枚举
@@ -33,4 +34,12 @@ type TenantModel struct {
 // TableName 设置表名
 func (TenantModel) TableName() string {
 	return "tenants"
+}
+
+// BeforeCreate GORM钩子，在创建记录之前调用
+func (u *TenantModel) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return
 }

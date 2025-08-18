@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"new-spbatc-drone-platform/internal/routes"
 	"new-spbatc-drone-platform/internal/server"
 	"os"
 	"os/signal"
@@ -40,10 +41,11 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 }
 
 func main() {
-
 	server := server.New()
 
-	server.RegisterFiberRoutes()
+	// 创建并注册模块化路由
+	router := routes.NewRouter(server)
+	router.RegisterRoutes()
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)

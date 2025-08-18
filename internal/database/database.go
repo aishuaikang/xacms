@@ -1,25 +1,32 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"new-spbatc-drone-platform/internal/database/models"
+	"new-spbatc-drone-platform/internal/routes/dto"
 	"os"
 
+	"github.com/google/uuid"
 	_ "github.com/joho/godotenv/autoload"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-// Service represents a service that interacts with a database.
+// Service 与数据库交互的服务
 type Service interface {
-	// Health returns a map of health status information.
-	// The keys and values in the map are service-specific.
-	// Health() map[string]string
-
-	// Close terminates the database connection.
-	// It returns an error if the connection cannot be closed.
-	// Close() error
+	// 获取用户列表
+	GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error)
+	// 创建用户
+	CreateUser(req dto.CreateUserRequest) error
+	// 获取用户
+	GetUser(id uuid.UUID) (*models.UserModel, error)
+	// 修改用户
+	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) error
+	// 删除用户
+	DeleteUser(userId uuid.UUID) error
 }
 
 type service struct {
@@ -41,7 +48,10 @@ func New() Service {
 		return dbInstance
 	}
 
-	db, err := gorm.Open(mysql.Open(fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, dbname)), &gorm.Config{
+		// 打印日志
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,61 +65,107 @@ func New() Service {
 	return dbInstance
 }
 
-// // Health checks the health of the database connection by pinging the database.
-// // It returns a map with keys indicating various health statistics.
-// func (s *service) Health() map[string]string {
-// 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-// 	defer cancel()
+// GetUsers 获取用户列表
+func (s *service) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error) {
+	var users []models.UserModel
+	query := s.db.Model(&models.UserModel{})
 
-// 	stats := make(map[string]string)
+	// 分页参数
+	page := req.Page
+	pageSize := req.PageSize
 
-// 	// Ping the database
-// 	err := s.db.PingContext(ctx)
-// 	if err != nil {
-// 		stats["status"] = "down"
-// 		stats["error"] = fmt.Sprintf("db down: %v", err)
-// 		log.Fatalf("db down: %v", err) // Log the error and terminate the program
-// 		return stats
-// 	}
+	offset := (page - 1) * pageSize
 
-// 	// Database is up, add more statistics
-// 	stats["status"] = "up"
-// 	stats["message"] = "It's healthy"
+	if err := query.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return &dto.PaginatedResponse[models.UserModel]{
+		Total: int64(len(users)),
+		Items: users,
+	}, nil
+}
 
-// 	// Get database stats (like open connections, in use, idle, etc.)
-// 	dbStats := s.db.Stats()
-// 	stats["open_connections"] = strconv.Itoa(dbStats.OpenConnections)
-// 	stats["in_use"] = strconv.Itoa(dbStats.InUse)
-// 	stats["idle"] = strconv.Itoa(dbStats.Idle)
-// 	stats["wait_count"] = strconv.FormatInt(dbStats.WaitCount, 10)
-// 	stats["wait_duration"] = dbStats.WaitDuration.String()
-// 	stats["max_idle_closed"] = strconv.FormatInt(dbStats.MaxIdleClosed, 10)
-// 	stats["max_lifetime_closed"] = strconv.FormatInt(dbStats.MaxLifetimeClosed, 10)
+// CreateUser 创建用户
+func (s *service) CreateUser(req dto.CreateUserRequest) error {
+	// 转换为数据库模型
+	userData := models.UserModel{
+		ID:           uuid.New(),
+		Nickname:     req.Nickname,
+		Username:     req.Username,
+		Password:     req.Password, // 注意：实际应用中应该加密密码
+		Email:        req.Email,
+		Phone:        req.Phone,
+		Avatar:       req.Avatar,
+		Status:       req.Status,
+		RoleID:       req.RoleID,
+		TenantID:     req.TenantID,
+		DepartmentID: req.DepartmentID,
+	}
 
-// 	// Evaluate stats to provide a health message
-// 	if dbStats.OpenConnections > 40 { // Assuming 50 is the max for this example
-// 		stats["message"] = "The database is experiencing heavy load."
-// 	}
-// 	if dbStats.WaitCount > 1000 {
-// 		stats["message"] = "The database has a high number of wait events, indicating potential bottlenecks."
-// 	}
+	if err := s.db.Create(userData).Error; err != nil {
+		return err
+	}
+	return nil
+}
 
-// 	if dbStats.MaxIdleClosed > int64(dbStats.OpenConnections)/2 {
-// 		stats["message"] = "Many idle connections are being closed, consider revising the connection pool settings."
-// 	}
+// GetUser 获取用户
+func (s *service) GetUser(id uuid.UUID) (*models.UserModel, error) {
+	var user models.UserModel
+	if err := s.db.First(&user, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
 
-// 	if dbStats.MaxLifetimeClosed > int64(dbStats.OpenConnections)/2 {
-// 		stats["message"] = "Many connections are being closed due to max lifetime, consider increasing max lifetime or revising the connection usage pattern."
-// 	}
+// UpdateUser 修改用户
+func (s *service) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) error {
+	user, err := s.GetUser(userId)
+	if err != nil {
+		return errors.New("用户不存在")
+	}
 
-// 	return stats
-// }
+	if req.Nickname != nil {
+		user.Nickname = *req.Nickname
+	}
 
-// Close closes the database connection.
-// It logs a message indicating the disconnection from the specific database.
-// If the connection is successfully closed, it returns nil.
-// If an error occurs while closing the connection, it returns the error.
-// func (s *service) Close() error {
-// 	log.Printf("Disconnected from database: %s", dbname)
-// 	return nil
-// }
+	if req.Username != nil {
+		user.Username = *req.Username
+	}
+
+	if req.Email != nil {
+		user.Email = *req.Email
+	}
+
+	if req.Phone != nil {
+		user.Phone = *req.Phone
+	}
+
+	if req.Avatar != nil {
+		user.Avatar = *req.Avatar
+	}
+
+	if req.Status != nil {
+		user.Status = req.Status
+	}
+
+	if req.RoleID != nil {
+		user.RoleID = req.RoleID
+	}
+
+	if req.DepartmentID != nil {
+		user.DepartmentID = req.DepartmentID
+	}
+
+	if err := s.db.Save(user).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteUser 删除用户
+func (s *service) DeleteUser(userId uuid.UUID) error {
+	if err := s.db.Delete(&models.UserModel{}, "id = ?", userId).Error; err != nil {
+		return err
+	}
+	return nil
+}

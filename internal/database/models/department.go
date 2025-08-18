@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DepartmentModel struct {
@@ -17,4 +18,12 @@ type DepartmentModel struct {
 // TableName 设置表名
 func (DepartmentModel) TableName() string {
 	return "departments"
+}
+
+// BeforeCreate GORM钩子，在创建记录之前调用
+func (u *DepartmentModel) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return
 }
