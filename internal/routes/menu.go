@@ -33,7 +33,7 @@ func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 
 // GetMenus 获取菜单列表
 func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
-	menus, err := h.DB.GetMenus()
+	menus, err := h.DB.ServiceManager.MenuService.GetMenus()
 	if err != nil {
 		return c.Status(500).JSON(dto.ErrorResponse(500, "获取菜单列表失败"))
 	}

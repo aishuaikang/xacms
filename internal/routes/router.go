@@ -16,12 +16,12 @@ type RouteModule interface {
 
 // BaseHandler 基础处理器，包含通用依赖
 type BaseHandler struct {
-	DB        database.Service
+	DB        *database.Service
 	Validator *utils.ValidationMiddleware
 }
 
 // NewBaseHandler 创建基础处理器
-func NewBaseHandler(db database.Service, validator *utils.ValidationMiddleware) *BaseHandler {
+func NewBaseHandler(db *database.Service, validator *utils.ValidationMiddleware) *BaseHandler {
 	return &BaseHandler{
 		DB:        db,
 		Validator: validator,
