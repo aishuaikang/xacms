@@ -2,19 +2,23 @@ package routes
 
 import (
 	"new-spbatc-drone-platform/internal/routes/dto"
+	"new-spbatc-drone-platform/internal/services"
+	"new-spbatc-drone-platform/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 // UserHandler 用户处理器
 type UserHandler struct {
-	*BaseHandler
+	Validator   *utils.ValidationMiddleware
+	UserService services.UserService
 }
 
 // NewUserHandler 创建用户处理器
-func NewUserHandler(base *BaseHandler) *UserHandler {
+func NewUserHandler(validator *utils.ValidationMiddleware, userService services.UserService) *UserHandler {
 	return &UserHandler{
-		BaseHandler: base,
+		Validator:   validator,
+		UserService: userService,
 	}
 }
 

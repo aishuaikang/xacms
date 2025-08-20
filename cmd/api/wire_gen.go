@@ -10,8 +10,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"new-spbatc-drone-platform/internal/database"
 	"new-spbatc-drone-platform/internal/routes"
 	"new-spbatc-drone-platform/internal/server"
+	"new-spbatc-drone-platform/internal/services"
 	"new-spbatc-drone-platform/internal/utils"
 	"os"
 	"os/signal"
@@ -26,14 +28,18 @@ import (
 
 // Injectors from main.go:
 
-// wireApp init application.
-func wireApp(server2 *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
-	baseHandler := routes.NewBaseHandler(validator)
-	userHandler := routes.NewUserHandler(baseHandler)
-	menuHandler := routes.NewMenuHandler(baseHandler)
-	departmentHandler := routes.NewDepartmentHandler(baseHandler)
-	roleHandler := routes.NewRoleHandler(baseHandler)
-	tenantHandler := routes.NewTenantHandler(baseHandler)
+func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
+	db := database.NewDB()
+	userService := services.NewUserService(db)
+	userHandler := routes.NewUserHandler(validator, userService)
+	menuService := services.NewMenuService(db)
+	menuHandler := routes.NewMenuHandler(validator, menuService)
+	departmentService := services.NewDepartmentService(db)
+	departmentHandler := routes.NewDepartmentHandler(validator, departmentService)
+	roleService := services.NewRoleService(db)
+	roleHandler := routes.NewRoleHandler(validator, roleService)
+	tenantService := services.NewTenantService(db)
+	tenantHandler := routes.NewTenantHandler(validator, tenantService)
 	router := routes.NewRouter(server2, userHandler, menuHandler, departmentHandler, roleHandler, tenantHandler)
 	return router
 }
@@ -62,7 +68,7 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 func main() {
 	server2 := server.NewFiberServer()
 
-	router := wireApp(server2, utils.NewValidationMiddleware())
+	router := wireRouter(server2, utils.NewValidationMiddleware())
 	router.RegisterRoutes()
 
 	done := make(chan bool, 1)

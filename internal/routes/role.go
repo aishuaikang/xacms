@@ -2,6 +2,8 @@ package routes
 
 import (
 	"new-spbatc-drone-platform/internal/routes/dto"
+	"new-spbatc-drone-platform/internal/services"
+	"new-spbatc-drone-platform/internal/utils"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,13 +11,15 @@ import (
 
 // RoleHandler 角色处理器
 type RoleHandler struct {
-	*BaseHandler
+	Validator   *utils.ValidationMiddleware
+	RoleService services.RoleService
 }
 
 // NewRoleHandler 创建角色处理器
-func NewRoleHandler(base *BaseHandler) *RoleHandler {
+func NewRoleHandler(validator *utils.ValidationMiddleware, roleService services.RoleService) *RoleHandler {
 	return &RoleHandler{
-		BaseHandler: base,
+		Validator:   validator,
+		RoleService: roleService,
 	}
 }
 

@@ -2,6 +2,8 @@ package routes
 
 import (
 	"new-spbatc-drone-platform/internal/routes/dto"
+	"new-spbatc-drone-platform/internal/services"
+	"new-spbatc-drone-platform/internal/utils"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,13 +11,15 @@ import (
 
 // DepartmentHandler 部门处理器
 type DepartmentHandler struct {
-	*BaseHandler
+	Validator         *utils.ValidationMiddleware
+	DepartmentService services.DepartmentService
 }
 
 // NewDepartmentHandler 创建部门处理器
-func NewDepartmentHandler(base *BaseHandler) *DepartmentHandler {
+func NewDepartmentHandler(validator *utils.ValidationMiddleware, departmentService services.DepartmentService) *DepartmentHandler {
 	return &DepartmentHandler{
-		BaseHandler: base,
+		Validator:         validator,
+		DepartmentService: departmentService,
 	}
 }
 

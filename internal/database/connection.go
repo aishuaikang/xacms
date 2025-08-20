@@ -18,8 +18,8 @@ var (
 	once sync.Once
 )
 
-// GetDB 获取数据库连接实例（单例模式）
-func GetDB() *gorm.DB {
+// getDB 获取数据库连接实例（单例模式）
+func getDB() *gorm.DB {
 	once.Do(func() {
 		var err error
 		dbname := os.Getenv("BLUEPRINT_DB_DATABASE")

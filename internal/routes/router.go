@@ -2,7 +2,6 @@ package routes
 
 import (
 	"new-spbatc-drone-platform/internal/server"
-	"new-spbatc-drone-platform/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -12,21 +11,8 @@ type RouteModule interface {
 	RegisterRoutes(router fiber.Router)
 }
 
-// BaseHandler 基础处理器，包含通用依赖
-type BaseHandler struct {
-	Validator *utils.ValidationMiddleware
-}
-
-// NewBaseHandler 创建基础处理器
-func NewBaseHandler(validator *utils.ValidationMiddleware) *BaseHandler {
-	return &BaseHandler{
-		Validator: validator,
-	}
-}
-
 // Router 路由注册器
 type Router struct {
-	// baseHandler *BaseHandler
 	server *server.FiberServer
 
 	modules []RouteModule

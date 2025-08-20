@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"new-spbatc-drone-platform/internal/database"
 	"new-spbatc-drone-platform/internal/routes"
 	"new-spbatc-drone-platform/internal/server"
+	"new-spbatc-drone-platform/internal/services"
 	"new-spbatc-drone-platform/internal/utils"
 	"os"
 	"os/signal"
@@ -48,7 +50,7 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 func main() {
 	server := server.NewFiberServer()
 
-	router := wireApp(server, utils.NewValidationMiddleware())
+	router := wireRouter(server, utils.NewValidationMiddleware())
 	router.RegisterRoutes()
 
 	// 创建一个完成通道，在关机完成后发出信号
@@ -70,10 +72,14 @@ func main() {
 	log.Println("优雅关闭完成。")
 }
 
-// wireApp init application.
-func wireApp(server *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
+func wireRouter(server *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
 	wire.Build(
-		routes.NewBaseHandler,
+		database.NewDB,
+		services.NewUserService,
+		services.NewTenantService,
+		services.NewRoleService,
+		services.NewDepartmentService,
+		services.NewMenuService,
 		routes.NewTenantHandler,
 		routes.NewRoleHandler,
 		routes.NewDepartmentHandler,

@@ -2,6 +2,8 @@ package routes
 
 import (
 	"new-spbatc-drone-platform/internal/routes/dto"
+	"new-spbatc-drone-platform/internal/services"
+	"new-spbatc-drone-platform/internal/utils"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,13 +11,15 @@ import (
 
 // TenantHandler 租户处理器
 type TenantHandler struct {
-	*BaseHandler
+	Validator     *utils.ValidationMiddleware
+	TenantService services.TenantService
 }
 
 // NewTenantHandler 创建租户处理器
-func NewTenantHandler(base *BaseHandler) *TenantHandler {
+func NewTenantHandler(validator *utils.ValidationMiddleware, tenantService services.TenantService) *TenantHandler {
 	return &TenantHandler{
-		BaseHandler: base,
+		Validator:     validator,
+		TenantService: tenantService,
 	}
 }
 

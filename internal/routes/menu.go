@@ -2,6 +2,8 @@ package routes
 
 import (
 	"new-spbatc-drone-platform/internal/routes/dto"
+	"new-spbatc-drone-platform/internal/services"
+	"new-spbatc-drone-platform/internal/utils"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,13 +11,15 @@ import (
 
 // MenuHandler 菜单处理器
 type MenuHandler struct {
-	*BaseHandler
+	Validator   *utils.ValidationMiddleware
+	MenuService services.MenuService
 }
 
 // NewMenuHandler 创建菜单处理器
-func NewMenuHandler(base *BaseHandler) *MenuHandler {
+func NewMenuHandler(validator *utils.ValidationMiddleware, menuService services.MenuService) *MenuHandler {
 	return &MenuHandler{
-		BaseHandler: base,
+		Validator:   validator,
+		MenuService: menuService,
 	}
 }
 
