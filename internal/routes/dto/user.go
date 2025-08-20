@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"new-spbatc-drone-platform/internal/database/models"
+	"new-spbatc-drone-platform/internal/models"
 
 	"github.com/google/uuid"
 )

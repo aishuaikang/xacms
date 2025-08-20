@@ -10,7 +10,7 @@ type FiberServer struct {
 	*fiber.App
 }
 
-func New() *FiberServer {
+func NewFiberServer() *FiberServer {
 
 	app := fiber.New(fiber.Config{
 		ServerHeader: "new-spbatc-drone-platform",

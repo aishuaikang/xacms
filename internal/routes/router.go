@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"new-spbatc-drone-platform/internal/database"
-	"new-spbatc-drone-platform/internal/routes/dto"
 	"new-spbatc-drone-platform/internal/server"
 	"new-spbatc-drone-platform/internal/utils"
 
@@ -16,40 +14,45 @@ type RouteModule interface {
 
 // BaseHandler 基础处理器，包含通用依赖
 type BaseHandler struct {
-	DB        *database.Service
 	Validator *utils.ValidationMiddleware
 }
 
 // NewBaseHandler 创建基础处理器
-func NewBaseHandler(db *database.Service, validator *utils.ValidationMiddleware) *BaseHandler {
+func NewBaseHandler(validator *utils.ValidationMiddleware) *BaseHandler {
 	return &BaseHandler{
-		DB:        db,
 		Validator: validator,
 	}
 }
 
 // Router 路由注册器
 type Router struct {
-	baseHandler *BaseHandler
-	modules     []RouteModule
-	server      *server.FiberServer
+	// baseHandler *BaseHandler
+	server *server.FiberServer
+
+	modules []RouteModule
 }
 
 // NewRouter 创建路由注册器
-func NewRouter(server *server.FiberServer) *Router {
+func NewRouter(server *server.FiberServer,
+	userHandler *UserHandler,
+	menuHandler *MenuHandler,
+	departmentHandler *DepartmentHandler,
+	roleHandler *RoleHandler,
+	tenantHandler *TenantHandler,
+) *Router {
 
-	baseHandler := NewBaseHandler(database.New(), utils.NewValidationMiddleware())
+	// baseHandler := NewBaseHandler(utils.NewValidationMiddleware())
 
 	return &Router{
-		baseHandler: baseHandler,
-		modules: []RouteModule{
-			NewUserHandler(baseHandler),
-			NewMenuHandler(baseHandler),
-			NewDepartmentHandler(baseHandler),
-			NewRoleHandler(baseHandler),
-			NewTenantHandler(baseHandler),
-		},
+		// baseHandler: baseHandler,
 		server: server,
+		modules: []RouteModule{
+			userHandler,
+			menuHandler,
+			departmentHandler,
+			roleHandler,
+			tenantHandler,
+		},
 	}
 }
 
@@ -59,8 +62,8 @@ func (r *Router) RegisterRoutes() {
 	apiV1 := r.server.App.Group("/api/v1")
 
 	// 注册公开路由（不需要认证）
-	publicRoutes := apiV1.Group("/public")
-	publicRoutes.Get("/health", r.HealthCheck)
+	// publicRoutes := apiV1.Group("/public")
+	// publicRoutes.Get("/health", r.HealthCheck)
 
 	// 注册需要认证的路由
 	protectedRoutes := apiV1.Group("/")
@@ -74,16 +77,16 @@ func (r *Router) RegisterRoutes() {
 }
 
 // HealthCheck 健康检查端点
-func (r *Router) HealthCheck(c *fiber.Ctx) error {
-	// TODO: 可以添加数据库连接检查等
-	return c.JSON(dto.SuccessResponse(map[string]interface{}{
-		"status":  "ok",
-		"service": "new-spbatc-drone-platform",
-		"version": "1.0.0",
-	}))
-}
+// func (r *Router) HealthCheck(c *fiber.Ctx) error {
+// 	// TODO: 可以添加数据库连接检查等
+// 	return c.JSON(dto.SuccessResponse(map[string]interface{}{
+// 		"status":  "ok",
+// 		"service": "new-spbatc-drone-platform",
+// 		"version": "1.0.0",
+// 	}))
+// }
 
-// AddModule 添加新的路由模块
-func (r *Router) AddModule(module RouteModule) {
-	r.modules = append(r.modules, module)
-}
+// // AddModule 添加新的路由模块
+// func (r *Router) AddModule(module RouteModule) {
+// 	r.modules = append(r.modules, module)
+// }

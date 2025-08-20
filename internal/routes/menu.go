@@ -4,9 +4,7 @@ import (
 	"new-spbatc-drone-platform/internal/routes/dto"
 	"strconv"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 )
 
 // MenuHandler 菜单处理器
@@ -35,13 +33,13 @@ func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 
 // GetMenus 获取菜单列表
 func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
-	menus, err := h.DB.ServiceManager.MenuService.GetMenus()
-	if err != nil {
-		log.Errorf("获取菜单列表失败: %v", err)
-		return c.Status(500).JSON(dto.ErrorResponse(500, "获取菜单列表失败"))
-	}
+	// menus, err := h.DB.ServiceManager.MenuService.GetMenus()
+	// if err != nil {
+	// 	log.Errorf("获取菜单列表失败: %v", err)
+	// 	return c.Status(500).JSON(dto.ErrorResponse(500, "获取菜单列表失败"))
+	// }
 
-	return c.JSON(dto.SuccessResponse(menus))
+	return c.JSON(dto.SuccessResponse(nil))
 }
 
 // CreateMenu 创建菜单
@@ -58,26 +56,26 @@ func (h *MenuHandler) CreateMenu(c *fiber.Ctx) error {
 	}
 
 	// 创建菜单
-	if err := h.DB.ServiceManager.MenuService.CreateMenu(&req); err != nil {
-		log.Errorf("创建菜单失败: %#v", err)
+	// if err := h.DB.ServiceManager.MenuService.CreateMenu(&req); err != nil {
+	// 	log.Errorf("创建菜单失败: %#v", err)
 
-		// 我如何捕获这个错误并返回一个友好的错误消息？
-		if mysqlErr, ok := err.(*mysql.MySQLError); ok {
-			if mysqlErr.Number == 1062 {
-				return c.Status(400).JSON(dto.ErrorResponse(400, "菜单已存在"))
-			}
-		}
+	// 	// 我如何捕获这个错误并返回一个友好的错误消息？
+	// 	if mysqlErr, ok := err.(*mysql.MySQLError); ok {
+	// 		if mysqlErr.Number == 1062 {
+	// 			return c.Status(400).JSON(dto.ErrorResponse(400, "菜单已存在"))
+	// 		}
+	// 	}
 
-		log.Errorf("创建菜单失败: %v", err)
-		return c.Status(500).JSON(dto.ErrorResponse(500, "创建菜单失败"))
-		// switch err {
-		// case gorm.ErrDuplicatedKey:
-		// 	return c.Status(400).JSON(dto.ErrorResponse(400, "菜单已存在"))
-		// default:
-		// 	log.Errorf("创建菜单失败: %v", err)
-		// 	return c.Status(500).JSON(dto.ErrorResponse(500, "创建菜单失败"))
-		// }
-	}
+	// 	log.Errorf("创建菜单失败: %v", err)
+	// 	return c.Status(500).JSON(dto.ErrorResponse(500, "创建菜单失败"))
+	// 	// switch err {
+	// 	// case gorm.ErrDuplicatedKey:
+	// 	// 	return c.Status(400).JSON(dto.ErrorResponse(400, "菜单已存在"))
+	// 	// default:
+	// 	// 	log.Errorf("创建菜单失败: %v", err)
+	// 	// 	return c.Status(500).JSON(dto.ErrorResponse(500, "创建菜单失败"))
+	// 	// }
+	// }
 
 	return c.Status(201).JSON(dto.SuccessResponse(req))
 }

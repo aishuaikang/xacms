@@ -1,7 +1,7 @@
 package services
 
 import (
-	"new-spbatc-drone-platform/internal/database/models"
+	"new-spbatc-drone-platform/internal/models"
 	"new-spbatc-drone-platform/internal/routes/dto"
 
 	"gorm.io/gorm"

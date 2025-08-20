@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"new-spbatc-drone-platform/internal/database/models"
+	"new-spbatc-drone-platform/internal/models"
 	"new-spbatc-drone-platform/internal/routes/dto"
 
 	"github.com/gofiber/fiber/v2/log"

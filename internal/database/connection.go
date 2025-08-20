@@ -3,7 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
-	"new-spbatc-drone-platform/internal/database/models"
+	"new-spbatc-drone-platform/internal/models"
 	"os"
 	"sync"
 
