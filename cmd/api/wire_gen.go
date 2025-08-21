@@ -7,26 +7,18 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
 	"new-spbatc-drone-platform/internal/database"
 	"new-spbatc-drone-platform/internal/routes"
 	"new-spbatc-drone-platform/internal/server"
 	"new-spbatc-drone-platform/internal/services"
 	"new-spbatc-drone-platform/internal/utils"
-	"os"
-	"os/signal"
-	"strconv"
-	"syscall"
-	"time"
 )
 
 import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-// Injectors from main.go:
+// Injectors from injector.go:
 
 func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
 	db := database.NewDB()
@@ -42,47 +34,4 @@ func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddlewa
 	tenantHandler := routes.NewTenantHandler(validator, tenantService)
 	router := routes.NewRouter(server2, userHandler, menuHandler, departmentHandler, roleHandler, tenantHandler)
 	return router
-}
-
-// main.go:
-
-func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	<-ctx.Done()
-	log.Println("优雅地关闭，再次按Ctrl+C强制关闭")
-	stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := fiberServer.ShutdownWithContext(ctx); err != nil {
-		log.Printf("服务器强制关闭，错误: %v", err)
-	}
-	log.Println("服务器正在退出")
-
-	done <- true
-}
-
-func main() {
-	server2 := server.NewFiberServer()
-
-	router := wireRouter(server2, utils.NewValidationMiddleware())
-	router.RegisterRoutes()
-
-	done := make(chan bool, 1)
-
-	go func() {
-		port, _ := strconv.Atoi(os.Getenv("PORT"))
-		err := server2.Listen(fmt.Sprintf(":%d", port))
-		if err != nil {
-			panic(fmt.Sprintf("HTTP服务器错误: %s", err))
-		}
-	}()
-
-	go gracefulShutdown(server2, done)
-
-	<-done
-	log.Println("优雅关闭完成。")
 }

@@ -1,16 +1,10 @@
-//go:build wireinject
-// +build wireinject
-
 package main
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"new-spbatc-drone-platform/internal/database"
-	"new-spbatc-drone-platform/internal/routes"
 	"new-spbatc-drone-platform/internal/server"
-	"new-spbatc-drone-platform/internal/services"
 	"new-spbatc-drone-platform/internal/utils"
 	"os"
 	"os/signal"
@@ -18,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/wire"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -70,22 +63,4 @@ func main() {
 	// 等待优雅关闭完成
 	<-done
 	log.Println("优雅关闭完成。")
-}
-
-func wireRouter(server *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
-	wire.Build(
-		database.NewDB,
-		services.NewUserService,
-		services.NewTenantService,
-		services.NewRoleService,
-		services.NewDepartmentService,
-		services.NewMenuService,
-		routes.NewTenantHandler,
-		routes.NewRoleHandler,
-		routes.NewDepartmentHandler,
-		routes.NewMenuHandler,
-		routes.NewUserHandler,
-		routes.NewRouter,
-	)
-	return nil
 }
