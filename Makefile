@@ -29,21 +29,29 @@ run:
 	@go run ./cmd/api
 # 创建数据库容器
 docker-run:
+ifeq ($(OS),Windows_NT)
+	@docker compose up --build 2>nul || docker-compose up --build
+else
 	@if docker compose up --build 2>/dev/null; then \
 		: ; \
 	else \
 		echo "回退到 Docker Compose V1"; \
 		docker-compose up --build; \
 	fi
+endif
 
 # 关闭数据库容器
 docker-down:
+ifeq ($(OS),Windows_NT)
+	@docker compose down 2>nul || docker-compose down
+else
 	@if docker compose down 2>/dev/null; then \
 		: ; \
 	else \
 		echo "回退到 Docker Compose V1"; \
 		docker-compose down; \
 	fi
+endif
 
 # 测试应用程序
 test:
