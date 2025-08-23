@@ -13,8 +13,7 @@ type RouteModule interface {
 
 // Router 路由注册器
 type Router struct {
-	server *server.FiberServer
-
+	server  *server.FiberServer
 	modules []RouteModule
 }
 

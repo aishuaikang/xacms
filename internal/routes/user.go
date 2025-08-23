@@ -17,14 +17,6 @@ type UserHandler struct {
 	UserService services.UserService
 }
 
-// NewUserHandler 创建用户处理器
-func NewUserHandler(validator *utils.ValidationMiddleware, userService services.UserService) *UserHandler {
-	return &UserHandler{
-		Validator:   validator,
-		UserService: userService,
-	}
-}
-
 // RegisterRoutes 注册用户相关路由
 func (h *UserHandler) RegisterRoutes(router fiber.Router) {
 	userGroup := router.Group("/users")
@@ -74,12 +66,13 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	// 创建用户
-	if err := h.UserService.CreateUser(req); err != nil {
+	user, err := h.UserService.CreateUser(req)
+	if err != nil {
 		log.Errorf("创建用户失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "创建用户失败"))
 	}
 
-	return c.Status(201).JSON(dto.SuccessResponse(nil))
+	return c.Status(201).JSON(dto.SuccessResponse(user))
 }
 
 // GetUser 获取单个用户
@@ -127,12 +120,13 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	}
 
 	// 更新用户
-	if err := h.UserService.UpdateUser(userUUID, req); err != nil {
+	user, err := h.UserService.UpdateUser(userUUID, req)
+	if err != nil {
 		log.Errorf("更新用户失败: %v", err)
 		return c.Status(500).JSON(dto.ErrorResponse(500, "更新用户失败"))
 	}
 
-	return c.JSON(dto.SuccessResponse(nil))
+	return c.JSON(dto.SuccessResponse(user))
 }
 
 // DeleteUser 删除用户

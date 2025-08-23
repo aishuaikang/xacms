@@ -23,15 +23,30 @@ import (
 func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
 	db := database.NewDB()
 	userService := services.NewUserService(db)
-	userHandler := routes.NewUserHandler(validator, userService)
+	userHandler := &routes.UserHandler{
+		Validator:   validator,
+		UserService: userService,
+	}
 	menuService := services.NewMenuService(db)
-	menuHandler := routes.NewMenuHandler(validator, menuService)
+	menuHandler := &routes.MenuHandler{
+		Validator:   validator,
+		MenuService: menuService,
+	}
 	departmentService := services.NewDepartmentService(db)
-	departmentHandler := routes.NewDepartmentHandler(validator, departmentService)
+	departmentHandler := &routes.DepartmentHandler{
+		Validator:         validator,
+		DepartmentService: departmentService,
+	}
 	roleService := services.NewRoleService(db)
-	roleHandler := routes.NewRoleHandler(validator, roleService)
+	roleHandler := &routes.RoleHandler{
+		Validator:   validator,
+		RoleService: roleService,
+	}
 	tenantService := services.NewTenantService(db)
-	tenantHandler := routes.NewTenantHandler(validator, tenantService)
+	tenantHandler := &routes.TenantHandler{
+		Validator:     validator,
+		TenantService: tenantService,
+	}
 	router := routes.NewRouter(server2, userHandler, menuHandler, departmentHandler, roleHandler, tenantHandler)
 	return router
 }

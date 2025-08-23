@@ -18,11 +18,11 @@ type UserModel struct {
 	RoleID *uuid.UUID `json:"role_id" gorm:"type:char(36);comment:角色ID"`  // 角色ID
 	Role   *RoleModel `json:"role" gorm:"foreignKey:RoleID;comment:用户角色"` // 用户角色
 
-	TenantID *uuid.UUID   `json:"tenant_id" gorm:"type:char(36);comment:租户ID"`    // 租户ID
-	Tenant   *TenantModel `json:"tenant" gorm:"foreignKey:TenantID;comment:用户租户"` // 用户租户
+	// TenantID *uuid.UUID   `json:"tenant_id" gorm:"type:char(36);comment:租户ID"`    // 租户ID
+	// Tenant   *TenantModel `json:"tenant" gorm:"foreignKey:TenantID;comment:用户租户"` // 用户租户
 
-	DepartmentID *uuid.UUID       `json:"department_id" gorm:"type:char(36);comment:部门ID"`        // 部门ID
-	Department   *DepartmentModel `json:"department" gorm:"foreignKey:DepartmentID;comment:用户部门"` // 用户部门
+	// DepartmentID *uuid.UUID       `json:"department_id" gorm:"type:char(36);comment:部门ID"`        // 部门ID
+	// Department   *DepartmentModel `json:"department" gorm:"foreignKey:DepartmentID;comment:用户部门"` // 用户部门
 
 	CommonModel
 }

@@ -17,14 +17,6 @@ type MenuHandler struct {
 	MenuService services.MenuService
 }
 
-// NewMenuHandler 创建菜单处理器
-func NewMenuHandler(validator *utils.ValidationMiddleware, menuService services.MenuService) *MenuHandler {
-	return &MenuHandler{
-		Validator:   validator,
-		MenuService: menuService,
-	}
-}
-
 // RegisterRoutes 注册菜单相关路由
 func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 	menuGroup := router.Group("/menus")

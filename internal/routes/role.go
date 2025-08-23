@@ -15,14 +15,6 @@ type RoleHandler struct {
 	RoleService services.RoleService
 }
 
-// NewRoleHandler 创建角色处理器
-func NewRoleHandler(validator *utils.ValidationMiddleware, roleService services.RoleService) *RoleHandler {
-	return &RoleHandler{
-		Validator:   validator,
-		RoleService: roleService,
-	}
-}
-
 // RegisterRoutes 注册角色相关路由
 func (h *RoleHandler) RegisterRoutes(router fiber.Router) {
 	roleGroup := router.Group("/roles")

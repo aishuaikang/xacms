@@ -13,9 +13,9 @@ import (
 // UserService 用户服务接口
 type UserService interface {
 	GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error)
-	CreateUser(req dto.CreateUserRequest) error
+	CreateUser(req dto.CreateUserRequest) (*models.UserModel, error)
 	GetUser(id uuid.UUID) (*models.UserModel, error)
-	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) error
+	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error)
 	DeleteUser(userId uuid.UUID) error
 }
 
@@ -52,26 +52,26 @@ func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse
 }
 
 // CreateUser 创建用户
-func (s *userService) CreateUser(req dto.CreateUserRequest) error {
+func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, error) {
 	// 转换为数据库模型
 	userData := &models.UserModel{
-		ID:           uuid.New(),
-		Nickname:     req.Nickname,
-		Username:     req.Username,
-		Password:     req.Password, // 注意：实际应用中应该加密密码
-		Email:        req.Email,
-		Phone:        req.Phone,
-		Avatar:       req.Avatar,
-		Status:       req.Status,
-		RoleID:       req.RoleID,
-		TenantID:     req.TenantID,
-		DepartmentID: req.DepartmentID,
+		ID:       uuid.New(),
+		Nickname: req.Nickname,
+		Username: req.Username,
+		Password: req.Password, // 注意：实际应用中应该加密密码
+		Email:    req.Email,
+		Phone:    req.Phone,
+		Avatar:   req.Avatar,
+		Status:   req.Status,
+		RoleID:   req.RoleID,
+		// TenantID:     req.TenantID,
+		// DepartmentID: req.DepartmentID,
 	}
 
 	if err := s.db.Create(userData).Error; err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return userData, nil
 }
 
 // GetUser 获取用户
@@ -84,11 +84,11 @@ func (s *userService) GetUser(id uuid.UUID) (*models.UserModel, error) {
 }
 
 // UpdateUser 修改用户
-func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) error {
+func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error) {
 	user, err := s.GetUser(userId)
 	if err != nil {
 		log.Errorf("获取用户失败: %v", err)
-		return errors.New("用户不存在")
+		return nil, errors.New("用户不存在")
 	}
 
 	if req.Nickname != nil {
@@ -119,14 +119,14 @@ func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) er
 		user.RoleID = req.RoleID
 	}
 
-	if req.DepartmentID != nil {
-		user.DepartmentID = req.DepartmentID
-	}
+	// if req.DepartmentID != nil {
+	// 	user.DepartmentID = req.DepartmentID
+	// }
 
 	if err := s.db.Save(user).Error; err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return user, nil
 }
 
 // DeleteUser 删除用户

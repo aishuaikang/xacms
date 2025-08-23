@@ -15,14 +15,6 @@ type DepartmentHandler struct {
 	DepartmentService services.DepartmentService
 }
 
-// NewDepartmentHandler 创建部门处理器
-func NewDepartmentHandler(validator *utils.ValidationMiddleware, departmentService services.DepartmentService) *DepartmentHandler {
-	return &DepartmentHandler{
-		Validator:         validator,
-		DepartmentService: departmentService,
-	}
-}
-
 // RegisterRoutes 注册部门相关路由
 func (h *DepartmentHandler) RegisterRoutes(router fiber.Router) {
 	deptGroup := router.Group("/departments")

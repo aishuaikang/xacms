@@ -15,14 +15,6 @@ type TenantHandler struct {
 	TenantService services.TenantService
 }
 
-// NewTenantHandler 创建租户处理器
-func NewTenantHandler(validator *utils.ValidationMiddleware, tenantService services.TenantService) *TenantHandler {
-	return &TenantHandler{
-		Validator:     validator,
-		TenantService: tenantService,
-	}
-}
-
 // RegisterRoutes 注册租户相关路由
 func (h *TenantHandler) RegisterRoutes(router fiber.Router) {
 	tenantGroup := router.Group("/tenants")
