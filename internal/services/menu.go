@@ -56,6 +56,7 @@ func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) error {
 		Name:         req.Name,
 		RouteName:    req.RouteName,
 		RoutePath:    req.RoutePath,
+		ApiIds:       req.ApiIds,
 		IsHidden:     req.IsHidden,
 		IsFullScreen: req.IsFullScreen,
 		IsTabs:       req.IsTabs,
