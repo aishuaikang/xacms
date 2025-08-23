@@ -13,9 +13,9 @@ type FiberServer struct {
 func NewFiberServer() *FiberServer {
 
 	app := fiber.New(fiber.Config{
-		ServerHeader:      "new-spbatc-drone-platform",
-		AppName:           "new-spbatc-drone-platform",
-		EnablePrintRoutes: true,
+		ServerHeader: "new-spbatc-drone-platform",
+		AppName:      "new-spbatc-drone-platform",
+		// EnablePrintRoutes: true,
 	})
 
 	// 设置压缩中间件

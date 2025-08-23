@@ -154,44 +154,5 @@ func (h *MenuHandler) GetMenuTree(c *fiber.Ctx) error {
 
 // GetAPIs 获取API列表
 func (h *MenuHandler) GetAPIs(c *fiber.Ctx) error {
-	allRoutes := h.Server.GetRoutes(true)
-	routeMap := make(map[string][]fiber.Route) // 键: 路径+名称, 值: 具有相同路径+名称的路由
-
-	// 按路径+名称分组路由
-	for _, route := range allRoutes {
-		key := route.Path + "|" + route.Name
-		routeMap[key] = append(routeMap[key], route)
-	}
-
-	var result []fiber.Route
-
-	// 处理每个分组
-	for _, routes := range routeMap {
-		if len(routes) == 1 {
-			// 只有一个路由，无论方法如何都保留它
-			result = append(result, routes[0])
-		} else {
-			// 具有相同路径+名称的多个路由
-			hasNonHead := false
-			var headRoute *fiber.Route
-
-			for i := range routes {
-				if routes[i].Method == fiber.MethodHead {
-					if headRoute == nil {
-						headRoute = &routes[i]
-					}
-				} else {
-					hasNonHead = true
-					result = append(result, routes[i])
-				}
-			}
-
-			// 如果没有找到非HEAD路由，保留HEAD路由
-			if !hasNonHead && headRoute != nil {
-				result = append(result, *headRoute)
-			}
-		}
-	}
-
-	return c.JSON(dto.SuccessResponse(result))
+	return c.JSON(dto.SuccessResponse(h.MenuService.GetAPIs(h.Server.GetRoutes(true))))
 }

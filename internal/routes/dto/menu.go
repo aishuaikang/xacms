@@ -48,3 +48,11 @@ type MenuTreeRequest struct {
 type MoveMenuRequest struct {
 	NewParentID *uuid.UUID `json:"new_parent_id" validate:"omitempty,uuid"`
 }
+
+// ApiItem API列表项结构
+type ApiItem struct {
+	ID     string `json:"id"`
+	Method string `json:"method"`
+	Path   string `json:"path"`
+	Name   string `json:"name"`
+}
