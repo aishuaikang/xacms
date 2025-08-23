@@ -41,8 +41,6 @@ func getDB() *gorm.DB {
 			&models.RoleModel{},
 			&models.MenuModel{},
 			&models.UserModel{},
-			// &models.TenantModel{},
-			// &models.DepartmentModel{},
 		)
 		if err != nil {
 			log.Fatal("Failed to migrate database:", err)

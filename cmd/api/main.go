@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"new-spbatc-drone-platform/internal/server"
 	"new-spbatc-drone-platform/internal/utils"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gofiber/fiber/v2/log"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -23,7 +23,7 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 	// 监听中断信号。
 	<-ctx.Done()
 
-	log.Println("优雅地关闭，再次按Ctrl+C强制关闭")
+	log.Info("优雅地关闭，再次按Ctrl+C强制关闭")
 	stop() // 允许Ctrl+C强制关闭
 
 	// 上下文用于通知服务器它有5秒钟的时间来完成
@@ -31,10 +31,10 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := fiberServer.ShutdownWithContext(ctx); err != nil {
-		log.Printf("服务器强制关闭，错误: %v", err)
+		log.Infof("服务器强制关闭，错误: %v", err)
 	}
 
-	log.Println("服务器正在退出")
+	log.Info("服务器正在退出")
 
 	// 通知主goroutine关闭已完成
 	done <- true
@@ -62,5 +62,5 @@ func main() {
 
 	// 等待优雅关闭完成
 	<-done
-	log.Println("优雅关闭完成。")
+	log.Info("优雅关闭完成。")
 }

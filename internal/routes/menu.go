@@ -2,6 +2,7 @@ package routes
 
 import (
 	"new-spbatc-drone-platform/internal/routes/dto"
+	"new-spbatc-drone-platform/internal/server"
 	"new-spbatc-drone-platform/internal/services"
 	"new-spbatc-drone-platform/internal/utils"
 	"strconv"
@@ -15,18 +16,21 @@ import (
 type MenuHandler struct {
 	Validator   *utils.ValidationMiddleware
 	MenuService services.MenuService
+	Server      *server.FiberServer
 }
 
 // RegisterRoutes 注册菜单相关路由
 func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 	menuGroup := router.Group("/menus")
 
-	menuGroup.Get("/", h.GetMenus)
-	menuGroup.Post("/", h.CreateMenu)
-	menuGroup.Get("/:id", h.GetMenu)
-	menuGroup.Put("/:id", h.UpdateMenu)
-	menuGroup.Delete("/:id", h.DeleteMenu)
-	menuGroup.Get("/tree", h.GetMenuTree)
+	menuGroup.Get("/", h.GetMenus).Name("获取菜单列表")
+	menuGroup.Post("/", h.CreateMenu).Name("创建菜单")
+	menuGroup.Get("/:id<guid>", h.GetMenu).Name("获取菜单详情")
+	menuGroup.Put("/:id<guid>", h.UpdateMenu).Name("更新菜单")
+	menuGroup.Delete("/:id<guid>", h.DeleteMenu).Name("删除菜单")
+	menuGroup.Get("/tree", h.GetMenuTree).Name("获取菜单树")
+	menuGroup.Get("/apis", h.GetAPIs).Name("获取API列表")
+
 }
 
 // GetMenus 获取菜单列表
@@ -146,4 +150,48 @@ func (h *MenuHandler) GetMenuTree(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(dto.SuccessResponse(menuTree))
+}
+
+// GetAPIs 获取API列表
+func (h *MenuHandler) GetAPIs(c *fiber.Ctx) error {
+	allRoutes := h.Server.GetRoutes(true)
+	routeMap := make(map[string][]fiber.Route) // 键: 路径+名称, 值: 具有相同路径+名称的路由
+
+	// 按路径+名称分组路由
+	for _, route := range allRoutes {
+		key := route.Path + "|" + route.Name
+		routeMap[key] = append(routeMap[key], route)
+	}
+
+	var result []fiber.Route
+
+	// 处理每个分组
+	for _, routes := range routeMap {
+		if len(routes) == 1 {
+			// 只有一个路由，无论方法如何都保留它
+			result = append(result, routes[0])
+		} else {
+			// 具有相同路径+名称的多个路由
+			hasNonHead := false
+			var headRoute *fiber.Route
+
+			for i := range routes {
+				if routes[i].Method == fiber.MethodHead {
+					if headRoute == nil {
+						headRoute = &routes[i]
+					}
+				} else {
+					hasNonHead = true
+					result = append(result, routes[i])
+				}
+			}
+
+			// 如果没有找到非HEAD路由，保留HEAD路由
+			if !hasNonHead && headRoute != nil {
+				result = append(result, *headRoute)
+			}
+		}
+	}
+
+	return c.JSON(dto.SuccessResponse(result))
 }

@@ -4,6 +4,7 @@ import (
 	"new-spbatc-drone-platform/internal/server"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 )
 
 // RouteModule 定义路由模块接口
@@ -21,9 +22,9 @@ type Router struct {
 func NewRouter(server *server.FiberServer,
 	userHandler *UserHandler,
 	menuHandler *MenuHandler,
-	departmentHandler *DepartmentHandler,
+	// departmentHandler *DepartmentHandler,
 	roleHandler *RoleHandler,
-	tenantHandler *TenantHandler,
+	// tenantHandler *TenantHandler,
 ) *Router {
 
 	// baseHandler := NewBaseHandler(utils.NewValidationMiddleware())
@@ -34,9 +35,9 @@ func NewRouter(server *server.FiberServer,
 		modules: []RouteModule{
 			userHandler,
 			menuHandler,
-			departmentHandler,
+			// departmentHandler,
 			roleHandler,
-			tenantHandler,
+			// tenantHandler,
 		},
 	}
 }
@@ -52,6 +53,14 @@ func (r *Router) RegisterRoutes() {
 
 	// 注册需要认证的路由
 	protectedRoutes := apiV1.Group("/")
+
+	protectedRoutes.Use(func(c *fiber.Ctx) error {
+		// 如何匹配路由是否有权限
+		c.Next()
+		log.Info(c.Route().Path)
+
+		return nil
+	})
 	// protectedRoutes.Use(middlewares.AuthMiddleware())
 	// protectedRoutes.Use(middlewares.TenantMiddleware())
 

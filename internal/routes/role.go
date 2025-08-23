@@ -19,13 +19,13 @@ type RoleHandler struct {
 func (h *RoleHandler) RegisterRoutes(router fiber.Router) {
 	roleGroup := router.Group("/roles")
 
-	roleGroup.Get("/", h.GetRoles)
-	roleGroup.Post("/", h.CreateRole)
-	roleGroup.Get("/:id", h.GetRole)
-	roleGroup.Put("/:id", h.UpdateRole)
-	roleGroup.Delete("/:id", h.DeleteRole)
-	roleGroup.Get("/:id/permissions", h.GetRolePermissions)
-	roleGroup.Post("/:id/permissions", h.AssignPermissions)
+	roleGroup.Get("/", h.GetRoles).Name("获取角色列表")
+	roleGroup.Post("/", h.CreateRole).Name("创建角色")
+	roleGroup.Get("/:id<guid>", h.GetRole).Name("获取角色详情")
+	roleGroup.Put("/:id<guid>", h.UpdateRole).Name("更新角色")
+	roleGroup.Delete("/:id<guid>", h.DeleteRole).Name("删除角色")
+	roleGroup.Get("/:id<guid>/menus", h.GetRoleMenus).Name("获取角色菜单")
+	roleGroup.Post("/:id<guid>/menus", h.AssignMenus).Name("分配角色菜单")
 }
 
 // GetRoles 获取角色列表
@@ -105,8 +105,8 @@ func (h *RoleHandler) DeleteRole(c *fiber.Ctx) error {
 	}))
 }
 
-// GetRolePermissions 获取角色权限
-func (h *RoleHandler) GetRolePermissions(c *fiber.Ctx) error {
+// GetRoleMenus 获取角色菜单
+func (h *RoleHandler) GetRoleMenus(c *fiber.Ctx) error {
 	id := c.Params("id")
 	roleID, err := strconv.Atoi(id)
 	if err != nil {
@@ -125,8 +125,8 @@ func (h *RoleHandler) GetRolePermissions(c *fiber.Ctx) error {
 	}))
 }
 
-// AssignPermissions 分配权限给角色
-func (h *RoleHandler) AssignPermissions(c *fiber.Ctx) error {
+// AssignMenus 分配菜单给角色
+func (h *RoleHandler) AssignMenus(c *fiber.Ctx) error {
 	id := c.Params("id")
 	roleID, err := strconv.Atoi(id)
 	if err != nil {

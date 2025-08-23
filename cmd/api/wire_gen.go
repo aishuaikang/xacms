@@ -31,22 +31,13 @@ func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddlewa
 	menuHandler := &routes.MenuHandler{
 		Validator:   validator,
 		MenuService: menuService,
-	}
-	departmentService := services.NewDepartmentService(db)
-	departmentHandler := &routes.DepartmentHandler{
-		Validator:         validator,
-		DepartmentService: departmentService,
+		Server:      server2,
 	}
 	roleService := services.NewRoleService(db)
 	roleHandler := &routes.RoleHandler{
 		Validator:   validator,
 		RoleService: roleService,
 	}
-	tenantService := services.NewTenantService(db)
-	tenantHandler := &routes.TenantHandler{
-		Validator:     validator,
-		TenantService: tenantService,
-	}
-	router := routes.NewRouter(server2, userHandler, menuHandler, departmentHandler, roleHandler, tenantHandler)
+	router := routes.NewRouter(server2, userHandler, menuHandler, roleHandler)
 	return router
 }

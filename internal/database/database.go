@@ -14,8 +14,5 @@ func NewDB() *gorm.DB {
 	// 获取数据库连接
 	dbInstance = getDB()
 
-	// 创建服务管理器
-	// serviceManager := services.NewServiceManager(db)
-
 	return dbInstance
 }
