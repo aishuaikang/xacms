@@ -11,7 +11,7 @@ type CreateMenuRequest struct {
 	Name         string         `json:"name" validate:"required,min=2,max=64"`
 	RouteName    string         `json:"route_name" validate:"required,min=2,max=64"`
 	RoutePath    string         `json:"route_path" validate:"required,min=1,max=255"`
-	ApiIds       *models.ApiIds `json:"api_paths" validate:"omitempty"`
+	ApiIds       *models.ApiIds `json:"api_ids" validate:"omitempty"`
 	IsHidden     bool           `json:"is_hidden" validate:"omitempty"`
 	IsFullScreen bool           `json:"is_full_screen" validate:"omitempty"`
 	IsTabs       bool           `json:"is_tabs" validate:"omitempty"`
@@ -25,7 +25,7 @@ type UpdateMenuRequest struct {
 	Name         *string        `json:"name" validate:"omitempty,min=2,max=64"`
 	RouteName    *string        `json:"route_name" validate:"omitempty,min=2,max=64"`
 	RoutePath    *string        `json:"route_path" validate:"omitempty,min=1,max=255"`
-	ApiIds       *models.ApiIds `json:"api_paths" validate:"omitempty"`
+	ApiIds       *models.ApiIds `json:"api_ids" validate:"omitempty"`
 	IsHidden     *bool          `json:"is_hidden" validate:"omitempty"`
 	IsFullScreen *bool          `json:"is_full_screen" validate:"omitempty"`
 	IsTabs       *bool          `json:"is_tabs" validate:"omitempty"`
