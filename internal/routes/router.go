@@ -57,7 +57,7 @@ func (r *Router) RegisterRoutes() {
 	protectedRoutes.Use(func(c *fiber.Ctx) error {
 		// 如何匹配路由是否有权限
 		c.Next()
-		log.Info(c.Route().Path)
+		log.Info(c.Route().Name, c.Route().Path, c.Route().Method)
 
 		return nil
 	})

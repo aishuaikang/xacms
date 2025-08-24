@@ -3,9 +3,13 @@ package services
 import (
 	"new-spbatc-drone-platform/internal/models"
 	"new-spbatc-drone-platform/internal/routes/dto"
+	"new-spbatc-drone-platform/internal/utils"
 	"sort"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -16,7 +20,8 @@ type MenuService interface {
 	CreateMenu(req *dto.CreateMenuRequest) error
 	UpdateMenu(menu *models.MenuModel) error
 	DeleteMenu(id string) error
-	GetAPIs(allroutes []fiber.Route) []dto.ApiItem
+	GetMenuTree() ([]dto.MenuTreeItem, error)
+	GetAPIs(allroutes []fiber.Route, groupName string, nameMap map[string]string) []dto.ApiItem
 }
 
 // menuService 菜单服务实现
@@ -53,6 +58,7 @@ func (s *menuService) GetMenuByID(id string) (*models.MenuModel, error) {
 func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) error {
 
 	menu := &models.MenuModel{
+		ParentID:     req.ParentID,
 		Name:         req.Name,
 		RouteName:    req.RouteName,
 		RoutePath:    req.RoutePath,
@@ -87,8 +93,33 @@ func (s *menuService) DeleteMenu(id string) error {
 	return nil
 }
 
+// GetMenuTree 获取菜单树
+func (s *menuService) GetMenuTree() ([]dto.MenuTreeItem, error) {
+	menus, err := s.GetMenus()
+	if err != nil {
+		return nil, err
+	}
+
+	// 递归组装菜单树
+	var buildMenuTree func(parentID *uuid.UUID) []dto.MenuTreeItem
+	buildMenuTree = func(parentID *uuid.UUID) []dto.MenuTreeItem {
+		var children []dto.MenuTreeItem
+		for _, menu := range menus {
+			if utils.EqualUUID(menu.ParentID, parentID) {
+				children = append(children, dto.MenuTreeItem{
+					MenuModel: menu,
+					Children:  buildMenuTree(&menu.ID),
+				})
+			}
+		}
+		return children
+	}
+
+	return buildMenuTree(nil), nil
+}
+
 // GetAPIs 获取API列表
-func (s *menuService) GetAPIs(allroutes []fiber.Route) []dto.ApiItem {
+func (s *menuService) GetAPIs(allroutes []fiber.Route, groupName string, nameMap map[string]string) []dto.ApiItem {
 	routeMap := make(map[string][]fiber.Route) // 键: 路径+名称, 值: 具有相同路径+名称的路由
 
 	// 按路径+名称分组路由
@@ -101,13 +132,15 @@ func (s *menuService) GetAPIs(allroutes []fiber.Route) []dto.ApiItem {
 	// 处理每个分组
 	for _, routes := range routeMap {
 		if len(routes) == 1 {
+			name := strings.TrimPrefix(routes[0].Name, groupName)
+			log.Infof("保留HEAD路由: %s", name)
+
 			// 只有一个路由，无论方法如何都保留它
-			ID := routes[0].Method + "_" + routes[0].Path
 			result = append(result, dto.ApiItem{
-				ID:     ID,
+				ID:     routes[0].Name,
 				Method: routes[0].Method,
 				Path:   routes[0].Path,
-				Name:   routes[0].Name,
+				Name:   nameMap[name],
 			})
 		} else {
 			// 具有相同路径+名称的多个路由
@@ -121,22 +154,24 @@ func (s *menuService) GetAPIs(allroutes []fiber.Route) []dto.ApiItem {
 					}
 				} else {
 					hasNonHead = true
+					name := strings.TrimPrefix(routes[i].Name, groupName)
 					result = append(result, dto.ApiItem{
-						ID:     routes[i].Method + "_" + routes[i].Path,
+						ID:     routes[i].Name,
 						Method: routes[i].Method,
 						Path:   routes[i].Path,
-						Name:   routes[i].Name,
+						Name:   nameMap[name],
 					})
 				}
 			}
 
 			// 如果没有找到非HEAD路由，保留HEAD路由
 			if !hasNonHead && headRoute != nil {
+				name := strings.TrimPrefix(headRoute.Name, groupName)
 				result = append(result, dto.ApiItem{
-					ID:     headRoute.Method + "_" + headRoute.Path,
+					ID:     headRoute.Name,
 					Method: headRoute.Method,
 					Path:   headRoute.Path,
-					Name:   headRoute.Name,
+					Name:   nameMap[name],
 				})
 			}
 		}
@@ -144,7 +179,7 @@ func (s *menuService) GetAPIs(allroutes []fiber.Route) []dto.ApiItem {
 
 	// 排序
 	sort.Slice(result, func(i, j int) bool {
-		return result[i].ID < result[j].ID
+		return result[i].Name < result[j].Name
 	})
 	return result
 }

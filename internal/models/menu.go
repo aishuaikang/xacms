@@ -3,8 +3,9 @@ package models
 import (
 	"database/sql/driver"
 	"fmt"
-	"strings"
 
+	"github.com/bytedance/sonic"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -13,9 +14,11 @@ type ApiIds []string
 
 // Value 实现 driver.Valuer 接口，用于将 ApiIds 转换为数据库存储格式
 func (a *ApiIds) Value() (driver.Value, error) {
-	jsonData, err := a.MarshalJSON()
+	log.Errorf("无法将 ApiIds 转换为数据库存储格式: %v", a)
+
+	jsonData, err := sonic.Marshal(a)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("无法将 ApiIds 转换为数据库存储格式: %v", a)
 	}
 
 	return jsonData, nil
@@ -23,36 +26,13 @@ func (a *ApiIds) Value() (driver.Value, error) {
 
 // Scan 实现 sql.Scanner 接口，用于将数据库中的值转换为 ApiIds
 func (a *ApiIds) Scan(value any) error {
-	if value == nil {
-		return nil
+	v, ok := value.([]byte)
+	if !ok {
+		log.Errorf("无法将数据库中的值转换为 ApiIds: %v", value)
+		return fmt.Errorf("无法将数据库中的值转换为 ApiIds: %v", value)
 	}
-	switch v := value.(type) {
-	case []byte:
-		if len(v) > 0 {
-			*a = strings.Split(string(v), ",")
-		}
 
-	default:
-		return fmt.Errorf("无法将 %T 转换为 ApiIds", value)
-	}
-	return nil
-}
-
-// 实现 json.Marshaler 接口，用于将 ApiIds 转换为 JSON 格式
-func (a *ApiIds) MarshalJSON() ([]byte, error) {
-	if a == nil {
-		return nil, nil
-	}
-	return []byte(strings.Join(*a, ",")), nil
-}
-
-// 实现 json.Unmarshaler 接口，用于将 JSON 格式的值转换为 ApiIds
-func (a *ApiIds) UnmarshalJSON(data []byte) error {
-	if data == nil {
-		return nil
-	}
-	*a = ApiIds(strings.Split(string(data), ","))
-	return nil
+	return sonic.Unmarshal(v, a)
 }
 
 type MenuModel struct {

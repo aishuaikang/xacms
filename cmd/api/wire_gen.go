@@ -28,11 +28,7 @@ func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddlewa
 		UserService: userService,
 	}
 	menuService := services.NewMenuService(db)
-	menuHandler := &routes.MenuHandler{
-		Validator:   validator,
-		MenuService: menuService,
-		Server:      server2,
-	}
+	menuHandler := routes.NewMenuHandler(validator, menuService, server2)
 	roleService := services.NewRoleService(db)
 	roleHandler := &routes.RoleHandler{
 		Validator:   validator,

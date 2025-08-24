@@ -17,20 +17,43 @@ type MenuHandler struct {
 	Validator   *utils.ValidationMiddleware
 	MenuService services.MenuService
 	Server      *server.FiberServer
+
+	groupName string
+	nameMap   map[string]string
+}
+
+// NewMenuHandler 创建新的菜单处理器
+func NewMenuHandler(validator *utils.ValidationMiddleware, menuService services.MenuService, server *server.FiberServer) *MenuHandler {
+	return &MenuHandler{
+		Validator:   validator,
+		MenuService: menuService,
+		Server:      server,
+
+		groupName: "menu.",
+		nameMap: map[string]string{
+			"list":   "获取菜单列表",
+			"create": "创建菜单",
+			"detail": "获取菜单详情",
+			"update": "更新菜单",
+			"delete": "删除菜单",
+			"tree":   "获取菜单树",
+			"apis":   "获取API列表",
+		},
+	}
 }
 
 // RegisterRoutes 注册菜单相关路由
 func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
-	menuGroup := router.Group("/menus")
 
-	menuGroup.Get("/", h.GetMenus).Name("获取菜单列表")
-	menuGroup.Post("/", h.CreateMenu).Name("创建菜单")
-	menuGroup.Get("/:id<guid>", h.GetMenu).Name("获取菜单详情")
-	menuGroup.Put("/:id<guid>", h.UpdateMenu).Name("更新菜单")
-	menuGroup.Delete("/:id<guid>", h.DeleteMenu).Name("删除菜单")
-	menuGroup.Get("/tree", h.GetMenuTree).Name("获取菜单树")
-	menuGroup.Get("/apis", h.GetAPIs).Name("获取API列表")
+	menuGroup := router.Group("/menus").Name(h.groupName)
 
+	menuGroup.Get("", h.GetMenus).Name("list")
+	menuGroup.Post("", h.CreateMenu).Name("create")
+	menuGroup.Get("/:id<guid>", h.GetMenu).Name("detail")
+	menuGroup.Put("/:id<guid>", h.UpdateMenu).Name("update")
+	menuGroup.Delete("/:id<guid>", h.DeleteMenu).Name("delete")
+	menuGroup.Get("/tree", h.GetMenuTree).Name("tree")
+	menuGroup.Get("/apis", h.GetAPIs).Name("apis")
 }
 
 // GetMenus 获取菜单列表
@@ -38,7 +61,7 @@ func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
 	menus, err := h.MenuService.GetMenus()
 	if err != nil {
 		log.Errorf("获取菜单列表失败: %v", err)
-		return c.Status(500).JSON(dto.ErrorResponse(500, "获取菜单列表失败"))
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取菜单列表失败"))
 	}
 
 	return c.JSON(dto.SuccessResponse(menus))
@@ -49,30 +72,29 @@ func (h *MenuHandler) CreateMenu(c *fiber.Ctx) error {
 	// 解析请求体到 DTO
 	var req dto.CreateMenuRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(dto.ErrorResponse(400, "请求体格式错误"))
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "请求体格式错误"))
 	}
 
 	// 验证请求数据
 	if errors := h.Validator.ValidateStruct(&req); len(errors) > 0 {
-		return c.Status(400).JSON(dto.ErrorResponse(400, errors[0]))
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, errors[0]))
 	}
 
 	// 创建菜单
 	if err := h.MenuService.CreateMenu(&req); err != nil {
 		log.Errorf("创建菜单失败: %#v", err)
 
-		// 我如何捕获这个错误并返回一个友好的错误消息？
 		if mysqlErr, ok := err.(*mysql.MySQLError); ok {
 			if mysqlErr.Number == 1062 {
-				return c.Status(400).JSON(dto.ErrorResponse(400, "菜单已存在"))
+				return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "菜单已存在"))
 			}
 		}
 
 		log.Errorf("创建菜单失败: %v", err)
-		return c.Status(500).JSON(dto.ErrorResponse(500, "创建菜单失败"))
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "创建菜单失败"))
 	}
 
-	return c.Status(201).JSON(dto.SuccessResponse(req))
+	return c.Status(fiber.StatusCreated).JSON(dto.SuccessResponse(req))
 }
 
 // GetMenu 获取单个菜单
@@ -131,22 +153,11 @@ func (h *MenuHandler) DeleteMenu(c *fiber.Ctx) error {
 
 // GetMenuTree 获取菜单树结构
 func (h *MenuHandler) GetMenuTree(c *fiber.Ctx) error {
-	// TODO: 实现获取菜单树逻辑
-	menuTree := []map[string]interface{}{
-		{
-			"id":   1,
-			"name": "Dashboard",
-			"path": "/dashboard",
-			"children": []map[string]interface{}{
-				{"id": 3, "name": "Analytics", "path": "/dashboard/analytics"},
-			},
-		},
-		{
-			"id":       2,
-			"name":     "Users",
-			"path":     "/users",
-			"children": []map[string]interface{}{},
-		},
+	// 组装为树形结构
+	menuTree, err := h.MenuService.GetMenuTree()
+	if err != nil {
+		log.Errorf("获取菜单树失败: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取菜单树失败"))
 	}
 
 	return c.JSON(dto.SuccessResponse(menuTree))
@@ -154,5 +165,5 @@ func (h *MenuHandler) GetMenuTree(c *fiber.Ctx) error {
 
 // GetAPIs 获取API列表
 func (h *MenuHandler) GetAPIs(c *fiber.Ctx) error {
-	return c.JSON(dto.SuccessResponse(h.MenuService.GetAPIs(h.Server.GetRoutes(true))))
+	return c.JSON(dto.SuccessResponse(h.MenuService.GetAPIs(h.Server.GetRoutes(true), h.groupName, h.nameMap)))
 }

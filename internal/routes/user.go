@@ -19,10 +19,10 @@ type UserHandler struct {
 
 // RegisterRoutes 注册用户相关路由
 func (h *UserHandler) RegisterRoutes(router fiber.Router) {
-	userGroup := router.Group("/users")
+	userGroup := router.Group("/users").Name("用户管理.")
 
-	userGroup.Get("/", h.GetUsers).Name("获取用户列表")
-	userGroup.Post("/", h.CreateUser).Name("创建用户")
+	userGroup.Get("", h.GetUsers).Name("获取用户列表")
+	userGroup.Post("", h.CreateUser).Name("创建用户")
 	userGroup.Get("/:id<guid>", h.GetUser).Name("获取用户详情")
 	userGroup.Put("/:id<guid>", h.UpdateUser).Name("更新用户")
 	userGroup.Delete("/:id<guid>", h.DeleteUser).Name("删除用户")

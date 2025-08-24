@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -13,9 +14,11 @@ type FiberServer struct {
 func NewFiberServer() *FiberServer {
 
 	app := fiber.New(fiber.Config{
-		ServerHeader: "new-spbatc-drone-platform",
-		AppName:      "new-spbatc-drone-platform",
-		// EnablePrintRoutes: true,
+		ServerHeader:  "XACMS",
+		AppName:       "XACMS",
+		CaseSensitive: true,
+		JSONEncoder:   sonic.Marshal,
+		JSONDecoder:   sonic.Unmarshal,
 	})
 
 	// 设置压缩中间件

@@ -4,7 +4,7 @@ import "github.com/google/wire"
 
 var RoutesSet = wire.NewSet(
 	wire.Struct(new(RoleHandler), "*"),
-	wire.Struct(new(MenuHandler), "*"),
+	NewMenuHandler,
 	wire.Struct(new(UserHandler), "*"),
 	NewRouter,
 )

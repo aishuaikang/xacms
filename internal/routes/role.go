@@ -17,10 +17,10 @@ type RoleHandler struct {
 
 // RegisterRoutes 注册角色相关路由
 func (h *RoleHandler) RegisterRoutes(router fiber.Router) {
-	roleGroup := router.Group("/roles")
+	roleGroup := router.Group("/roles").Name("角色管理.")
 
-	roleGroup.Get("/", h.GetRoles).Name("获取角色列表")
-	roleGroup.Post("/", h.CreateRole).Name("创建角色")
+	roleGroup.Get("", h.GetRoles).Name("获取角色列表")
+	roleGroup.Post("", h.CreateRole).Name("创建角色")
 	roleGroup.Get("/:id<guid>", h.GetRole).Name("获取角色详情")
 	roleGroup.Put("/:id<guid>", h.UpdateRole).Name("更新角色")
 	roleGroup.Delete("/:id<guid>", h.DeleteRole).Name("删除角色")
