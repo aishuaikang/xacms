@@ -58,11 +58,3 @@ type MenuTreeItem struct {
 	models.MenuModel
 	Children []MenuTreeItem `json:"children"`
 }
-
-// ApiItem API列表项结构
-type ApiItem struct {
-	ID     string `json:"id"`
-	Method string `json:"method"`
-	Path   string `json:"path"`
-	Name   string `json:"name"`
-}

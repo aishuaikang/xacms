@@ -17,9 +17,6 @@ type MenuHandler struct {
 	Validator   *utils.ValidationMiddleware
 	MenuService services.MenuService
 	Server      *server.FiberServer
-
-	groupName string
-	nameMap   map[string]string
 }
 
 // NewMenuHandler 创建新的菜单处理器
@@ -28,32 +25,22 @@ func NewMenuHandler(validator *utils.ValidationMiddleware, menuService services.
 		Validator:   validator,
 		MenuService: menuService,
 		Server:      server,
-
-		groupName: "menu.",
-		nameMap: map[string]string{
-			"list":   "获取菜单列表",
-			"create": "创建菜单",
-			"detail": "获取菜单详情",
-			"update": "更新菜单",
-			"delete": "删除菜单",
-			"tree":   "获取菜单树",
-			"apis":   "获取API列表",
-		},
 	}
 }
 
 // RegisterRoutes 注册菜单相关路由
 func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 
-	menuGroup := router.Group("/menus").Name(h.groupName)
+	menuGroup := router.Group("/menus").Name("菜单管理.")
 
-	menuGroup.Get("", h.GetMenus).Name("list")
-	menuGroup.Post("", h.CreateMenu).Name("create")
-	menuGroup.Get("/:id<guid>", h.GetMenu).Name("detail")
-	menuGroup.Put("/:id<guid>", h.UpdateMenu).Name("update")
-	menuGroup.Delete("/:id<guid>", h.DeleteMenu).Name("delete")
-	menuGroup.Get("/tree", h.GetMenuTree).Name("tree")
-	menuGroup.Get("/apis", h.GetAPIs).Name("apis")
+	menuGroup.Get("", h.GetMenus).Name("获取菜单列表")
+	menuGroup.Post("", h.CreateMenu).Name("创建菜单")
+	menuGroup.Get("/:id<guid>", h.GetMenu).Name("获取菜单详情")
+	menuGroup.Put("/:id<guid>", h.UpdateMenu).Name("更新菜单")
+	menuGroup.Delete("/:id<guid>", h.DeleteMenu).Name("删除菜单")
+	menuGroup.Get("/tree", h.GetMenuTree).Name("获取菜单树")
+	menuGroup.Get("/apis", h.GetAPIs).Name("获取API列表")
+
 }
 
 // GetMenus 获取菜单列表
@@ -165,5 +152,5 @@ func (h *MenuHandler) GetMenuTree(c *fiber.Ctx) error {
 
 // GetAPIs 获取API列表
 func (h *MenuHandler) GetAPIs(c *fiber.Ctx) error {
-	return c.JSON(dto.SuccessResponse(h.MenuService.GetAPIs(h.Server.GetRoutes(true), h.groupName, h.nameMap)))
+	return c.JSON(dto.SuccessResponse(h.MenuService.GetAPIs(h.Server.GetRoutes(true))))
 }

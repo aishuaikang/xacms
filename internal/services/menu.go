@@ -5,10 +5,8 @@ import (
 	"new-spbatc-drone-platform/internal/routes/dto"
 	"new-spbatc-drone-platform/internal/utils"
 	"sort"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -21,7 +19,7 @@ type MenuService interface {
 	UpdateMenu(menu *models.MenuModel) error
 	DeleteMenu(id string) error
 	GetMenuTree() ([]dto.MenuTreeItem, error)
-	GetAPIs(allroutes []fiber.Route, groupName string, nameMap map[string]string) []dto.ApiItem
+	GetAPIs(allroutes []fiber.Route) []fiber.Route
 }
 
 // menuService 菜单服务实现
@@ -119,7 +117,7 @@ func (s *menuService) GetMenuTree() ([]dto.MenuTreeItem, error) {
 }
 
 // GetAPIs 获取API列表
-func (s *menuService) GetAPIs(allroutes []fiber.Route, groupName string, nameMap map[string]string) []dto.ApiItem {
+func (s *menuService) GetAPIs(allroutes []fiber.Route) []fiber.Route {
 	routeMap := make(map[string][]fiber.Route) // 键: 路径+名称, 值: 具有相同路径+名称的路由
 
 	// 按路径+名称分组路由
@@ -128,20 +126,13 @@ func (s *menuService) GetAPIs(allroutes []fiber.Route, groupName string, nameMap
 		routeMap[key] = append(routeMap[key], route)
 	}
 
-	var result []dto.ApiItem
+	var result []fiber.Route
 	// 处理每个分组
 	for _, routes := range routeMap {
 		if len(routes) == 1 {
-			name := strings.TrimPrefix(routes[0].Name, groupName)
-			log.Infof("保留HEAD路由: %s", name)
-
 			// 只有一个路由，无论方法如何都保留它
-			result = append(result, dto.ApiItem{
-				ID:     routes[0].Name,
-				Method: routes[0].Method,
-				Path:   routes[0].Path,
-				Name:   nameMap[name],
-			})
+			result = append(result, routes[0])
+
 		} else {
 			// 具有相同路径+名称的多个路由
 			hasNonHead := false
@@ -154,25 +145,13 @@ func (s *menuService) GetAPIs(allroutes []fiber.Route, groupName string, nameMap
 					}
 				} else {
 					hasNonHead = true
-					name := strings.TrimPrefix(routes[i].Name, groupName)
-					result = append(result, dto.ApiItem{
-						ID:     routes[i].Name,
-						Method: routes[i].Method,
-						Path:   routes[i].Path,
-						Name:   nameMap[name],
-					})
+					result = append(result, routes[i])
 				}
 			}
 
 			// 如果没有找到非HEAD路由，保留HEAD路由
 			if !hasNonHead && headRoute != nil {
-				name := strings.TrimPrefix(headRoute.Name, groupName)
-				result = append(result, dto.ApiItem{
-					ID:     headRoute.Name,
-					Method: headRoute.Method,
-					Path:   headRoute.Path,
-					Name:   nameMap[name],
-				})
+				result = append(result, *headRoute)
 			}
 		}
 	}
