@@ -22,11 +22,17 @@ import (
 
 func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
 	db := database.NewDB()
-	commonService := services.NewCommonService(db, validator)
+	commonService := services.NewCommonService(db, validator, server2)
 	userService := services.NewUserService(db, commonService)
-	userHandler := routes.NewUserHandler(userService, commonService)
-	menuService := services.NewMenuService(db, commonService)
-	menuHandler := routes.NewMenuHandler(commonService, menuService, server2)
+	userHandler := &routes.UserHandler{
+		UserService:   userService,
+		CommonService: commonService,
+	}
+	menuService := services.NewMenuService(db, commonService, server2)
+	menuHandler := &routes.MenuHandler{
+		CommonService: commonService,
+		MenuService:   menuService,
+	}
 	roleService := services.NewRoleService(db)
 	roleHandler := &routes.RoleHandler{
 		Validator:   validator,

@@ -22,22 +22,14 @@ type Router struct {
 func NewRouter(server *server.FiberServer,
 	userHandler *UserHandler,
 	menuHandler *MenuHandler,
-	// departmentHandler *DepartmentHandler,
 	roleHandler *RoleHandler,
-	// tenantHandler *TenantHandler,
 ) *Router {
-
-	// baseHandler := NewBaseHandler(utils.NewValidationMiddleware())
-
 	return &Router{
-		// baseHandler: baseHandler,
 		server: server,
 		modules: []RouteModule{
 			userHandler,
 			menuHandler,
-			// departmentHandler,
 			roleHandler,
-			// tenantHandler,
 		},
 	}
 }
@@ -69,18 +61,3 @@ func (r *Router) RegisterRoutes() {
 		module.RegisterRoutes(protectedRoutes)
 	}
 }
-
-// HealthCheck 健康检查端点
-// func (r *Router) HealthCheck(c *fiber.Ctx) error {
-// 	// TODO: 可以添加数据库连接检查等
-// 	return c.JSON(dto.SuccessResponse(map[string]interface{}{
-// 		"status":  "ok",
-// 		"service": "new-spbatc-drone-platform",
-// 		"version": "1.0.0",
-// 	}))
-// }
-
-// // AddModule 添加新的路由模块
-// func (r *Router) AddModule(module RouteModule) {
-// 	r.modules = append(r.modules, module)
-// }

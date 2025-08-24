@@ -3,7 +3,6 @@ package routes
 import (
 	"new-spbatc-drone-platform/internal/models"
 	"new-spbatc-drone-platform/internal/routes/dto"
-	"new-spbatc-drone-platform/internal/server"
 	"new-spbatc-drone-platform/internal/services"
 
 	"github.com/go-sql-driver/mysql"
@@ -15,19 +14,8 @@ import (
 
 // MenuHandler 菜单处理器
 type MenuHandler struct {
-	commonService services.CommonService
-	menuService   services.MenuService
-
-	fiberServer *server.FiberServer
-}
-
-// NewMenuHandler 创建新的菜单处理器
-func NewMenuHandler(commonService services.CommonService, menuService services.MenuService, fiberServer *server.FiberServer) *MenuHandler {
-	return &MenuHandler{
-		commonService: commonService,
-		menuService:   menuService,
-		fiberServer:   fiberServer,
-	}
+	CommonService services.CommonService
+	MenuService   services.MenuService
 }
 
 // RegisterRoutes 注册菜单相关路由
@@ -47,8 +35,8 @@ func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 
 // GetMenus 获取菜单列表
 func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
-	menus, err := h.menuService.GetMenus()
-	if err != nil {
+	var menus []models.MenuModel
+	if err := h.CommonService.GetItems(&menus); err != nil {
 		log.Errorf("获取菜单列表失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取菜单列表失败"))
 	}
@@ -60,12 +48,12 @@ func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
 func (h *MenuHandler) CreateMenu(c *fiber.Ctx) error {
 	// 解析请求体到 DTO
 	var req dto.CreateMenuRequest
-	if err := h.commonService.ValidateBody(c, &req); err != nil {
+	if err := h.CommonService.ValidateBody(c, &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
 	}
 
 	// 创建菜单
-	menu, err := h.menuService.CreateMenu(&req)
+	menu, err := h.MenuService.CreateMenu(&req)
 	if err != nil {
 		log.Errorf("创建菜单失败: %#v", err)
 
@@ -94,7 +82,7 @@ func (h *MenuHandler) GetMenu(c *fiber.Ctx) error {
 
 	// 获取菜单
 	var menu models.MenuModel
-	if err := h.commonService.GetItemByID(&menu, menuUUID); err != nil {
+	if err := h.CommonService.GetItemByID(&menu, menuUUID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(fiber.StatusNotFound, "菜单不存在"))
 		}
@@ -116,12 +104,12 @@ func (h *MenuHandler) UpdateMenu(c *fiber.Ctx) error {
 
 	// 解析请求体
 	var req dto.UpdateMenuRequest
-	if err := h.commonService.ValidateBody(c, &req); err != nil {
+	if err := h.CommonService.ValidateBody(c, &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
 	}
 
 	// 更新菜单
-	menu, err := h.menuService.UpdateMenu(menuUUID, &req)
+	menu, err := h.MenuService.UpdateMenu(menuUUID, &req)
 	if err != nil {
 		log.Errorf("更新菜单失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "更新菜单失败"))
@@ -141,7 +129,7 @@ func (h *MenuHandler) DeleteMenu(c *fiber.Ctx) error {
 	}
 
 	// 删除菜单
-	if err := h.commonService.DeleteItemByID(&models.MenuModel{}, menuUUID); err != nil {
+	if err := h.CommonService.DeleteItemByID(&models.MenuModel{}, menuUUID); err != nil {
 		log.Errorf("删除菜单失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除菜单失败"))
 	}
@@ -152,7 +140,7 @@ func (h *MenuHandler) DeleteMenu(c *fiber.Ctx) error {
 // GetMenuTree 获取菜单树结构
 func (h *MenuHandler) GetMenuTree(c *fiber.Ctx) error {
 	// 组装为树形结构
-	menuTree, err := h.menuService.GetMenuTree()
+	menuTree, err := h.MenuService.GetMenuTree()
 	if err != nil {
 		log.Errorf("获取菜单树失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取菜单树失败"))
@@ -163,5 +151,5 @@ func (h *MenuHandler) GetMenuTree(c *fiber.Ctx) error {
 
 // GetAPIs 获取API列表
 func (h *MenuHandler) GetAPIs(c *fiber.Ctx) error {
-	return c.JSON(dto.SuccessResponse(h.menuService.GetAPIs(h.fiberServer.GetRoutes(true))))
+	return c.JSON(dto.SuccessResponse(h.CommonService.GetAPIs()))
 }

@@ -43,8 +43,7 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 func main() {
 	server := server.NewFiberServer()
 
-	router := wireRouter(server, utils.NewValidationMiddleware())
-	router.RegisterRoutes()
+	wireRouter(server, utils.NewValidationMiddleware()).RegisterRoutes()
 
 	// 创建一个完成通道，在关机完成后发出信号
 	done := make(chan bool, 1)

@@ -13,16 +13,8 @@ import (
 
 // UserHandler 用户处理器
 type UserHandler struct {
-	userService   services.UserService
-	commonService services.CommonService
-}
-
-// NewUserHandler 创建用户处理器
-func NewUserHandler(userService services.UserService, commonService services.CommonService) *UserHandler {
-	return &UserHandler{
-		userService:   userService,
-		commonService: commonService,
-	}
+	UserService   services.UserService
+	CommonService services.CommonService
 }
 
 // RegisterRoutes 注册用户相关路由
@@ -40,13 +32,13 @@ func (h *UserHandler) RegisterRoutes(router fiber.Router) {
 func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 	// 解析查询参数
 	var req dto.UserQueryRequest
-	err := h.commonService.ValidateQuery(c, &req)
+	err := h.CommonService.ValidateQuery(c, &req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
 	}
 
 	// 获取用户列表
-	users, err := h.userService.GetUsers(req)
+	users, err := h.UserService.GetUsers(req)
 	if err != nil {
 		log.Errorf("获取用户列表失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取用户列表失败"))
@@ -59,12 +51,12 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	// 解析请求体到 DTO
 	var req dto.CreateUserRequest
-	if err := h.commonService.ValidateBody(c, &req); err != nil {
+	if err := h.CommonService.ValidateBody(c, &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
 	}
 
 	// 创建用户
-	user, err := h.userService.CreateUser(req)
+	user, err := h.UserService.CreateUser(req)
 	if err != nil {
 		log.Errorf("创建用户失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "创建用户失败"))
@@ -85,7 +77,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 
 	// 获取用户
 	var user models.UserModel
-	if err := h.commonService.GetItemByID(&user, userUUID); err != nil {
+	if err := h.CommonService.GetItemByID(&user, userUUID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(fiber.StatusNotFound, "用户不存在"))
 		}
@@ -108,12 +100,12 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 
 	// 解析请求体
 	var req dto.UpdateUserRequest
-	if err := h.commonService.ValidateBody(c, &req); err != nil {
+	if err := h.CommonService.ValidateBody(c, &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
 	}
 
 	// 更新用户
-	user, err := h.userService.UpdateUser(userUUID, req)
+	user, err := h.UserService.UpdateUser(userUUID, req)
 	if err != nil {
 		log.Errorf("更新用户失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "更新用户失败"))
@@ -133,7 +125,7 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	}
 
 	// 删除用户
-	if err := h.commonService.DeleteItemByID(&models.UserModel{}, userUUID); err != nil {
+	if err := h.CommonService.DeleteItemByID(&models.UserModel{}, userUUID); err != nil {
 		log.Errorf("删除用户失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除用户失败"))
 	}
