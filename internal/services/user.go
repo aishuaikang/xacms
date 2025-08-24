@@ -5,7 +5,6 @@ import (
 	"new-spbatc-drone-platform/internal/models"
 	"new-spbatc-drone-platform/internal/routes/dto"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -14,20 +13,20 @@ import (
 type UserService interface {
 	GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error)
 	CreateUser(req dto.CreateUserRequest) (*models.UserModel, error)
-	GetUser(id uuid.UUID) (*models.UserModel, error)
 	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error)
-	DeleteUser(userId uuid.UUID) error
 }
 
 // userService 用户服务实现
 type userService struct {
-	db *gorm.DB
+	db            *gorm.DB
+	commonService CommonService
 }
 
 // NewUserService 创建用户服务实例
-func NewUserService(db *gorm.DB) UserService {
+func NewUserService(db *gorm.DB, commonService CommonService) UserService {
 	return &userService{
-		db: db,
+		db:            db,
+		commonService: commonService,
 	}
 }
 
@@ -58,14 +57,12 @@ func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, 
 		ID:       uuid.New(),
 		Nickname: req.Nickname,
 		Username: req.Username,
-		Password: req.Password, // 注意：实际应用中应该加密密码
+		Password: req.Password, // TODO：实际应用中应该加密密码
 		Email:    req.Email,
 		Phone:    req.Phone,
 		Avatar:   req.Avatar,
 		Status:   req.Status,
 		RoleID:   req.RoleID,
-		// TenantID:     req.TenantID,
-		// DepartmentID: req.DepartmentID,
 	}
 
 	if err := s.db.Create(userData).Error; err != nil {
@@ -74,21 +71,14 @@ func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, 
 	return userData, nil
 }
 
-// GetUser 获取用户
-func (s *userService) GetUser(id uuid.UUID) (*models.UserModel, error) {
-	var user models.UserModel
-	if err := s.db.First(&user, "id = ?", id).Error; err != nil {
-		return nil, err
-	}
-	return &user, nil
-}
-
 // UpdateUser 修改用户
 func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error) {
-	user, err := s.GetUser(userId)
-	if err != nil {
-		log.Errorf("获取用户失败: %v", err)
-		return nil, errors.New("用户不存在")
+	var user models.UserModel
+	if err := s.commonService.GetItemByID(&user, userId); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("用户不存在")
+		}
+		return nil, err
 	}
 
 	if req.Nickname != nil {
@@ -119,20 +109,8 @@ func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*
 		user.RoleID = req.RoleID
 	}
 
-	// if req.DepartmentID != nil {
-	// 	user.DepartmentID = req.DepartmentID
-	// }
-
-	if err := s.db.Save(user).Error; err != nil {
+	if err := s.db.Save(&user).Error; err != nil {
 		return nil, err
 	}
-	return user, nil
-}
-
-// DeleteUser 删除用户
-func (s *userService) DeleteUser(userId uuid.UUID) error {
-	if err := s.db.Delete(&models.UserModel{}, "id = ?", userId).Error; err != nil {
-		return err
-	}
-	return nil
+	return &user, nil
 }
