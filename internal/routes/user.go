@@ -26,6 +26,7 @@ func (h *UserHandler) RegisterRoutes(router fiber.Router) {
 	userGroup.Get("/:id<guid>", h.GetUser).Name("获取用户详情")
 	userGroup.Put("/:id<guid>", h.UpdateUser).Name("更新用户")
 	userGroup.Delete("/:id<guid>", h.DeleteUser).Name("删除用户")
+	userGroup.Post("/:id<guid>/role", h.AssignRole).Name("分配角色")
 }
 
 // GetUsers 获取用户列表
@@ -49,7 +50,7 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 
 // CreateUser 创建用户
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
-	// 解析请求体到 DTO
+	// 解析请求体
 	var req dto.CreateUserRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
@@ -65,7 +66,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(dto.SuccessResponse(user))
 }
 
-// GetUser 获取单个用户
+// GetUser 获取用户详情
 func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -77,7 +78,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 
 	// 获取用户
 	var user models.UserModel
-	if err := h.CommonService.GetItemByID(&user, userUUID); err != nil {
+	if err := h.CommonService.GetItemByID(userUUID, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(fiber.StatusNotFound, "用户不存在"))
 		}
@@ -131,4 +132,30 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(dto.SuccessResponse(nil))
+}
+
+// AssignRole 分配角色
+func (h *UserHandler) AssignRole(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	// 验证 UUID 格式
+	userUUID, err := uuid.Parse(id)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
+	}
+
+	// 解析请求体
+	var req dto.AssignRoleRequest
+	if err := h.CommonService.ValidateBody(c, &req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
+	}
+
+	// 分配角色
+	user, err := h.UserService.AssignRole(userUUID, req)
+	if err != nil {
+		log.Errorf("分配角色失败: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "分配角色失败"))
+	}
+
+	return c.JSON(dto.SuccessResponse(user))
 }

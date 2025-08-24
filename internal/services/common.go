@@ -14,7 +14,7 @@ import (
 // CommonService 公共服务接口
 type CommonService interface {
 	GetItems(model any) error
-	GetItemByID(model any, id uuid.UUID) error
+	GetItemByID(id uuid.UUID, model any) error
 	DeleteItemByID(model any, id uuid.UUID) error
 	ValidateBody(c *fiber.Ctx, model any) error
 	ValidateQuery(c *fiber.Ctx, model any) error
@@ -39,14 +39,15 @@ func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware, fiberS
 
 // GetItems 获取多个数据
 func (s *commonService) GetItems(model any) error {
-	if err := s.db.Find(model).Error; err != nil {
+	// 如果有 order 字段则对 order 字段进行排序，其次在进行创建时间排序
+	if err := s.db.Order("`order` ASC, created_at DESC").Find(model).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 // GetItemByID 根据ID获取单个数据
-func (s *commonService) GetItemByID(model any, id uuid.UUID) error {
+func (s *commonService) GetItemByID(id uuid.UUID, model any) error {
 	if err := s.db.First(model, "id = ?", id).Error; err != nil {
 		return err
 	}

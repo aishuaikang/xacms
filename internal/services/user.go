@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // UserService 用户服务接口
@@ -14,6 +15,7 @@ type UserService interface {
 	GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error)
 	CreateUser(req dto.CreateUserRequest) (*models.UserModel, error)
 	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error)
+	AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*models.UserModel, error)
 }
 
 // userService 用户服务实现
@@ -33,7 +35,7 @@ func NewUserService(db *gorm.DB, commonService CommonService) UserService {
 // GetUsers 获取用户列表
 func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error) {
 	var users []models.UserModel
-	query := s.db.Model(&models.UserModel{})
+	query := s.db.Model(&models.UserModel{}).Preload(clause.Associations)
 
 	// 分页参数
 	page := req.Page
@@ -52,7 +54,6 @@ func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse
 
 // CreateUser 创建用户
 func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, error) {
-	// 转换为数据库模型
 	userData := &models.UserModel{
 		ID:       uuid.New(),
 		Nickname: req.Nickname,
@@ -62,7 +63,6 @@ func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, 
 		Phone:    req.Phone,
 		Avatar:   req.Avatar,
 		Status:   req.Status,
-		RoleID:   req.RoleID,
 	}
 
 	if err := s.db.Create(userData).Error; err != nil {
@@ -74,7 +74,7 @@ func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, 
 // UpdateUser 修改用户
 func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error) {
 	var user models.UserModel
-	if err := s.commonService.GetItemByID(&user, userId); err != nil {
+	if err := s.commonService.GetItemByID(userId, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("用户不存在")
 		}
@@ -105,9 +105,23 @@ func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*
 		user.Status = req.Status
 	}
 
-	if req.RoleID != nil {
-		user.RoleID = req.RoleID
+	if err := s.db.Save(&user).Error; err != nil {
+		return nil, err
 	}
+	return &user, nil
+}
+
+// AssignRole 分配角色
+func (s *userService) AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*models.UserModel, error) {
+	var user models.UserModel
+	if err := s.commonService.GetItemByID(userId, &user); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("用户不存在")
+		}
+		return nil, err
+	}
+
+	user.RoleID = &req.RoleID
 
 	if err := s.db.Save(&user).Error; err != nil {
 		return nil, err

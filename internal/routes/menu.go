@@ -46,7 +46,7 @@ func (h *MenuHandler) GetMenus(c *fiber.Ctx) error {
 
 // CreateMenu 创建菜单
 func (h *MenuHandler) CreateMenu(c *fiber.Ctx) error {
-	// 解析请求体到 DTO
+	// 解析请求体
 	var req dto.CreateMenuRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
@@ -82,7 +82,7 @@ func (h *MenuHandler) GetMenu(c *fiber.Ctx) error {
 
 	// 获取菜单
 	var menu models.MenuModel
-	if err := h.CommonService.GetItemByID(&menu, menuUUID); err != nil {
+	if err := h.CommonService.GetItemByID(menuUUID, &menu); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(fiber.StatusNotFound, "菜单不存在"))
 		}

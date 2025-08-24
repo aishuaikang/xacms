@@ -59,7 +59,7 @@ func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel,
 // UpdateMenu 更新菜单
 func (s *menuService) UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error) {
 	var menu models.MenuModel
-	if err := s.commonService.GetItemByID(&menu, menuUUID); err != nil {
+	if err := s.commonService.GetItemByID(menuUUID, &menu); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("菜单不存在")
 		}

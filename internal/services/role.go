@@ -1,7 +1,9 @@
 package services
 
 import (
+	"errors"
 	"new-spbatc-drone-platform/internal/models"
+	"new-spbatc-drone-platform/internal/routes/dto"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -9,63 +11,96 @@ import (
 
 // RoleService 角色服务接口
 type RoleService interface {
-	GetRoles() ([]models.RoleModel, error)
-	GetRoleByID(id uuid.UUID) (*models.RoleModel, error)
-	CreateRole(role *models.RoleModel) error
-	UpdateRole(role *models.RoleModel) error
-	DeleteRole(id uuid.UUID) error
+	CreateRole(req dto.CreateRoleRequest) (*models.RoleModel, error)
+	UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error)
+	GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error)
+	AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error)
 }
 
 // roleService 角色服务实现
 type roleService struct {
-	db *gorm.DB
+	db            *gorm.DB
+	commonService CommonService
 }
 
 // NewRoleService 创建角色服务实例
-func NewRoleService(db *gorm.DB) RoleService {
+func NewRoleService(db *gorm.DB, commonService CommonService) RoleService {
 	return &roleService{
-		db: db,
+		db:            db,
+		commonService: commonService,
 	}
 }
 
-// GetRoles 获取角色列表
-func (s *roleService) GetRoles() ([]models.RoleModel, error) {
-	var roles []models.RoleModel
-	if err := s.db.Find(&roles).Error; err != nil {
+// CreateRole 创建角色
+func (s *roleService) CreateRole(req dto.CreateRoleRequest) (*models.RoleModel, error) {
+	role := &models.RoleModel{
+		Name:        req.Name,
+		Description: req.Description,
+		Order:       req.Order,
+	}
+	if err := s.db.Create(role).Error; err != nil {
 		return nil, err
 	}
-	return roles, nil
+	return role, nil
 }
 
-// GetRoleByID 根据ID获取角色
-func (s *roleService) GetRoleByID(id uuid.UUID) (*models.RoleModel, error) {
+// UpdateRole 更新角色
+func (s *roleService) UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error) {
 	var role models.RoleModel
-	if err := s.db.First(&role, "id = ?", id).Error; err != nil {
+	if err := s.commonService.GetItemByID(roleId, &role); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("角色不存在")
+		}
+		return nil, err
+	}
+
+	if req.Name != nil {
+		role.Name = *req.Name
+	}
+
+	if req.Description != nil {
+		role.Description = *req.Description
+	}
+
+	if req.Order != nil {
+		role.Order = *req.Order
+	}
+
+	if err := s.db.Save(&role).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil
 }
 
-// CreateRole 创建角色
-func (s *roleService) CreateRole(role *models.RoleModel) error {
-	if err := s.db.Create(role).Error; err != nil {
-		return err
+// GetRoleMenus 获取角色菜单列表
+func (s *roleService) GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error) {
+	var menus []models.MenuModel
+	if err := s.db.Model(&models.RoleModel{ID: roleId}).Association("Menus").Find(&menus); err != nil {
+		return nil, err
 	}
-	return nil
+	return menus, nil
 }
 
-// UpdateRole 更新角色
-func (s *roleService) UpdateRole(role *models.RoleModel) error {
-	if err := s.db.Save(role).Error; err != nil {
-		return err
+// AssignMenus 分配菜单给角色
+func (s *roleService) AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error) {
+	var role models.RoleModel
+	if err := s.commonService.GetItemByID(roleId, &role); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("角色不存在")
+		}
+		return nil, err
 	}
-	return nil
-}
 
-// DeleteRole 删除角色
-func (s *roleService) DeleteRole(id uuid.UUID) error {
-	if err := s.db.Delete(&models.RoleModel{}, "id = ?", id).Error; err != nil {
-		return err
+	// 获取菜单实例
+	var menus []models.MenuModel
+	if err := s.db.Where("id IN ?", req.MenuIDs).Find(&menus).Error; err != nil {
+		return nil, err
 	}
-	return nil
+
+	// 更新角色菜单
+	if err := s.db.Model(&role).Association("Menus").Replace(menus); err != nil {
+		return nil, err
+	}
+
+	return &role, nil
 }

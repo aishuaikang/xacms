@@ -33,10 +33,10 @@ func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddlewa
 		CommonService: commonService,
 		MenuService:   menuService,
 	}
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService(db, commonService)
 	roleHandler := &routes.RoleHandler{
-		Validator:   validator,
-		RoleService: roleService,
+		RoleService:   roleService,
+		CommonService: commonService,
 	}
 	router := routes.NewRouter(server2, userHandler, menuHandler, roleHandler)
 	return router
