@@ -1,4 +1,4 @@
-module new-spbatc-drone-platform
+module xacms
 
 go 1.24.3
 

@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"new-spbatc-drone-platform/internal/server"
-	"new-spbatc-drone-platform/internal/utils"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
+	"xacms/internal/server"
+	"xacms/internal/utils"
 
 	"github.com/gofiber/fiber/v2/log"
 	_ "github.com/joho/godotenv/autoload"

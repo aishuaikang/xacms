@@ -2,9 +2,9 @@ package services
 
 import (
 	"errors"
-	"new-spbatc-drone-platform/internal/server"
-	"new-spbatc-drone-platform/internal/utils"
 	"sort"
+	"xacms/internal/server"
+	"xacms/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

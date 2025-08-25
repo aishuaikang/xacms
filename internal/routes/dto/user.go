@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"new-spbatc-drone-platform/internal/models"
+	"xacms/internal/models"
 
 	"github.com/google/uuid"
 )

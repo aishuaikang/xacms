@@ -3,9 +3,9 @@ package database
 import (
 	"fmt"
 	"log"
-	"new-spbatc-drone-platform/internal/models"
 	"os"
 	"sync"
+	"xacms/internal/models"
 
 	_ "github.com/joho/godotenv/autoload"
 	"gorm.io/driver/mysql"

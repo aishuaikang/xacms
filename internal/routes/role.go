@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"new-spbatc-drone-platform/internal/models"
-	"new-spbatc-drone-platform/internal/routes/dto"
-	"new-spbatc-drone-platform/internal/services"
+	"xacms/internal/models"
+	"xacms/internal/routes/dto"
+	"xacms/internal/services"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"

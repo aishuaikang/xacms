@@ -2,10 +2,10 @@ package services
 
 import (
 	"errors"
-	"new-spbatc-drone-platform/internal/models"
-	"new-spbatc-drone-platform/internal/routes/dto"
-	"new-spbatc-drone-platform/internal/server"
-	"new-spbatc-drone-platform/internal/utils"
+	"xacms/internal/models"
+	"xacms/internal/routes/dto"
+	"xacms/internal/server"
+	"xacms/internal/utils"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"

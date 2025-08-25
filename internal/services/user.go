@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
-	"new-spbatc-drone-platform/internal/models"
-	"new-spbatc-drone-platform/internal/routes/dto"
+	"xacms/internal/models"
+	"xacms/internal/routes/dto"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

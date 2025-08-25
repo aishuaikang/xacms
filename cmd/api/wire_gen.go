@@ -7,14 +7,12 @@
 package main
 
 import (
-	"new-spbatc-drone-platform/internal/database"
-	"new-spbatc-drone-platform/internal/routes"
-	"new-spbatc-drone-platform/internal/server"
-	"new-spbatc-drone-platform/internal/services"
-	"new-spbatc-drone-platform/internal/utils"
-)
+	"xacms/internal/database"
+	"xacms/internal/routes"
+	"xacms/internal/server"
+	"xacms/internal/services"
+	"xacms/internal/utils"
 
-import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
