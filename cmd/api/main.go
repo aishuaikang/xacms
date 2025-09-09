@@ -3,16 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
+	"xacms/internal/pkg/config"
 	"xacms/internal/server"
 	"xacms/internal/utils"
 
 	"github.com/gofiber/fiber/v2/log"
-	_ "github.com/joho/godotenv/autoload"
 )
 
 func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
@@ -41,19 +39,23 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 }
 
 func main() {
-	// _, cancel := context.WithCancel(context.Background())
-	// defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cfg := config.NewConfig()
+
+	log.SetLevel(cfg.Log.Level)
 
 	server := server.NewFiberServer()
 
-	wireRouter(server, utils.NewValidationMiddleware()).RegisterRoutes()
+	wireRouter(ctx, cfg, server, utils.NewValidationMiddleware()).RegisterRoutes()
 
 	// 创建一个完成通道，在关机完成后发出信号
 	done := make(chan bool, 1)
 
 	go func() {
-		port, _ := strconv.Atoi(os.Getenv("PORT"))
-		err := server.Listen(fmt.Sprintf(":%d", port))
+		// port, _ := strconv.Atoi(os.Getenv("PORT"))
+		err := server.Listen(fmt.Sprintf(":%d", cfg.Server.Port))
 		if err != nil {
 			panic(fmt.Sprintf("HTTP服务器错误: %s", err))
 		}

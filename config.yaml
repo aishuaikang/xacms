@@ -1,0 +1,48 @@
+log:
+    # LevelTrace Level = iota 0
+    # LevelDebug 1
+    # LevelInfo 2
+    # LevelWarn 3
+    # LevelError 4
+    # LevelFatal 5
+    # LevelPanic 6
+    level: 1
+    enabled: false
+database:
+    name: "spbatc.db"
+
+server:
+    port: 8099
+
+# account:
+#     init-password: 123456
+
+# jwt:
+#     signing-key: aaa123
+#     expires-time: 7d
+#     buffer-time: 1d
+#     issuer: qmPlus
+
+configuration:
+    # # 1关使用侦测设备默认的gps 2开使用专用的gps模块
+    # gpsSwitch: 1
+    # # 1测向开 2 侧向关
+    # orientationSwitch: 2
+
+    # fpv服务
+    fpvPort: 10000
+    # gps服务
+    gpsPort: 10001
+    #解析服务
+    parsePort: 10002
+
+    # 刷新时间(建议10秒以上）
+    # ttl: 60
+    # # 扫频间隔(必须带.0)
+    # similarThreshold: 15.0
+    # # 锁频间隔
+    # lockFrequency: 5
+    # # 侧向策略 1-定向后侧向 2-直接侧向
+    # lateralStrategy: 1
+    # #侧率 1 关 2开
+    # lateralStrategySwitch: 1
