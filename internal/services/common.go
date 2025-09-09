@@ -39,9 +39,12 @@ func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware, fiberS
 
 // GetItems 获取多个数据
 func (s *commonService) GetItems(model any) error {
-	// 如果有 order 字段则对 order 字段进行排序，其次在进行创建时间排序
+	// 先尝试按 order 字段排序，如果失败则只按创建时间排序
 	if err := s.db.Order("`order` ASC, created_at DESC").Find(model).Error; err != nil {
-		return err
+		// 如果 order 字段不存在，回退到只按创建时间排序
+		if err := s.db.Order("created_at DESC").Find(model).Error; err != nil {
+			return err
+		}
 	}
 	return nil
 }

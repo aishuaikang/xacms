@@ -7,4 +7,5 @@ var ServicesSet = wire.NewSet(
 	NewRoleService,
 	NewMenuService,
 	NewCommonService,
+	NewDeviceService,
 )

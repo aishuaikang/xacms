@@ -3,7 +3,7 @@
 package main
 
 import (
-	"xacms/internal/database"
+	"xacms/internal/pkg/database"
 	"xacms/internal/routes"
 	"xacms/internal/server"
 	"xacms/internal/services"

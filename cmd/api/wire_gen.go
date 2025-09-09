@@ -7,7 +7,7 @@
 package main
 
 import (
-	"xacms/internal/database"
+	"xacms/internal/pkg/database"
 	"xacms/internal/routes"
 	"xacms/internal/server"
 	"xacms/internal/services"
@@ -38,6 +38,11 @@ func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddlewa
 		RoleService:   roleService,
 		CommonService: commonService,
 	}
-	router := routes.NewRouter(server2, userHandler, menuHandler, roleHandler)
+	deviceService := services.NewDeviceService(db, commonService)
+	deviceHandler := &routes.DeviceHandler{
+		DeviceService: deviceService,
+		CommonService: commonService,
+	}
+	router := routes.NewRouter(server2, userHandler, menuHandler, roleHandler, deviceHandler)
 	return router
 }

@@ -23,6 +23,7 @@ func NewRouter(server *server.FiberServer,
 	userHandler *UserHandler,
 	menuHandler *MenuHandler,
 	roleHandler *RoleHandler,
+	deviceHandler *DeviceHandler,
 ) *Router {
 	return &Router{
 		server: server,
@@ -30,6 +31,7 @@ func NewRouter(server *server.FiberServer,
 			userHandler,
 			menuHandler,
 			roleHandler,
+			deviceHandler,
 		},
 	}
 }

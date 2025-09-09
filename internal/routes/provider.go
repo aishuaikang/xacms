@@ -6,5 +6,6 @@ var RoutesSet = wire.NewSet(
 	wire.Struct(new(RoleHandler), "*"),
 	wire.Struct(new(MenuHandler), "*"),
 	wire.Struct(new(UserHandler), "*"),
+	wire.Struct(new(DeviceHandler), "*"),
 	NewRouter,
 )

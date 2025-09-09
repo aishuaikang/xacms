@@ -5,10 +5,10 @@ import (
 	"xacms/internal/routes/dto"
 	"xacms/internal/services"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
+	"github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
 )
 
@@ -55,15 +55,13 @@ func (h *MenuHandler) CreateMenu(c *fiber.Ctx) error {
 	// 创建菜单
 	menu, err := h.MenuService.CreateMenu(&req)
 	if err != nil {
-		log.Errorf("创建菜单失败: %#v", err)
-
-		if mysqlErr, ok := err.(*mysql.MySQLError); ok {
-			if mysqlErr.Number == 1062 {
+		log.Errorf("创建菜单失败: %v", err)
+		if sqliteErr, ok := err.(sqlite3.Error); ok {
+			if sqliteErr.Code == sqlite3.ErrConstraint {
 				return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "菜单已存在"))
 			}
 		}
 
-		log.Errorf("创建菜单失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "创建菜单失败"))
 	}
 
@@ -111,6 +109,12 @@ func (h *MenuHandler) UpdateMenu(c *fiber.Ctx) error {
 	// 更新菜单
 	menu, err := h.MenuService.UpdateMenu(menuUUID, &req)
 	if err != nil {
+		log.Errorf("更新菜单失败: %v", err)
+		if sqliteErr, ok := err.(sqlite3.Error); ok {
+			if sqliteErr.Code == sqlite3.ErrConstraint {
+				return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "菜单已存在"))
+			}
+		}
 		log.Errorf("更新菜单失败: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "更新菜单失败"))
 	}
