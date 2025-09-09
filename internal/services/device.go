@@ -13,6 +13,7 @@ import (
 type DeviceService interface {
 	CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error)
 	UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error)
+	InitDevices() ([]models.DeviceModel, error)
 }
 
 // deviceService 设备服务实现
@@ -124,4 +125,13 @@ func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceReque
 		return nil, err
 	}
 	return &user, nil
+}
+
+// InitDevices 初始化设备列表
+func (s *deviceService) InitDevices() ([]models.DeviceModel, error) {
+	var devices []models.DeviceModel
+	if err := s.db.Find(&devices).Error; err != nil {
+		return nil, err
+	}
+	return devices, nil
 }

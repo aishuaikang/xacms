@@ -41,6 +41,9 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 }
 
 func main() {
+	// _, cancel := context.WithCancel(context.Background())
+	// defer cancel()
+
 	server := server.NewFiberServer()
 
 	wireRouter(server, utils.NewValidationMiddleware()).RegisterRoutes()

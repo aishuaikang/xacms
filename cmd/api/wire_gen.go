@@ -39,10 +39,7 @@ func wireRouter(server2 *server.FiberServer, validator *utils.ValidationMiddlewa
 		CommonService: commonService,
 	}
 	deviceService := services.NewDeviceService(db, commonService)
-	deviceHandler := &routes.DeviceHandler{
-		DeviceService: deviceService,
-		CommonService: commonService,
-	}
+	deviceHandler := routes.NewDeviceHandler(deviceService, commonService)
 	router := routes.NewRouter(server2, userHandler, menuHandler, roleHandler, deviceHandler)
 	return router
 }
