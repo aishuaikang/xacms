@@ -12,8 +12,8 @@ type CreateDeviceRequest struct {
 	DetectionPort int    `json:"detection_port" validate:"required"` // 侦测模块端口
 
 	// 解析模块
-	AnalysisID int    `json:"analysis_id" validate:"required"` // 解析模块ID
-	AnalysisIP string `json:"analysis_ip" validate:"required"` // 解析模块IP
+	ParseID int    `json:"parse_id" validate:"required"` // 解析模块ID
+	ParseIP string `json:"parse_ip" validate:"required"` // 解析模块IP
 
 	// FPV模块
 	FPVIP          string `json:"fpv_ip" validate:"required"`           // FPV模块IP
@@ -36,8 +36,8 @@ type UpdateDeviceRequest struct {
 	DetectionPort *int    `json:"detection_port" validate:"omitempty"` // 侦测模块端口
 
 	// 解析模块
-	AnalysisID *int    `json:"analysis_id" validate:"omitempty"` // 解析模块ID
-	AnalysisIP *string `json:"analysis_ip" validate:"omitempty"` // 解析模块IP
+	ParseID *int    `json:"parse_id" validate:"omitempty"` // 解析模块ID
+	ParseIP *string `json:"parse_ip" validate:"omitempty"` // 解析模块IP
 
 	// FPV模块
 	FPVIP          *string `json:"fpv_ip" validate:"omitempty"`           // FPV模块IP

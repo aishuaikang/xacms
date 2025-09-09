@@ -24,8 +24,10 @@ type DeviceHandler struct {
 	Ctx           context.Context
 	DeviceService services.DeviceService
 	CommonService services.CommonService
+	CommonStore   store.CommonStore
 	DeviceStore   store.DeviceStore
 	FPVStore      store.FPVStore
+	ParseStore    store.ParseStore
 }
 
 // RegisterRoutes 注册设备相关路由
@@ -43,6 +45,10 @@ func (h *DeviceHandler) RegisterRoutes(router fiber.Router) {
 
 	// 实时获取 fpv 警告数据
 	deviceGroup.Get("/fpv/sse", h.FPVWaringDataListSSE).Name("实时获取FPV警告数据")
+
+	// 实时获取 parse 数据
+	deviceGroup.Get("/parse/sse", h.ParseDataListSSE).Name("实时获取Parse数据")
+
 }
 
 // GetDevices 获取设备列表
@@ -181,7 +187,7 @@ func (h *DeviceHandler) DeviceListSSE(c *fiber.Ctx) error {
 
 			case <-ticker.C:
 				// TODO: 仅发送变化的设备数据以优化性能
-				devices := h.DeviceStore.GetDeviceList()
+				devices := h.CommonStore.GetDeviceList()
 				data, err := sonic.Marshal(devices)
 				if err != nil {
 					fmt.Fprintf(w, "data: {\"error\":\"marshal failed\"}\n\n")
@@ -239,4 +245,41 @@ func (h *DeviceHandler) FPVWaringDataListSSE(c *fiber.Ctx) error {
 	}))
 
 	return nil
+}
+
+// ParseDataListSSE 使用 SSE 实时获取 Parse 数据
+func (h *DeviceHandler) ParseDataListSSE(c *fiber.Ctx) error {
+
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("Transfer-Encoding", "chunked")
+
+	c.Status(fiber.StatusOK).Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-h.Ctx.Done():
+				return
+			case <-ticker.C:
+				parseDataList := h.ParseStore.GetParseDataList()
+				data, err := sonic.Marshal(parseDataList)
+				if err != nil {
+					fmt.Fprintf(w, "data: {\"error\":\"marshal failed\"}\n\n")
+				} else {
+					fmt.Fprintf(w, "data: %s\n\n", data)
+				}
+
+				err = w.Flush()
+				if err != nil {
+					log.Errorf("刷新连接时发生错误: %v. 关闭 SSE 连接", err)
+					return
+				}
+			}
+		}
+	}))
+
+	return nil
+
 }

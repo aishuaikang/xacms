@@ -44,8 +44,8 @@ func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.Devic
 		DetectionPort: req.DetectionPort,
 
 		// 解析模块
-		AnalysisID: req.AnalysisID,
-		AnalysisIP: req.AnalysisIP,
+		ParseID: req.ParseID,
+		ParseIP: req.ParseIP,
 
 		// FPV模块
 		FPVIP:          req.FPVIP,
@@ -97,12 +97,12 @@ func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceReque
 
 	}
 
-	if req.AnalysisID != nil {
-		user.AnalysisID = *req.AnalysisID
+	if req.ParseID != nil {
+		user.ParseID = *req.ParseID
 	}
 
-	if req.AnalysisIP != nil {
-		user.AnalysisIP = *req.AnalysisIP
+	if req.ParseIP != nil {
+		user.ParseIP = *req.ParseIP
 	}
 
 	if req.FPVIP != nil {
@@ -130,8 +130,9 @@ func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceReque
 // InitDevices 初始化设备列表
 func (s *deviceService) InitDevices() ([]models.DeviceModel, error) {
 	var devices []models.DeviceModel
-	if err := s.db.Find(&devices).Error; err != nil {
+	if err := s.commonService.GetItems(&devices); err != nil {
 		return nil, err
 	}
+
 	return devices, nil
 }

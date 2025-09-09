@@ -18,8 +18,8 @@ type DeviceModel struct {
 	DetectionPort int    `json:"detection_port" gorm:"comment:侦测模块端口"`                         // 侦测模块端口
 
 	// 解析模块
-	AnalysisID int    `json:"analysis_id" gorm:"uniqueIndex;type:char(36);comment:解析模块ID"` // 解析模块ID
-	AnalysisIP string `json:"analysis_ip" gorm:"size:64;comment:解析模块IP"`                   // 解析模块IP
+	ParseID int    `json:"parse_id" gorm:"uniqueIndex;type:char(36);comment:解析模块ID"` // 解析模块ID
+	ParseIP string `json:"parse_ip" gorm:"size:64;comment:解析模块IP"`                   // 解析模块IP
 
 	// FPV模块
 	FPVIP          string `json:"fpv_ip" gorm:"size:64;comment:FPV模块IP"`            // FPV模块IP

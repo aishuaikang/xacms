@@ -38,14 +38,18 @@ func wireRouter(ctx context.Context, cfg *config.Config, server2 *server.FiberSe
 		CommonService: commonService,
 	}
 	deviceService := services.NewDeviceService(db, commonService)
-	deviceStore := store.NewDeviceStore(ctx, deviceService)
+	commonStore := store.NewCommonStore(ctx)
+	deviceStore := store.NewDeviceStore(ctx, deviceService, commonStore)
 	fpvStore := store.NewFPVStore(ctx, cfg)
+	parseStore := store.NewParseStore(ctx, cfg, commonStore)
 	deviceHandler := &routes.DeviceHandler{
 		Ctx:           ctx,
 		DeviceService: deviceService,
 		CommonService: commonService,
+		CommonStore:   commonStore,
 		DeviceStore:   deviceStore,
 		FPVStore:      fpvStore,
+		ParseStore:    parseStore,
 	}
 	router := routes.NewRouter(server2, userHandler, menuHandler, roleHandler, deviceHandler)
 	return router
