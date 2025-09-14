@@ -5,14 +5,14 @@ import (
 	"xacms/internal/dto"
 	"xacms/internal/models"
 
-	"gorm.io/datatypes"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // DeviceService 设备 服务接口
 type DeviceService interface {
 	CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error)
-	UpdateDevice(userId datatypes.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error)
+	UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error)
 	InitDevices() ([]models.DeviceModel, error)
 }
 
@@ -33,7 +33,7 @@ func NewDeviceService(db *gorm.DB, commonService CommonService) DeviceService {
 // CreateDevice 创建设备
 func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error) {
 	deviceData := &models.DeviceModel{
-		ID:        datatypes.NewUUIDv4(),
+		ID:        uuid.New(),
 		Name:      req.Name,
 		Longitude: req.Longitude,
 		Latitude:  req.Latitude,
@@ -62,7 +62,7 @@ func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.Devic
 }
 
 // UpdateDevice 修改设备
-func (s *deviceService) UpdateDevice(userId datatypes.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error) {
+func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error) {
 	var user models.DeviceModel
 	if err := s.commonService.GetItemByID(userId, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
-	"gorm.io/datatypes"
+	"github.com/google/uuid"
 )
 
 // DroneTargetHandler 无人机目标处理器
@@ -54,8 +54,8 @@ func (h *DroneTargetHandler) DeleteDroneTarget(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	userUUID := datatypes.UUID{}
-	if err := userUUID.Scan(id); err != nil {
+	userUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
 	}
 

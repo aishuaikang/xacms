@@ -8,15 +8,15 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
-	"gorm.io/datatypes"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // CommonService 公共服务接口
 type CommonService interface {
 	GetItems(model any) error
-	GetItemByID(id datatypes.UUID, model any) error
-	DeleteItemByID(model any, id datatypes.UUID) error
+	GetItemByID(id uuid.UUID, model any) error
+	DeleteItemByID(model any, id uuid.UUID) error
 	ValidateBody(c *fiber.Ctx, model any) error
 	ValidateQuery(c *fiber.Ctx, model any) error
 	GetAPIs() []fiber.Route
@@ -51,7 +51,7 @@ func (s *commonService) GetItems(model any) error {
 }
 
 // GetItemByID 根据ID获取单个数据
-func (s *commonService) GetItemByID(id datatypes.UUID, model any) error {
+func (s *commonService) GetItemByID(id uuid.UUID, model any) error {
 	if err := s.db.First(model, "id = ?", id).Error; err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (s *commonService) GetItemByID(id datatypes.UUID, model any) error {
 }
 
 // DeleteItemByID 根据ID删除单个数据
-func (s *commonService) DeleteItemByID(model any, id datatypes.UUID) error {
+func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
 	if err := s.db.Delete(model, "id = ?", id).Error; err != nil {
 		return err
 	}

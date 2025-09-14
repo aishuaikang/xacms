@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -21,7 +22,7 @@ type Trajectory struct {
 }
 
 type DroneTargetModel struct {
-	ID            datatypes.UUID                  `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"` // 唯一ID
+	ID            uuid.UUID                       `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"` // 唯一ID
 	Serial        string                          `json:"serial" gorm:"size:64;not null;comment:目标序列号"`    // 目标序列号
 	Model         string                          `json:"model" gorm:"size:64;not null;comment:无人机型号"`     // 无人机型号
 	Device        int                             `json:"device" gorm:"size:64;not null;comment:捕获设备"`     // 捕获设备
@@ -46,8 +47,8 @@ func (DroneTargetModel) TableName() string {
 
 // BeforeCreate GORM钩子，在创建记录之前调用
 func (d *DroneTargetModel) BeforeCreate(tx *gorm.DB) (err error) {
-	if d.ID.IsEmptyPtr() {
-		d.ID = datatypes.NewUUIDv4()
+	if d.ID == uuid.Nil {
+		d.ID = uuid.New()
 	}
 	// 如果 Status 是零值（StatusDisabled = 0），但我们想要明确设置它
 	// 可以根据业务需求决定是否需要默认值

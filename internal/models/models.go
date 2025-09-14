@@ -55,8 +55,8 @@ type CustomTime time.Time
 // MarshalJSON 自定义时间的 JSON 序列化
 func (ct CustomTime) MarshalJSON() ([]byte, error) {
 	formatted := time.Time(ct).Format(time.DateTime)
-	log.Infof("格式化时间: %s", formatted)
-	return []byte(formatted), nil
+	log.Debugf("格式化时间: %s", formatted)
+	return []byte(`"` + formatted + `"`), nil
 }
 
 // UnmarshalJSON 自定义时间的 JSON 反序列化
@@ -67,7 +67,7 @@ func (ct *CustomTime) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	*ct = CustomTime(t)
-	log.Infof("反序列化时间: %s", t)
+	log.Debugf("反序列化时间: %s", t)
 	return nil
 }
 
@@ -78,7 +78,7 @@ func (ct CustomTime) Value() (driver.Value, error) {
 		log.Warn("时间为零值，返回 nil")
 		return nil, nil
 	}
-	log.Infof("存储时间: %s", t)
+	log.Debugf("存储时间: %s", t)
 	return t, nil
 }
 
@@ -96,7 +96,7 @@ func (ct *CustomTime) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case time.Time:
 		*ct = CustomTime(v)
-		log.Infof("扫描时间: %s", v)
+		log.Debugf("扫描时间: %s", v)
 		return nil
 	default:
 		log.Errorf("不支持的扫描类型: %T", v)

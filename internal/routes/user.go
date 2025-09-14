@@ -7,7 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
-	"gorm.io/datatypes"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -71,8 +71,8 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	userUUID := datatypes.UUID{}
-	if err := userUUID.Scan(id); err != nil {
+	userUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
 	}
 
@@ -94,8 +94,8 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	userUUID := datatypes.UUID{}
-	if err := userUUID.Scan(id); err != nil {
+	userUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
 	}
 
@@ -120,8 +120,8 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	userUUID := datatypes.UUID{}
-	if err := userUUID.Scan(id); err != nil {
+	userUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
 	}
 
@@ -139,8 +139,8 @@ func (h *UserHandler) AssignRole(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	userUUID := datatypes.UUID{}
-	if err := userUUID.Scan(id); err != nil {
+	userUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
 	}
 

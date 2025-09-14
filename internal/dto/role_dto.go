@@ -1,6 +1,6 @@
 package dto
 
-import "gorm.io/datatypes"
+import "github.com/google/uuid"
 
 // CreateRoleRequest 创建角色请求结构
 type CreateRoleRequest struct {
@@ -18,5 +18,5 @@ type UpdateRoleRequest struct {
 
 // AssignMenusRequest 分配菜单请求结构
 type AssignMenusRequest struct {
-	MenuIDs []datatypes.UUID `json:"menu_ids" validate:"required,min=1,dive,uuid"`
+	MenuIDs []uuid.UUID `json:"menu_ids" validate:"required,min=1,dive,uuid"`
 }

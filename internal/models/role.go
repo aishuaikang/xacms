@@ -1,15 +1,15 @@
 package models
 
 import (
-	"gorm.io/datatypes"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type RoleModel struct {
-	ID          datatypes.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"`                     // 唯一ID
-	Name        string         `json:"name" gorm:"uniqueIndex:idx_role_name;size:64;not null;comment:角色名称"` // 角色名称
-	Description string         `json:"description" gorm:"size:255;comment:角色描述"`                            // 角色描述
-	Order       uint           `json:"order" gorm:"type:int;not null;default:0;comment:排序"`                 // 排序
+	ID          uuid.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"`                     // 唯一ID
+	Name        string    `json:"name" gorm:"uniqueIndex:idx_role_name;size:64;not null;comment:角色名称"` // 角色名称
+	Description string    `json:"description" gorm:"size:255;comment:角色描述"`                            // 角色描述
+	Order       uint      `json:"order" gorm:"type:int;not null;default:0;comment:排序"`                 // 排序
 
 	Menus []*MenuModel `json:"menus" gorm:"many2many:role_menus;comment:角色菜单"` // 角色菜单
 
@@ -25,8 +25,8 @@ func (RoleModel) TableName() string {
 
 // BeforeCreate GORM钩子，在创建记录之前调用
 func (r *RoleModel) BeforeCreate(tx *gorm.DB) (err error) {
-	if r.ID.IsEmptyPtr() {
-		r.ID = datatypes.NewUUIDv4()
+	if r.ID == uuid.Nil {
+		r.ID = uuid.New()
 	}
 	return
 }

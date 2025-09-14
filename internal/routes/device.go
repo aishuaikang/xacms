@@ -13,9 +13,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
 	"github.com/valyala/fasthttp"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -95,8 +95,8 @@ func (h *DeviceHandler) GetDevice(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	deviceUUID := datatypes.UUID{}
-	if err := deviceUUID.Scan(id); err != nil {
+	deviceUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
 	}
 
@@ -118,8 +118,8 @@ func (h *DeviceHandler) UpdateDevice(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	deviceUUID := datatypes.UUID{}
-	if err := deviceUUID.Scan(id); err != nil {
+	deviceUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
 	}
 
@@ -153,8 +153,8 @@ func (h *DeviceHandler) DeleteDevice(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	deviceUUID := datatypes.UUID{}
-	if err := deviceUUID.Scan(id); err != nil {
+	deviceUUID, err := uuid.Parse(id)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
 	}
 
