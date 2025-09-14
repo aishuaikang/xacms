@@ -6,5 +6,6 @@ var TaskSet = wire.NewSet(
 	NewDroneTargetTask,
 	NewDecryptTokenTask,
 	NewDevicesTask,
+	NewParseTask,
 	NewTasks,
 )

@@ -8,12 +8,13 @@ type Tasks struct {
 	tasks []TaskExecutor
 }
 
-func NewTasks(decryptTokenTask *DecryptTokenTask, devicesTask *DevicesTask, droneTargetTask *DroneTargetTask) *Tasks {
+func NewTasks(decryptTokenTask *DecryptTokenTask, devicesTask *DevicesTask, droneTargetTask *DroneTargetTask, parseTask *ParseTask) *Tasks {
 	return &Tasks{
 		tasks: []TaskExecutor{
 			decryptTokenTask,
 			devicesTask,
 			droneTargetTask,
+			parseTask,
 		},
 	}
 }

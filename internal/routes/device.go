@@ -27,7 +27,7 @@ type DeviceHandler struct {
 
 	DevicesCache        cache.DevicesCache
 	FPVWarningDataCache cache.FPVWarningDataCache
-	ParseDataCache      cache.ParseDataCache
+	ParseCache          cache.ParseCache
 }
 
 // RegisterRoutes 注册设备相关路由
@@ -263,7 +263,7 @@ func (h *DeviceHandler) ParseDataListSSE(c *fiber.Ctx) error {
 			case <-h.Ctx.Done():
 				return
 			case <-ticker.C:
-				parseDataList := h.ParseDataCache.GetParseDataList()
+				parseDataList := h.ParseCache.GetParseDataList()
 				data, err := sonic.Marshal(parseDataList)
 				if err != nil {
 					fmt.Fprintf(w, "data: {\"error\":\"marshal failed\"}\n\n")

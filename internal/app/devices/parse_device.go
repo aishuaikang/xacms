@@ -23,20 +23,20 @@ type ParseDevice struct {
 	config *config.Config
 
 	decryptTokenCache cache.DecryptTokenCache
-	parseDataCache    cache.ParseDataCache
+	parseCache        cache.ParseCache
 	devicesCache      cache.DevicesCache
 	droneTargetCache  cache.DroneTargetCache
 
 	parseConnection *conn_.ParseConnection
 }
 
-func NewParseDevice(ctx context.Context, config *config.Config, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseDataCache, devicesCache cache.DevicesCache, droneTargetCache cache.DroneTargetCache, parseConnection *conn_.ParseConnection) *ParseDevice {
+func NewParseDevice(ctx context.Context, config *config.Config, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseCache, devicesCache cache.DevicesCache, droneTargetCache cache.DroneTargetCache, parseConnection *conn_.ParseConnection) *ParseDevice {
 	parseDevice := &ParseDevice{
 		ctx:               ctx,
 		config:            config,
 		decryptTokenCache: decryptTokenCache,
 		devicesCache:      devicesCache,
-		parseDataCache:    parseDataCache,
+		parseCache:        parseDataCache,
 		droneTargetCache:  droneTargetCache,
 		parseConnection:   parseConnection,
 	}
@@ -160,7 +160,7 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *mo
 	// 查找符合条件的定位数据
 	var parseDataIndex int = -1
 	var parseData dto.ParseData
-	parseDataLists := s.parseDataCache.GetParseDataList()
+	parseDataLists := s.parseCache.GetParseDataList()
 	for i, item := range parseDataLists {
 		if item.Serial == newParseData.Serial && item.Device == newParseData.Device {
 			parseDataIndex = i
@@ -244,16 +244,16 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *mo
 		}
 
 		// 更新已有的定位数据
-		s.parseDataCache.UpdateParseDataAtIndex(parseDataIndex, parseData)
+		s.parseCache.UpdateParseDataAtIndex(parseDataIndex, parseData)
 	} else {
 		// 添加新的定位数据
-		s.parseDataCache.AddParseData(newParseData)
+		s.parseCache.AddParseData(newParseData)
 	}
 
 	// 只对非DJI-Drone模型排序
-	parseDataListLength := s.parseDataCache.GetParseDataListLength()
+	parseDataListLength := s.parseCache.GetParseDataListLength()
 	if newParseData.Model != "DJI-Drone" && parseDataListLength >= 2 {
-		s.parseDataCache.SortParseDataListByExpires()
+		s.parseCache.SortParseDataListByExpires()
 
 	}
 }

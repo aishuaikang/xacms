@@ -39,7 +39,7 @@ configuration:
     strikePort: 10003
 
     # 刷新时间(建议10秒以上）
-    # ttl: 60
+    ttl: 60
     # # 扫频间隔(必须带.0)
     # similarThreshold: 15.0
     # # 锁频间隔
