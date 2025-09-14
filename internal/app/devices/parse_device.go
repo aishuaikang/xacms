@@ -11,7 +11,6 @@ import (
 	conn_ "xacms/internal/app/devices/conn"
 	"xacms/internal/cache"
 	"xacms/internal/dto"
-	"xacms/internal/models"
 	"xacms/internal/pkg/config"
 	"xacms/internal/pkg/utils"
 
@@ -156,7 +155,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 	}
 }
 
-func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *models.DeviceModel) {
+func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dto.DeviceInfo) {
 	// 查找符合条件的定位数据
 	var parseDataIndex int = -1
 	var parseData dto.ParseData

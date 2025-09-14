@@ -2,44 +2,48 @@ package cache
 
 import (
 	"sync"
-	"xacms/internal/models"
+	"xacms/internal/dto"
+	"xacms/internal/services"
 )
 
 type DevicesCache interface {
-	SetDevices(deviceList []models.DeviceModel)
-	GetDevices() []models.DeviceModel
+	SetDevices(deviceList []dto.DeviceInfo)
+	GetDevices() []dto.DeviceInfo
 	NotifyRefresh()
 	GetRefreshChan() <-chan struct{}
-	GetDeviceByParseIP(parseIP string) (*models.DeviceModel, bool)
-	GetDeviceByParseID(parseID int) (*models.DeviceModel, bool)
-	GetDeviceByDetectionID(detectionID int) (*models.DeviceModel, bool)
-	GetDeviceByFPVIP(fpvIP string) (*models.DeviceModel, bool)
+	GetDeviceByParseIP(parseIP string) (*dto.DeviceInfo, bool)
+	GetDeviceByParseID(parseID int) (*dto.DeviceInfo, bool)
+	GetDeviceByDetectionID(detectionID int) (*dto.DeviceInfo, bool)
+	GetDeviceByFPVIP(fpvIP string) (*dto.DeviceInfo, bool)
+	RefreshDevices() error
 }
 
 type devicesCache struct {
-	devices      []models.DeviceModel
+	devices      []dto.DeviceInfo
 	devicesMutex sync.RWMutex
 
 	devicesRefreshSignal chan struct{}
+	deviceService        services.DeviceService
 }
 
-func NewDevicesCache() DevicesCache {
+func NewDevicesCache(deviceService services.DeviceService) DevicesCache {
 	return &devicesCache{
-		devices:              []models.DeviceModel{},
+		devices:              []dto.DeviceInfo{},
 		devicesMutex:         sync.RWMutex{},
 		devicesRefreshSignal: make(chan struct{}, 1),
+		deviceService:        deviceService,
 	}
 }
 
 // SetDevices 设置设备列表
-func (c *devicesCache) SetDevices(devices []models.DeviceModel) {
+func (c *devicesCache) SetDevices(devices []dto.DeviceInfo) {
 	c.devicesMutex.Lock()
 	defer c.devicesMutex.Unlock()
 	c.devices = devices
 }
 
 // GetDevices 获取设备列表
-func (c *devicesCache) GetDevices() []models.DeviceModel {
+func (c *devicesCache) GetDevices() []dto.DeviceInfo {
 	c.devicesMutex.RLock()
 	defer c.devicesMutex.RUnlock()
 	return c.devices
@@ -56,7 +60,7 @@ func (c *devicesCache) GetRefreshChan() <-chan struct{} {
 }
 
 // GetDeviceByParseIP 根据解析IP获取设备
-func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*models.DeviceModel, bool) {
+func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*dto.DeviceInfo, bool) {
 	devices := c.GetDevices()
 	for _, device := range devices {
 		if device.ParseIP == parseIP {
@@ -67,7 +71,7 @@ func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*models.DeviceModel, 
 }
 
 // GetDeviceByParseID 根据解析ID获取设备侦测ID
-func (c *devicesCache) GetDeviceByParseID(parseID int) (*models.DeviceModel, bool) {
+func (c *devicesCache) GetDeviceByParseID(parseID int) (*dto.DeviceInfo, bool) {
 	devices := c.GetDevices()
 
 	for _, device := range devices {
@@ -79,7 +83,7 @@ func (c *devicesCache) GetDeviceByParseID(parseID int) (*models.DeviceModel, boo
 }
 
 // GetDeviceByDetectionID 根据侦测ID获取设备信息
-func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*models.DeviceModel, bool) {
+func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*dto.DeviceInfo, bool) {
 	devices := c.GetDevices()
 
 	for _, device := range devices {
@@ -91,7 +95,7 @@ func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*models.DeviceMo
 }
 
 // GetDeviceByFPVIP 根据FPVIP获取设备信息
-func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*models.DeviceModel, bool) {
+func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*dto.DeviceInfo, bool) {
 	devices := c.GetDevices()
 	for _, device := range devices {
 		if device.FPVIP == fpvIP {
@@ -99,4 +103,30 @@ func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*models.DeviceModel, bool
 		}
 	}
 	return nil, false
+}
+
+// 将设备信息初始化到缓存中
+func (c *devicesCache) RefreshDevices() error {
+	devices, err := c.deviceService.GetAllDevices()
+	if err != nil {
+		return err
+	}
+
+	var deviceInfos []dto.DeviceInfo
+	for _, device := range devices {
+		deviceInfos = append(deviceInfos, dto.DeviceInfo{
+			DeviceModel:    device,
+			HeartbeatCount: 0,
+			Expires:        0,
+			Status:         dto.DeviceInfoStatusOffline,
+			StrikeInfo: dto.StrikeInfo{
+				Mode:      dto.StrikeModeIdle,
+				Status:    dto.StrikeStatusNotStriked,
+				Frequency: nil,
+			},
+		})
+	}
+
+	c.SetDevices(deviceInfos)
+	return nil
 }

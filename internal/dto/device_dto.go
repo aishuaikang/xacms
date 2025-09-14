@@ -1,5 +1,7 @@
 package dto
 
+import "xacms/internal/models"
+
 // CreateDeviceRequest 创建设备请求结构
 type CreateDeviceRequest struct {
 	Name      string  `json:"name" validate:"required,min=2,max=64"`
@@ -47,17 +49,42 @@ type UpdateDeviceRequest struct {
 	StrikeIP *string `json:"strike_ip" validate:"omitempty"` // 打击模块IP
 }
 
-// // StrikeState 打击状态
-// type StrikeState struct {
-// 	Mode      int      `json:"mode"`      // 1-宽频 2-无人值守
-// 	Status    string   `json:"status"`    // 1-宽频 2-无人值守
-// 	Frequency []string `json:"frequency"` // 频段
-// }
+type StrikeMode int
 
-// // DeviceStatusInfo 设备状态信息
-// type DeviceStatusInfo struct {
-// 	HeartbeatCount int   `json:"heartbeat_count"` // 心跳计数
-// 	Expires        int64 `json:"expires"`         // 过期时间戳
-// 	Status         int   `json:"status"`          // 设备状态，0-离线，1-在线
-// 	StrikeState    int   `json:"strike_state"`    // 打击状态，0-未打击，1-打击中，2-打击完成
-// }
+const (
+	StrikeModeIdle       StrikeMode = iota // 空闲
+	StrikeModeBroadband                    // 宽频打击
+	StrikeModeUnattended                   // 无人值守
+)
+
+type StrikeStatus string
+
+const (
+	StrikeStatusNotStriked StrikeStatus = "NotStriked" // 未打击
+	StrikeStatusStriking   StrikeStatus = "Striking"   // 打击中
+	StrikeStatusOffline    StrikeStatus = "Offline"    // 离线
+)
+
+// StrikeInfo 打击状态
+type StrikeInfo struct {
+	Mode      StrikeMode   `json:"mode"`      // 0 空闲 1-宽频打击 2-无人值守
+	Status    StrikeStatus `json:"status"`    // 打击状态，0-未打击，1-打击中，2-离线 "NotStriked", "Striking", "Offline"
+	Frequency []string     `json:"frequency"` // 频段
+}
+
+// DeviceInfoStatus 设备状态枚举
+type DeviceInfoStatus int
+
+const (
+	DeviceInfoStatusOffline DeviceInfoStatus = 0 // 离线
+	DeviceInfoStatusOnline  DeviceInfoStatus = 1 // 在线
+)
+
+// DeviceInfo 设备信息
+type DeviceInfo struct {
+	models.DeviceModel
+	HeartbeatCount int              `json:"heartbeat_count"` // 心跳计数
+	Expires        int64            `json:"expires"`         // 过期时间戳
+	Status         DeviceInfoStatus `json:"status"`          // 设备状态，0-离线，1-在线
+	StrikeInfo     StrikeInfo       `json:"strike_info"`     // 打击状态信息
+}

@@ -24,7 +24,10 @@ import (
 
 func wireRouter(ctx context.Context, cfg *config.Config, server *app.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
 	fpvWarningDataCache := cache.NewFPVWarningDataCache()
-	devicesCache := cache.NewDevicesCache()
+	db := database.NewDB(cfg)
+	commonService := services.NewCommonService(db, validator, server)
+	deviceService := services.NewDeviceService(db, commonService)
+	devicesCache := cache.NewDevicesCache(deviceService)
 	fpvConnection := conn.NewFPVConnection()
 	fpvDevice := devices.NewFPVDevice(ctx, cfg, fpvWarningDataCache, devicesCache, fpvConnection)
 	decryptTokenCache := cache.NewDecryptTokenCache()
@@ -34,10 +37,7 @@ func wireRouter(ctx context.Context, cfg *config.Config, server *app.FiberServer
 	parseDevice := devices.NewParseDevice(ctx, cfg, decryptTokenCache, parseCache, devicesCache, droneTargetCache, parseConnection)
 	devicesDevices := devices.NewDevices(fpvDevice, parseDevice)
 	decryptTokenTask := tasks.NewDecryptTokenTask(ctx, decryptTokenCache)
-	db := database.NewDB(cfg)
-	commonService := services.NewCommonService(db, validator, server)
-	deviceService := services.NewDeviceService(db, commonService)
-	devicesTask := tasks.NewDevicesTask(ctx, devicesCache, deviceService)
+	devicesTask := tasks.NewDevicesTask(ctx, devicesCache)
 	droneTargetService := services.NewDronTargetService(db, commonService)
 	droneTargetTask := tasks.NewDroneTargetTask(ctx, droneTargetCache, droneTargetService)
 	commonCache := cache.NewCommonCache(cfg)

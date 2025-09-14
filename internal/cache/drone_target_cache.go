@@ -122,7 +122,7 @@ func (c *droneTargetCache) addDroneTargetFromParseData(parseData dto.ParseData, 
 
 // updateDroneTargetFromParseData 使用解析数据更新现有的无人机目标
 func (c *droneTargetCache) updateDroneTargetFromParseData(droneTargetIndex int, parseData dto.ParseData, coordValid bool) error {
-	log.Infof("更新无人机目标: %s", parseData.Serial)
+	log.Debugf("更新无人机目标: %s", parseData.Serial)
 	if droneTargetCount := c.GetDroneTargetCount(); droneTargetIndex < 0 || droneTargetIndex >= droneTargetCount {
 		return errors.New("无效的目标索引")
 	}
@@ -165,7 +165,7 @@ func (c *droneTargetCache) updateDroneTargetFromParseData(droneTargetIndex int, 
 		target.Trajectory = append(target.Trajectory, newTrajectory)
 	}
 
-	log.Infof("更新目标 %s 轨迹点: (%.6f, %.6f, %.1f)",
+	log.Debugf("更新目标 %s 轨迹点: (%.6f, %.6f, %.1f)",
 		parseData.Serial, parseData.DroneGPS.Latitude, parseData.DroneGPS.Longitude, parseData.Height)
 	return nil
 }
