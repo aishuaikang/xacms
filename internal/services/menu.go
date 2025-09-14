@@ -2,10 +2,10 @@ package services
 
 import (
 	"errors"
+	"xacms/internal/app"
+	"xacms/internal/dto"
 	"xacms/internal/models"
-	"xacms/internal/routes/dto"
-	"xacms/internal/server"
-	"xacms/internal/utils"
+	"xacms/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
@@ -26,7 +26,7 @@ type menuService struct {
 }
 
 // NewMenuService 创建菜单服务实例
-func NewMenuService(db *gorm.DB, commonService CommonService, fiberServer *server.FiberServer) MenuService {
+func NewMenuService(db *gorm.DB, commonService CommonService, fiberServer *app.FiberServer) MenuService {
 	return &menuService{
 		db:            db,
 		commonService: commonService,

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"xacms/internal/dto"
 
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2/log"
@@ -41,82 +42,7 @@ func IsEncryption(fullLine []byte) bool {
 	return bytes.Contains(fullLine, []byte("byte"))
 }
 
-type GPS struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
-// 无人机类型
-type DroneType int
-
-const (
-	DroneTypeUnknown DroneType = iota // 未知
-	DroneTypeRC                       // 遥控器/飞手
-	DroneTypeUAV                      // 无人机
-	DroneTypeBoth                     // 遥控器和无人机
-)
-
-// Trajectory 轨迹点
-type Trajectory struct {
-	Lat float64 `json:"lat"`
-	Lng float64 `json:"lng"`
-}
-
-// LdResult 距离关系
-type LdResult struct {
-	Azimuth     float64 `json:"azimuth"`     // 方位角
-	Distance    float64 `json:"distance"`    // 距离
-	SensorId    string  `json:"sensor_id"`   // 传感器ID
-	Orientation float64 `json:"orientation"` // 方向
-	DeviceLat   float64 `json:"device_lat"`  // 设备纬度
-	DeviceLon   float64 `json:"device_lon"`  // 设备经度
-	Height      float64 `json:"height"`      // 目标出现的高度
-}
-
-type MType uint
-
-const (
-	MTypeZK  MType = iota + 1 // 中科
-	MTypeSHL                  // 上海L板
-)
-
-type SignType int8
-
-const (
-	SignTypeO2O3   SignType = iota + 1 // O2，O3 飞机的报文格式
-	SignTypeO3Plus                     // O3+, O4飞机的报文格式
-)
-
-type ParseData struct {
-	Device         string       `json:"device"`             // 设备编号
-	Model          string       `json:"model"`              // 设备型号
-	Freq           float64      `json:"freq"`               // 频率
-	RSSI           float64      `json:"rssi"`               // 信号强度
-	Expires        int64        `json:"expires"`            // 过期时间
-	Height         float64      `json:"height"`             // 高度
-	Altitude       float64      `json:"altitude"`           // 海拔
-	EastV          float64      `json:"eastv"`              // 东向速度
-	NorthV         float64      `json:"northv"`             // 北向速度
-	UpV            float64      `json:"upv"`                // 垂直速度
-	Distance       float64      `json:"distance"`           // 距离
-	Serial         string       `json:"serial"`             // 序列号
-	DroneGPS       GPS          `json:"drone_gps"`          // 无人机 GPS 坐标
-	HomeGPS        GPS          `json:"return_positioning"` // 家（起飞点）GPS 坐标
-	PilotGPS       GPS          `json:"rc_gps"`             // 飞行员 GPS 坐标
-	TrajectoryList []Trajectory `json:"trajectory_list"`    // 轨迹
-	MType          MType        `json:"m_type"`             // 1 -zk ,2-上海l板
-	TargetId       string       `json:"target_id"`          // 目标ID
-	LdResult       LdResult     `json:"ld_result"`          // 距离关系
-	DroneType      DroneType    `json:"drone_type"`         // 目标类别:[0-未知,1-遥控器/飞手,2-无人机]
-	InWhiteList    bool         `json:"in_white_list"`      // 是否在白名单内
-	Png            string       `json:"png"`                // base64 编码的图片 二维码
-	Sign           SignType     `json:"sign"`               // 1 O2，O3 飞机的报文格式；O3+, O4飞机的报文格式 2.RID
-	Mac            string       `json:"mac"`                // MAC 地址
-	UpdateTime     int64        `json:"update_time"`        // 更新时间
-	Speed          float64      `json:"speed"`              // 速度
-}
-
-func ParseRID(fullLine []byte, parseData *ParseData) error {
+func ParseRID(fullLine []byte, parseData *dto.ParseData) error {
 
 	fields := splitFields(fullLine)
 	for _, field := range fields {
@@ -128,17 +54,17 @@ func ParseRID(fullLine []byte, parseData *ParseData) error {
 	}
 
 	if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
-		parseData.DroneType = DroneTypeRC
+		parseData.DroneType = dto.DroneTypeRC
 	} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
-		parseData.DroneType = DroneTypeUAV
+		parseData.DroneType = dto.DroneTypeUAV
 	} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
-		parseData.DroneType = DroneTypeBoth
+		parseData.DroneType = dto.DroneTypeBoth
 	}
 
 	parseData.TargetId = parseData.Serial
 	parseData.Expires = time.Now().Unix()
 	parseData.Png, _ = generateQRCodeBase64(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
-	parseData.Sign = SignTypeO3Plus
+	parseData.Sign = dto.SignTypeO3Plus
 
 	return nil
 }
@@ -179,7 +105,7 @@ func parseKV(field []byte) ([]byte, []byte) {
 }
 
 // parseRIDFieldValue 解析 RID 字段值并赋值给 ParseData 结构体
-func parseRIDFieldValue(key string, value string, parseData *ParseData) {
+func parseRIDFieldValue(key string, value string, parseData *dto.ParseData) {
 	if key == "rid ssid" {
 		key = "ssid"
 	}
@@ -208,14 +134,14 @@ func parseRIDFieldValue(key string, value string, parseData *ParseData) {
 	case "freq":
 		parseData.Freq = parseFloat(value)
 	case "ua_type":
-		parseData.MType = MType(parseFloat(value))
+		parseData.MType = dto.MType(parseFloat(value))
 	case "mac":
 		parseData.Mac = value
 	}
 }
 
 // parseGPS 解析 GPS 字符串并赋值给 GPS 结构体
-func parseGPS(value string, gps *GPS) {
+func parseGPS(value string, gps *dto.GPS) {
 	if gps == nil {
 		return
 	}
@@ -294,7 +220,7 @@ func generateQRCodeBase64(lon, lat float64) (string, error) {
 }
 
 // ParseDID 解析 DID 字段值并赋值给 ParseData 结构体
-func ParseDID(fullLine []byte, parseData *ParseData) error {
+func ParseDID(fullLine []byte, parseData *dto.ParseData) error {
 	fields := splitFields(fullLine)
 	for _, field := range fields {
 		key, value := parseKV(field)
@@ -309,10 +235,14 @@ func ParseDID(fullLine []byte, parseData *ParseData) error {
 	return nil
 }
 
-func parseDIDFieldValue(key string, value string, parseData *ParseData) {
+func parseDIDFieldValue(key string, value string, parseData *dto.ParseData) {
 	switch key {
 	case "device":
-		parseData.Device = value
+		device, err := strconv.Atoi(value)
+		if err != nil {
+			log.Warnf("无法解析设备ID '%s': %v", value, err)
+		}
+		parseData.Device = device
 	case "serial":
 		parseData.Serial = value
 	case "model":
@@ -342,15 +272,15 @@ func parseDIDFieldValue(key string, value string, parseData *ParseData) {
 	case "distance":
 		parseData.Distance = parseDistance(value) / 1000
 		parseData.Expires = time.Now().Unix()
-		parseData.MType = MTypeSHL
-		parseData.Sign = SignTypeO2O3
+		parseData.MType = dto.MTypeSHL
+		parseData.Sign = dto.SignTypeO2O3
 		parseData.TargetId = parseData.Serial
 		if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = 1
+			parseData.DroneType = dto.DroneTypeRC
 		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
-			parseData.DroneType = 2
+			parseData.DroneType = dto.DroneTypeUAV
 		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = 3
+			parseData.DroneType = dto.DroneTypeBoth
 		}
 	}
 }
@@ -405,15 +335,40 @@ func parseDistance(value string) float64 {
 // 连续解密失败计数器
 var decryptFailCount int32
 
-func ParseEncryption(fullLine []byte, parseData *ParseData, token *string, isHasSerial *bool) error {
+func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, isHasSerial *bool) error {
 	freq, rssi, hexStr, id, err := extractFreqRssiAndHexString(fullLine)
 	if err != nil {
 		log.Errorf("提取频率、RSSI 和十六进制字符串失败: %v", err)
 		return err
 	}
 
-	pd, err := decryptWithAPI(hexStr, *token)
-	if err == nil && pd != nil && pd.Serial != "" {
+	pd, err := decryptWithAPI(hexStr, token)
+	if err != nil {
+		// 解密失败，增加计数器
+		failCount := atomic.AddInt32(&decryptFailCount, 1)
+
+		// 仅当连续失败达到20次时，启用降级方案
+		if failCount >= 20 {
+			log.Warnf("解密失败(%d/30): %v，启用降级方案", failCount, err)
+
+			parseData.Freq = freq
+			parseData.RSSI = rssi
+			parseData.Model = "DJI-Drone"
+			parseData.Serial = id
+			parseData.Expires = time.Now().Unix()
+			parseData.Sign = dto.SignTypeO2O3
+			parseData.MType = dto.MTypeSHL
+			*isHasSerial = true
+
+			// 重置计数器以便后续重新计数
+			atomic.StoreInt32(&decryptFailCount, 0)
+		} else {
+			log.Warnf("解密失败(%d/30): %v", failCount, err)
+		}
+		return err
+	}
+
+	if parseData != nil && parseData.Serial != "" {
 		// 解密成功，重置计数器
 		atomic.StoreInt32(&decryptFailCount, 0)
 
@@ -431,40 +386,18 @@ func ParseEncryption(fullLine []byte, parseData *ParseData, token *string, isHas
 		parseData.TargetId = parseData.Serial
 		*isHasSerial = true
 		parseData.Expires = time.Now().Unix()
-		parseData.MType = MTypeSHL
-		parseData.Sign = SignTypeO2O3
+		parseData.MType = dto.MTypeSHL
+		parseData.Sign = dto.SignTypeO2O3
 		parseData.Freq = freq
 		parseData.RSSI = rssi
 		if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = DroneTypeRC
+			parseData.DroneType = dto.DroneTypeRC
 		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
-			parseData.DroneType = DroneTypeUAV
+			parseData.DroneType = dto.DroneTypeUAV
 		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = DroneTypeBoth
+			parseData.DroneType = dto.DroneTypeBoth
 		}
 		parseData.Speed = calculateFlightSpeed(parseData.EastV, parseData.NorthV, parseData.UpV)
-	} else {
-		// 解密失败，增加计数器
-		failCount := atomic.AddInt32(&decryptFailCount, 1)
-
-		// 仅当连续失败达到20次时，启用降级方案
-		if failCount >= 20 {
-			log.Warnf("解密失败(%d/30): %v，启用降级方案", failCount, err)
-
-			parseData.Freq = freq
-			parseData.RSSI = rssi
-			parseData.Model = "DJI-Drone"
-			parseData.Serial = id
-			parseData.Expires = time.Now().Unix()
-			parseData.Sign = SignTypeO2O3
-			parseData.MType = MTypeSHL
-			*isHasSerial = true
-
-			// 重置计数器以便后续重新计数
-			atomic.StoreInt32(&decryptFailCount, 0)
-		} else {
-			log.Warnf("解密失败(%d/30): %v", failCount, err)
-		}
 	}
 	return nil
 }
@@ -535,7 +468,7 @@ func extractFreqRssiAndHexString(data []byte) (float64, float64, string, string,
 	return freq, rssi, hexStr.String(), encryptedID, nil
 }
 
-func decryptWithAPI(hexStr, token string) (*ParseData, error) {
+func decryptWithAPI(hexStr, token string) (*dto.ParseData, error) {
 	url := fmt.Sprintf("http://101.227.171.238:5000/api/yd/decryptl?hex=%s&token=%s", hexStr, token)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -568,18 +501,18 @@ func decryptWithAPI(hexStr, token string) (*ParseData, error) {
 	}
 
 	// 构造 alert 结构
-	parseData := &ParseData{
+	parseData := &dto.ParseData{
 		Serial: result.SN,
 		Model:  result.Model,
-		DroneGPS: GPS{
+		DroneGPS: dto.GPS{
 			Longitude: result.Lon,
 			Latitude:  result.Lat,
 		},
-		HomeGPS: GPS{
+		HomeGPS: dto.GPS{
 			Longitude: result.HomeLon,
 			Latitude:  result.HomeLat,
 		},
-		PilotGPS: GPS{
+		PilotGPS: dto.GPS{
 			Longitude: result.PilotLon,
 			Latitude:  result.PilotLat,
 		},
@@ -598,7 +531,7 @@ func calculateFlightSpeed(eastV, northV, upV float64) float64 {
 	return math.Sqrt(horizontalSpeed*horizontalSpeed + upV*upV)
 }
 
-func MergeParseData(oldData, newData ParseData) (ParseData, error) {
+func MergeParseData(oldData, newData dto.ParseData) (dto.ParseData, error) {
 	// 更新其他字段
 	oldData.DroneGPS = newData.DroneGPS
 	oldData.HomeGPS = newData.HomeGPS
@@ -624,11 +557,11 @@ func MergeParseData(oldData, newData ParseData) (ParseData, error) {
 	}
 
 	if newData.DroneGPS.Longitude == 0 && newData.PilotGPS.Longitude != 0 {
-		oldData.DroneType = DroneTypeRC
+		oldData.DroneType = dto.DroneTypeRC
 	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude == 0 {
-		oldData.DroneType = DroneTypeUAV
+		oldData.DroneType = dto.DroneTypeUAV
 	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude != 0 {
-		oldData.DroneType = DroneTypeBoth
+		oldData.DroneType = dto.DroneTypeBoth
 	}
 
 	// // 1. 通过设备编号获取设备注册信息

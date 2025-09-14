@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
+	"xacms/internal/dto"
 	"xacms/internal/models"
-	"xacms/internal/routes/dto"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

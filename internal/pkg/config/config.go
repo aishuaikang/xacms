@@ -21,9 +21,10 @@ type ServerConfig struct {
 }
 
 type Configuration struct {
-	FpvPort   int `yaml:"fpvPort"`
-	GpsPort   int `yaml:"gpsPort"`
-	ParsePort int `yaml:"parsePort"`
+	FPVPort    int `yaml:"fpvPort"`
+	GpsPort    int `yaml:"gpsPort"`
+	ParsePort  int `yaml:"parsePort"`
+	StrikePort int `yaml:"strikePort"`
 }
 
 type Config struct {

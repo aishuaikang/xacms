@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"xacms/internal/cache"
+	"xacms/internal/dto"
 	"xacms/internal/models"
-	"xacms/internal/routes/dto"
 	"xacms/internal/services"
-	"xacms/internal/store"
 
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
@@ -24,10 +24,10 @@ type DeviceHandler struct {
 	Ctx           context.Context
 	DeviceService services.DeviceService
 	CommonService services.CommonService
-	CommonStore   store.CommonStore
-	DeviceStore   store.DeviceStore
-	FPVStore      store.FPVStore
-	ParseStore    store.ParseStore
+
+	DevicesCache        cache.DevicesCache
+	FPVWarningDataCache cache.FPVWarningDataCache
+	ParseDataCache      cache.ParseDataCache
 }
 
 // RegisterRoutes 注册设备相关路由
@@ -85,7 +85,7 @@ func (h *DeviceHandler) CreateDevice(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "创建设备失败"))
 	}
 
-	h.DeviceStore.GetRefreshChan() <- struct{}{}
+	h.DevicesCache.NotifyRefresh()
 
 	return c.Status(fiber.StatusCreated).JSON(dto.SuccessResponse(device))
 }
@@ -143,7 +143,7 @@ func (h *DeviceHandler) UpdateDevice(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "更新设备失败"))
 	}
 
-	h.DeviceStore.GetRefreshChan() <- struct{}{}
+	h.DevicesCache.NotifyRefresh()
 
 	return c.JSON(dto.SuccessResponse(device))
 }
@@ -164,7 +164,7 @@ func (h *DeviceHandler) DeleteDevice(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除设备失败"))
 	}
 
-	h.DeviceStore.GetRefreshChan() <- struct{}{}
+	h.DevicesCache.NotifyRefresh()
 
 	return c.JSON(dto.SuccessResponse(nil))
 }
@@ -187,7 +187,7 @@ func (h *DeviceHandler) DeviceListSSE(c *fiber.Ctx) error {
 
 			case <-ticker.C:
 				// TODO: 仅发送变化的设备数据以优化性能
-				devices := h.CommonStore.GetDeviceList()
+				devices := h.DevicesCache.GetDevices()
 				data, err := sonic.Marshal(devices)
 				if err != nil {
 					fmt.Fprintf(w, "data: {\"error\":\"marshal failed\"}\n\n")
@@ -227,8 +227,8 @@ func (h *DeviceHandler) FPVWaringDataListSSE(c *fiber.Ctx) error {
 				// TODO: 仅发送变化的设备数据以优化性能
 				// devices := h.DeviceStore.GetDeviceList()
 
-				fpvWaringDataList := h.FPVStore.GetFPVWaringDataList()
-				data, err := sonic.Marshal(fpvWaringDataList)
+				fpvWarningDataList := h.FPVWarningDataCache.GetFPVWarningDataList()
+				data, err := sonic.Marshal(fpvWarningDataList)
 				if err != nil {
 					fmt.Fprintf(w, "data: {\"error\":\"marshal failed\"}\n\n")
 				} else {
@@ -263,7 +263,7 @@ func (h *DeviceHandler) ParseDataListSSE(c *fiber.Ctx) error {
 			case <-h.Ctx.Done():
 				return
 			case <-ticker.C:
-				parseDataList := h.ParseStore.GetParseDataList()
+				parseDataList := h.ParseDataCache.GetParseDataList()
 				data, err := sonic.Marshal(parseDataList)
 				if err != nil {
 					fmt.Fprintf(w, "data: {\"error\":\"marshal failed\"}\n\n")

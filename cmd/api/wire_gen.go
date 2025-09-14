@@ -8,26 +8,42 @@ package main
 
 import (
 	"context"
+	"xacms/internal/app"
+	"xacms/internal/app/devices"
+	"xacms/internal/app/devices/conn"
+	"xacms/internal/cache"
 	"xacms/internal/pkg/config"
 	"xacms/internal/pkg/database"
+	"xacms/internal/pkg/utils"
 	"xacms/internal/routes"
-	"xacms/internal/server"
 	"xacms/internal/services"
-	"xacms/internal/store"
-	"xacms/internal/utils"
+	"xacms/internal/tasks"
 )
 
 // Injectors from injector.go:
 
-func wireRouter(ctx context.Context, cfg *config.Config, server2 *server.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
+func wireRouter(ctx context.Context, cfg *config.Config, server *app.FiberServer, validator *utils.ValidationMiddleware) *routes.Router {
+	fpvWarningDataCache := cache.NewFPVWarningDataCache()
+	devicesCache := cache.NewDevicesCache()
+	fpvConnection := conn.NewFPVConnection()
+	fpvDevice := devices.NewFPVDevice(ctx, cfg, fpvWarningDataCache, devicesCache, fpvConnection)
+	decryptTokenCache := cache.NewDecryptTokenCache()
+	parseDataCache := cache.NewParseDataCache()
+	parseConnection := conn.NewParseConnection()
+	parseDevice := devices.NewParseDevice(ctx, cfg, decryptTokenCache, parseDataCache, devicesCache, parseConnection)
+	devicesDevices := devices.NewDevices(fpvDevice, parseDevice)
+	decryptTokenTask := tasks.NewDecryptTokenTask(ctx, decryptTokenCache)
 	db := database.NewDB(cfg)
-	commonService := services.NewCommonService(db, validator, server2)
+	commonService := services.NewCommonService(db, validator, server)
+	deviceService := services.NewDeviceService(db, commonService)
+	devicesTask := tasks.NewDevicesTask(ctx, devicesCache, deviceService)
+	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask)
 	userService := services.NewUserService(db, commonService)
 	userHandler := &routes.UserHandler{
 		UserService:   userService,
 		CommonService: commonService,
 	}
-	menuService := services.NewMenuService(db, commonService, server2)
+	menuService := services.NewMenuService(db, commonService, server)
 	menuHandler := &routes.MenuHandler{
 		CommonService: commonService,
 		MenuService:   menuService,
@@ -37,20 +53,14 @@ func wireRouter(ctx context.Context, cfg *config.Config, server2 *server.FiberSe
 		RoleService:   roleService,
 		CommonService: commonService,
 	}
-	deviceService := services.NewDeviceService(db, commonService)
-	commonStore := store.NewCommonStore(ctx)
-	deviceStore := store.NewDeviceStore(ctx, deviceService, commonStore)
-	fpvStore := store.NewFPVStore(ctx, cfg)
-	parseStore := store.NewParseStore(ctx, cfg, commonStore)
 	deviceHandler := &routes.DeviceHandler{
-		Ctx:           ctx,
-		DeviceService: deviceService,
-		CommonService: commonService,
-		CommonStore:   commonStore,
-		DeviceStore:   deviceStore,
-		FPVStore:      fpvStore,
-		ParseStore:    parseStore,
+		Ctx:                 ctx,
+		DeviceService:       deviceService,
+		CommonService:       commonService,
+		DevicesCache:        devicesCache,
+		FPVWarningDataCache: fpvWarningDataCache,
+		ParseDataCache:      parseDataCache,
 	}
-	router := routes.NewRouter(server2, userHandler, menuHandler, roleHandler, deviceHandler)
+	router := routes.NewRouter(server, devicesDevices, tasksTasks, userHandler, menuHandler, roleHandler, deviceHandler)
 	return router
 }

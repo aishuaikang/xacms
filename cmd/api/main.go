@@ -6,14 +6,14 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"xacms/internal/app"
 	"xacms/internal/pkg/config"
-	"xacms/internal/server"
-	"xacms/internal/utils"
+	"xacms/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2/log"
 )
 
-func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
+func gracefulShutdown(fiberServer *app.FiberServer, done chan bool) {
 	// 创建监听来自操作系统的中断信号的上下文。
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -46,7 +46,7 @@ func main() {
 
 	log.SetLevel(cfg.Log.Level)
 
-	server := server.NewFiberServer()
+	server := app.NewFiberServer()
 
 	wireRouter(ctx, cfg, server, utils.NewValidationMiddleware()).RegisterRoutes()
 

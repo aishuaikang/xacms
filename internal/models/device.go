@@ -26,8 +26,7 @@ type DeviceModel struct {
 	StreamServerIP string `json:"stream_server_ip" gorm:"size:64;comment:流媒体服务器IP"` // 流媒体服务器IP
 
 	// 打击模块
-	StrikeIP   string `json:"strike_ip" gorm:"size:64;comment:打击模块IP"` // 打击模块IP
-	StrikePort int    `json:"strike_port" gorm:"comment:打击模块端口"`       // 打击模块端口
+	StrikeIP string `json:"strike_ip" gorm:"size:64;comment:打击模块IP"` // 打击模块IP
 
 	CommonModel
 }

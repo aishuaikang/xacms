@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
+	"xacms/internal/dto"
 	"xacms/internal/models"
-	"xacms/internal/routes/dto"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -30,7 +30,7 @@ func NewDeviceService(db *gorm.DB, commonService CommonService) DeviceService {
 	}
 }
 
-// CreateDevice 创建用户
+// CreateDevice 创建设备
 func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error) {
 	deviceData := &models.DeviceModel{
 		ID:        uuid.New(),
@@ -52,8 +52,7 @@ func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.Devic
 		StreamServerIP: req.StreamServerIP,
 
 		// 打击模块
-		StrikeIP:   req.StrikeIP,
-		StrikePort: req.StrikePort,
+		StrikeIP: req.StrikeIP,
 	}
 
 	if err := s.db.Create(deviceData).Error; err != nil {
@@ -115,10 +114,6 @@ func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceReque
 
 	if req.StrikeIP != nil {
 		user.StrikeIP = *req.StrikeIP
-	}
-
-	if req.StrikePort != nil {
-		user.StrikePort = *req.StrikePort
 	}
 
 	if err := s.db.Save(&user).Error; err != nil {

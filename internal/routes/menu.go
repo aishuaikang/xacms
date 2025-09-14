@@ -1,8 +1,8 @@
 package routes
 
 import (
+	"xacms/internal/dto"
 	"xacms/internal/models"
-	"xacms/internal/routes/dto"
 	"xacms/internal/services"
 
 	"github.com/gofiber/fiber/v2"

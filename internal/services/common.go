@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 	"sort"
-	"xacms/internal/server"
-	"xacms/internal/utils"
+	"xacms/internal/app"
+	"xacms/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -25,11 +25,11 @@ type CommonService interface {
 type commonService struct {
 	db          *gorm.DB
 	validator   *utils.ValidationMiddleware
-	fiberServer *server.FiberServer
+	fiberServer *app.FiberServer
 }
 
 // NewCommonService 创建公共服务实例
-func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware, fiberServer *server.FiberServer) CommonService {
+func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware, fiberServer *app.FiberServer) CommonService {
 	return &commonService{
 		db:          db,
 		validator:   validator,

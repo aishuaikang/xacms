@@ -35,6 +35,8 @@ configuration:
     gpsPort: 10001
     #解析服务
     parsePort: 10002
+    # 打击服务
+    strikePort: 10003
 
     # 刷新时间(建议10秒以上）
     # ttl: 60

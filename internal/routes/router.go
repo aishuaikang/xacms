@@ -1,7 +1,9 @@
 package routes
 
 import (
-	"xacms/internal/server"
+	"xacms/internal/app"
+	"xacms/internal/app/devices"
+	"xacms/internal/tasks"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -14,17 +16,26 @@ type RouteModule interface {
 
 // Router 路由注册器
 type Router struct {
-	server  *server.FiberServer
+	server  *app.FiberServer
 	modules []RouteModule
 }
 
 // NewRouter 创建路由注册器
-func NewRouter(server *server.FiberServer,
+func NewRouter(server *app.FiberServer,
+	devices *devices.Devices,
+	tasks *tasks.Tasks,
 	userHandler *UserHandler,
 	menuHandler *MenuHandler,
 	roleHandler *RoleHandler,
 	deviceHandler *DeviceHandler,
 ) *Router {
+
+	// 启动设备相关服务
+	devices.Start()
+
+	// 执行任务
+	tasks.Execute()
+
 	return &Router{
 		server: server,
 		modules: []RouteModule{
