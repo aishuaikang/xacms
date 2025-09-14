@@ -1,15 +1,11 @@
 package dto
 
+import "xacms/internal/models"
+
 // GPS 结构体表示 GPS 坐标
 type GPS struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
-}
-
-// Trajectory 轨迹点
-type Trajectory struct {
-	Lat float64 `json:"lat"`
-	Lng float64 `json:"lng"`
 }
 
 // LdResult 距离关系
@@ -48,30 +44,30 @@ const (
 )
 
 type ParseData struct {
-	Device         int          `json:"device"`             // 设备编号
-	Model          string       `json:"model"`              // 设备型号
-	Freq           float64      `json:"freq"`               // 频率
-	RSSI           float64      `json:"rssi"`               // 信号强度
-	Expires        int64        `json:"expires"`            // 过期时间
-	Height         float64      `json:"height"`             // 高度
-	Altitude       float64      `json:"altitude"`           // 海拔
-	EastV          float64      `json:"eastv"`              // 东向速度
-	NorthV         float64      `json:"northv"`             // 北向速度
-	UpV            float64      `json:"upv"`                // 垂直速度
-	Distance       float64      `json:"distance"`           // 距离
-	Serial         string       `json:"serial"`             // 序列号
-	DroneGPS       GPS          `json:"drone_gps"`          // 无人机 GPS 坐标
-	HomeGPS        GPS          `json:"return_positioning"` // 家（起飞点）GPS 坐标
-	PilotGPS       GPS          `json:"rc_gps"`             // 飞行员 GPS 坐标
-	TrajectoryList []Trajectory `json:"trajectory_list"`    // 轨迹
-	MType          MType        `json:"m_type"`             // 1 -zk ,2-上海l板
-	TargetId       string       `json:"target_id"`          // 目标ID
-	LdResult       LdResult     `json:"ld_result"`          // 距离关系
-	DroneType      DroneType    `json:"drone_type"`         // 目标类别:[0-未知,1-遥控器/飞手,2-无人机]
-	InWhiteList    bool         `json:"in_white_list"`      // 是否在白名单内
-	Png            string       `json:"png"`                // base64 编码的图片 二维码
-	Sign           SignType     `json:"sign"`               // 1 O2，O3 飞机的报文格式；O3+, O4飞机的报文格式 2.RID
-	Mac            string       `json:"mac"`                // MAC 地址
-	UpdateTime     int64        `json:"update_time"`        // 更新时间
-	Speed          float64      `json:"speed"`              // 速度
+	Device         int                 `json:"device"`             // 设备编号
+	Model          string              `json:"model"`              // 设备型号
+	Freq           float64             `json:"freq"`               // 频率
+	RSSI           float64             `json:"rssi"`               // 信号强度
+	Expires        int64               `json:"expires"`            // 过期时间
+	Height         float64             `json:"height"`             // 高度
+	Altitude       float64             `json:"altitude"`           // 海拔
+	EastV          float64             `json:"eastv"`              // 东向速度
+	NorthV         float64             `json:"northv"`             // 北向速度
+	UpV            float64             `json:"upv"`                // 垂直速度
+	Distance       float64             `json:"distance"`           // 距离
+	Serial         string              `json:"serial"`             // 序列号
+	DroneGPS       GPS                 `json:"drone_gps"`          // 无人机 GPS 坐标
+	HomeGPS        GPS                 `json:"return_positioning"` // 家（起飞点）GPS 坐标
+	PilotGPS       GPS                 `json:"rc_gps"`             // 飞行员 GPS 坐标
+	TrajectoryList []models.Trajectory `json:"trajectory_list"`    // 轨迹
+	MType          MType               `json:"m_type"`             // 1 -zk ,2-上海l板
+	TargetId       string              `json:"target_id"`          // 目标ID
+	LdResult       LdResult            `json:"ld_result"`          // 距离关系
+	DroneType      DroneType           `json:"drone_type"`         // 目标类别:[0-未知,1-遥控器/飞手,2-无人机]
+	InWhiteList    bool                `json:"in_white_list"`      // 是否在白名单内
+	Png            string              `json:"png"`                // base64 编码的图片 二维码
+	Sign           SignType            `json:"sign"`               // 1 O2，O3 飞机的报文格式；O3+, O4飞机的报文格式 2.RID
+	Mac            string              `json:"mac"`                // MAC 地址
+	UpdateTime     int64               `json:"update_time"`        // 更新时间
+	Speed          float64             `json:"speed"`              // 速度
 }

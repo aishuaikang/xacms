@@ -7,15 +7,16 @@ import (
 	"xacms/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
+	"github.com/gofiber/fiber/v2/log"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 // CommonService 公共服务接口
 type CommonService interface {
 	GetItems(model any) error
-	GetItemByID(id uuid.UUID, model any) error
-	DeleteItemByID(model any, id uuid.UUID) error
+	GetItemByID(id datatypes.UUID, model any) error
+	DeleteItemByID(model any, id datatypes.UUID) error
 	ValidateBody(c *fiber.Ctx, model any) error
 	ValidateQuery(c *fiber.Ctx, model any) error
 	GetAPIs() []fiber.Route
@@ -50,7 +51,7 @@ func (s *commonService) GetItems(model any) error {
 }
 
 // GetItemByID 根据ID获取单个数据
-func (s *commonService) GetItemByID(id uuid.UUID, model any) error {
+func (s *commonService) GetItemByID(id datatypes.UUID, model any) error {
 	if err := s.db.First(model, "id = ?", id).Error; err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func (s *commonService) GetItemByID(id uuid.UUID, model any) error {
 }
 
 // DeleteItemByID 根据ID删除单个数据
-func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
+func (s *commonService) DeleteItemByID(model any, id datatypes.UUID) error {
 	if err := s.db.Delete(model, "id = ?", id).Error; err != nil {
 		return err
 	}
@@ -69,6 +70,7 @@ func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
 func (s *commonService) ValidateBody(c *fiber.Ctx, model any) error {
 	// 解析请求体
 	if err := c.BodyParser(model); err != nil {
+		log.Errorf("解析请求体失败: %v", err)
 		return errors.New("请求体格式错误")
 	}
 
@@ -83,6 +85,7 @@ func (s *commonService) ValidateBody(c *fiber.Ctx, model any) error {
 func (s *commonService) ValidateQuery(c *fiber.Ctx, model any) error {
 	// 解析查询参数
 	if err := c.QueryParser(model); err != nil {
+		log.Errorf("解析查询参数失败: %v", err)
 		return errors.New("查询参数格式错误")
 	}
 

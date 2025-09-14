@@ -8,4 +8,5 @@ var ServicesSet = wire.NewSet(
 	NewMenuService,
 	NewCommonService,
 	NewDeviceService,
+	NewDronTargetService,
 )

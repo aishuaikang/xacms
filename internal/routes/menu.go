@@ -7,8 +7,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -73,8 +73,8 @@ func (h *MenuHandler) GetMenu(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	menuUUID, err := uuid.Parse(id)
-	if err != nil {
+	menuUUID := datatypes.UUID{}
+	if err := menuUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "菜单ID格式无效"))
 	}
 
@@ -95,8 +95,8 @@ func (h *MenuHandler) UpdateMenu(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	menuUUID, err := uuid.Parse(id)
-	if err != nil {
+	menuUUID := datatypes.UUID{}
+	if err := menuUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "菜单ID格式无效"))
 	}
 
@@ -127,8 +127,8 @@ func (h *MenuHandler) DeleteMenu(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	menuUUID, err := uuid.Parse(id)
-	if err != nil {
+	menuUUID := datatypes.UUID{}
+	if err := menuUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "菜单ID格式无效"))
 	}
 

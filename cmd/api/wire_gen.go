@@ -29,19 +29,22 @@ func wireRouter(ctx context.Context, cfg *config.Config, server *app.FiberServer
 	fpvDevice := devices.NewFPVDevice(ctx, cfg, fpvWarningDataCache, devicesCache, fpvConnection)
 	decryptTokenCache := cache.NewDecryptTokenCache()
 	parseDataCache := cache.NewParseDataCache()
+	droneTargetCache := cache.NewDroneTargetCache()
 	parseConnection := conn.NewParseConnection()
-	parseDevice := devices.NewParseDevice(ctx, cfg, decryptTokenCache, parseDataCache, devicesCache, parseConnection)
+	parseDevice := devices.NewParseDevice(ctx, cfg, decryptTokenCache, parseDataCache, devicesCache, droneTargetCache, parseConnection)
 	devicesDevices := devices.NewDevices(fpvDevice, parseDevice)
 	decryptTokenTask := tasks.NewDecryptTokenTask(ctx, decryptTokenCache)
 	db := database.NewDB(cfg)
 	commonService := services.NewCommonService(db, validator, server)
 	deviceService := services.NewDeviceService(db, commonService)
 	devicesTask := tasks.NewDevicesTask(ctx, devicesCache, deviceService)
-	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask)
+	droneTargetService := services.NewDronTargetService(db, commonService)
+	droneTargetTask := tasks.NewDroneTargetTask(ctx, droneTargetCache, droneTargetService)
+	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, droneTargetTask)
 	userService := services.NewUserService(db, commonService)
 	userHandler := &routes.UserHandler{
-		UserService:   userService,
 		CommonService: commonService,
+		UserService:   userService,
 	}
 	menuService := services.NewMenuService(db, commonService, server)
 	menuHandler := &routes.MenuHandler{
@@ -61,6 +64,11 @@ func wireRouter(ctx context.Context, cfg *config.Config, server *app.FiberServer
 		FPVWarningDataCache: fpvWarningDataCache,
 		ParseDataCache:      parseDataCache,
 	}
-	router := routes.NewRouter(server, devicesDevices, tasksTasks, userHandler, menuHandler, roleHandler, deviceHandler)
+	droneTargetHandler := &routes.DroneTargetHandler{
+		Ctx:                ctx,
+		CommonService:      commonService,
+		DroneTargetService: droneTargetService,
+	}
+	router := routes.NewRouter(server, devicesDevices, tasksTasks, userHandler, menuHandler, roleHandler, deviceHandler, droneTargetHandler)
 	return router
 }

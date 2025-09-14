@@ -19,21 +19,25 @@ import (
 )
 
 type ParseDevice struct {
-	ctx               context.Context
-	config            *config.Config
+	ctx    context.Context
+	config *config.Config
+
 	decryptTokenCache cache.DecryptTokenCache
 	parseDataCache    cache.ParseDataCache
 	devicesCache      cache.DevicesCache
-	parseConnection   *conn_.ParseConnection
+	droneTargetCache  cache.DroneTargetCache
+
+	parseConnection *conn_.ParseConnection
 }
 
-func NewParseDevice(ctx context.Context, config *config.Config, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseDataCache, devicesCache cache.DevicesCache, parseConnection *conn_.ParseConnection) *ParseDevice {
+func NewParseDevice(ctx context.Context, config *config.Config, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseDataCache, devicesCache cache.DevicesCache, droneTargetCache cache.DroneTargetCache, parseConnection *conn_.ParseConnection) *ParseDevice {
 	parseDevice := &ParseDevice{
 		ctx:               ctx,
 		config:            config,
 		decryptTokenCache: decryptTokenCache,
 		devicesCache:      devicesCache,
 		parseDataCache:    parseDataCache,
+		droneTargetCache:  droneTargetCache,
 		parseConnection:   parseConnection,
 	}
 
@@ -140,24 +144,25 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 
 			// 验证了这条告警是不是完整的
 			if parseData.Serial != "" {
-				// TODO: 这里可以把数据存储到数据库或者发送到消息队列
+				s.droneTargetCache.HandleParseDataToDroneTarget(parseData)
+
 			}
 
 			// TODO: 1、根据设置的map类型设置进行坐标转换
 			// TODO: 2、去白名单查询是否在白名单内
 
-			s.updateParseDataList(&parseData, device)
+			s.updateParseDataList(parseData, device)
 		}
 	}
 }
 
-func (s *ParseDevice) updateParseDataList(data *dto.ParseData, device *models.DeviceModel) {
+func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *models.DeviceModel) {
 	// 查找符合条件的定位数据
 	var parseDataIndex int = -1
 	var parseData dto.ParseData
 	parseDataLists := s.parseDataCache.GetParseDataList()
 	for i, item := range parseDataLists {
-		if item.Serial == data.Serial && item.Device == data.Device {
+		if item.Serial == newParseData.Serial && item.Device == newParseData.Device {
 			parseDataIndex = i
 			parseData = item
 			break
@@ -165,33 +170,33 @@ func (s *ParseDevice) updateParseDataList(data *dto.ParseData, device *models.De
 	}
 
 	if parseDataIndex != -1 {
-		parseData.DroneGPS = data.DroneGPS
-		parseData.HomeGPS = data.HomeGPS
-		parseData.PilotGPS = data.PilotGPS
-		parseData.Height = data.Height
-		parseData.Speed = data.Speed
-		parseData.Altitude = data.Altitude
-		parseData.EastV = data.EastV
-		parseData.NorthV = data.NorthV
-		parseData.UpV = data.UpV
-		parseData.Freq = data.Freq
-		parseData.RSSI = data.RSSI
-		parseData.Distance = data.Distance
-		parseData.Png = data.Png
-		parseData.TrajectoryList = data.TrajectoryList
-		parseData.InWhiteList = data.InWhiteList
+		parseData.DroneGPS = newParseData.DroneGPS
+		parseData.HomeGPS = newParseData.HomeGPS
+		parseData.PilotGPS = newParseData.PilotGPS
+		parseData.Height = newParseData.Height
+		parseData.Speed = newParseData.Speed
+		parseData.Altitude = newParseData.Altitude
+		parseData.EastV = newParseData.EastV
+		parseData.NorthV = newParseData.NorthV
+		parseData.UpV = newParseData.UpV
+		parseData.Freq = newParseData.Freq
+		parseData.RSSI = newParseData.RSSI
+		parseData.Distance = newParseData.Distance
+		parseData.Png = newParseData.Png
+		parseData.TrajectoryList = newParseData.TrajectoryList
+		parseData.InWhiteList = newParseData.InWhiteList
 
 		// 更新过期时间
 		parseData.Expires = time.Now().Unix()
-		if data.Model != "" {
-			parseData.Model = data.Model
+		if newParseData.Model != "" {
+			parseData.Model = newParseData.Model
 		}
 
-		if data.DroneGPS.Longitude == 0 && data.PilotGPS.Longitude != 0 {
+		if newParseData.DroneGPS.Longitude == 0 && newParseData.PilotGPS.Longitude != 0 {
 			parseData.DroneType = dto.DroneTypeRC
-		} else if data.DroneGPS.Longitude != 0 && data.PilotGPS.Longitude == 0 {
+		} else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude == 0 {
 			parseData.DroneType = dto.DroneTypeUAV
-		} else if data.DroneGPS.Longitude != 0 && data.PilotGPS.Longitude != 0 {
+		} else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude != 0 {
 			parseData.DroneType = dto.DroneTypeBoth
 		}
 
@@ -242,12 +247,12 @@ func (s *ParseDevice) updateParseDataList(data *dto.ParseData, device *models.De
 		s.parseDataCache.UpdateParseDataAtIndex(parseDataIndex, parseData)
 	} else {
 		// 添加新的定位数据
-		s.parseDataCache.AddParseData(*data)
+		s.parseDataCache.AddParseData(newParseData)
 	}
 
 	// 只对非DJI-Drone模型排序
 	parseDataListLength := s.parseDataCache.GetParseDataListLength()
-	if data.Model != "DJI-Drone" && parseDataListLength >= 2 {
+	if newParseData.Model != "DJI-Drone" && parseDataListLength >= 2 {
 		s.parseDataCache.SortParseDataListByExpires()
 
 	}

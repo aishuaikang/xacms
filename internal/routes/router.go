@@ -28,6 +28,7 @@ func NewRouter(server *app.FiberServer,
 	menuHandler *MenuHandler,
 	roleHandler *RoleHandler,
 	deviceHandler *DeviceHandler,
+	droneTargetHandler *DroneTargetHandler,
 ) *Router {
 
 	// 启动设备相关服务
@@ -43,6 +44,7 @@ func NewRouter(server *app.FiberServer,
 			menuHandler,
 			roleHandler,
 			deviceHandler,
+			droneTargetHandler,
 		},
 	}
 }

@@ -7,5 +7,6 @@ var RoutesSet = wire.NewSet(
 	wire.Struct(new(MenuHandler), "*"),
 	wire.Struct(new(UserHandler), "*"),
 	wire.Struct(new(DeviceHandler), "*"),
+	wire.Struct(new(DroneTargetHandler), "*"),
 	NewRouter,
 )

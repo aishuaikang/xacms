@@ -7,4 +7,5 @@ var CacheSet = wire.NewSet(
 	NewDecryptTokenCache,
 	NewFPVWarningDataCache,
 	NewParseDataCache,
+	NewDroneTargetCache,
 )

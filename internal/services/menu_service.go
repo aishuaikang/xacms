@@ -5,17 +5,16 @@ import (
 	"xacms/internal/app"
 	"xacms/internal/dto"
 	"xacms/internal/models"
-	"xacms/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 // MenuService 菜单服务接口
 type MenuService interface {
 	CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel, error)
-	UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error)
+	UpdateMenu(menuUUID datatypes.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error)
 	GetMenuTree() ([]dto.MenuTreeItem, error)
 }
 
@@ -57,7 +56,7 @@ func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel,
 }
 
 // UpdateMenu 更新菜单
-func (s *menuService) UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error) {
+func (s *menuService) UpdateMenu(menuUUID datatypes.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error) {
 	var menu models.MenuModel
 	if err := s.commonService.GetItemByID(menuUUID, &menu); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -119,11 +118,11 @@ func (s *menuService) GetMenuTree() ([]dto.MenuTreeItem, error) {
 	}
 
 	// 递归组装菜单树
-	var buildMenuTree func(parentID *uuid.UUID) []dto.MenuTreeItem
-	buildMenuTree = func(parentID *uuid.UUID) []dto.MenuTreeItem {
+	var buildMenuTree func(parentID *datatypes.UUID) []dto.MenuTreeItem
+	buildMenuTree = func(parentID *datatypes.UUID) []dto.MenuTreeItem {
 		var children []dto.MenuTreeItem
 		for _, menu := range menus {
-			if utils.EqualUUID(menu.ParentID, parentID) {
+			if menu.ParentID.Equals(*parentID) {
 				children = append(children, dto.MenuTreeItem{
 					MenuModel: menu,
 					Children:  buildMenuTree(&menu.ID),

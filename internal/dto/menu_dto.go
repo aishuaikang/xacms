@@ -3,12 +3,12 @@ package dto
 import (
 	"xacms/internal/models"
 
-	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 // CreateMenuRequest 创建菜单请求结构
 type CreateMenuRequest struct {
-	ParentID     *uuid.UUID       `json:"parent_id" validate:"omitempty,uuid"`
+	ParentID     *datatypes.UUID  `json:"parent_id" validate:"omitempty,uuid"`
 	Name         string           `json:"name" validate:"required,min=2,max=64"`
 	RouteName    string           `json:"route_name" validate:"required,min=2,max=64"`
 	RoutePath    string           `json:"route_path" validate:"required,min=1,max=255"`
@@ -23,7 +23,7 @@ type CreateMenuRequest struct {
 
 // UpdateMenuRequest 更新菜单请求结构
 type UpdateMenuRequest struct {
-	ParentID     *uuid.UUID       `json:"parent_id" validate:"omitempty,uuid"`
+	ParentID     *datatypes.UUID  `json:"parent_id" validate:"omitempty,uuid"`
 	Name         *string          `json:"name" validate:"omitempty,min=2,max=64"`
 	RouteName    *string          `json:"route_name" validate:"omitempty,min=2,max=64"`
 	RoutePath    *string          `json:"route_path" validate:"omitempty,min=1,max=255"`
@@ -35,25 +35,6 @@ type UpdateMenuRequest struct {
 	Icon         *string          `json:"icon" validate:"omitempty,max=128"`
 	Order        *uint            `json:"order" validate:"omitempty,min=0"`
 }
-
-// MenuQueryRequest 菜单查询请求结构
-// type MenuQueryRequest struct {
-// 	BaseQueryRequest
-// 	ParentID *uuid.UUID `json:"parent_id" validate:"omitempty,uuid"`
-// 	Type     *int       `json:"type" validate:"omitempty,oneof=1 2 3"`
-// 	Status   *int       `json:"status" validate:"omitempty,oneof=0 1"`
-// }
-
-// MenuTreeRequest 菜单树查询请求结构
-// type MenuTreeRequest struct {
-// 	Type   *int `json:"type" validate:"omitempty,oneof=1 2 3"`
-// 	Status *int `json:"status" validate:"omitempty,oneof=0 1"`
-// }
-
-// // MoveMenuRequest 移动菜单请求结构
-// type MoveMenuRequest struct {
-// 	NewParentID *uuid.UUID `json:"new_parent_id" validate:"omitempty,uuid"`
-// }
 
 type MenuTreeItem struct {
 	models.MenuModel

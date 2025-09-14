@@ -5,16 +5,16 @@ import (
 	"xacms/internal/dto"
 	"xacms/internal/models"
 
-	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 // RoleService 角色服务接口
 type RoleService interface {
 	CreateRole(req dto.CreateRoleRequest) (*models.RoleModel, error)
-	UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error)
-	GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error)
-	AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error)
+	UpdateRole(roleId datatypes.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error)
+	GetRoleMenus(roleId datatypes.UUID) ([]models.MenuModel, error)
+	AssignMenus(roleId datatypes.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error)
 }
 
 // roleService 角色服务实现
@@ -45,7 +45,7 @@ func (s *roleService) CreateRole(req dto.CreateRoleRequest) (*models.RoleModel, 
 }
 
 // UpdateRole 更新角色
-func (s *roleService) UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error) {
+func (s *roleService) UpdateRole(roleId datatypes.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error) {
 	var role models.RoleModel
 	if err := s.commonService.GetItemByID(roleId, &role); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -73,7 +73,7 @@ func (s *roleService) UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*
 }
 
 // GetRoleMenus 获取角色菜单列表
-func (s *roleService) GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error) {
+func (s *roleService) GetRoleMenus(roleId datatypes.UUID) ([]models.MenuModel, error) {
 	var menus []models.MenuModel
 	if err := s.db.Model(&models.RoleModel{ID: roleId}).Association("Menus").Find(&menus); err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (s *roleService) GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error)
 }
 
 // AssignMenus 分配菜单给角色
-func (s *roleService) AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error) {
+func (s *roleService) AssignMenus(roleId datatypes.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error) {
 	var role models.RoleModel
 	if err := s.commonService.GetItemByID(roleId, &role); err != nil {
 		if err == gorm.ErrRecordNotFound {

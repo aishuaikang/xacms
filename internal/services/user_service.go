@@ -5,7 +5,7 @@ import (
 	"xacms/internal/dto"
 	"xacms/internal/models"
 
-	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -14,8 +14,8 @@ import (
 type UserService interface {
 	GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error)
 	CreateUser(req dto.CreateUserRequest) (*models.UserModel, error)
-	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error)
-	AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*models.UserModel, error)
+	UpdateUser(userId datatypes.UUID, req dto.UpdateUserRequest) (*models.UserModel, error)
+	AssignRole(userId datatypes.UUID, req dto.AssignRoleRequest) (*models.UserModel, error)
 }
 
 // userService 用户服务实现
@@ -47,7 +47,7 @@ func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse
 		return nil, err
 	}
 	return &dto.PaginatedResponse[models.UserModel]{
-		Total: int64(len(users)),
+		Total: len(users),
 		Items: users,
 	}, nil
 }
@@ -55,7 +55,7 @@ func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse
 // CreateUser 创建用户
 func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, error) {
 	userData := &models.UserModel{
-		ID:       uuid.New(),
+		ID:       datatypes.NewUUIDv4(),
 		Nickname: req.Nickname,
 		Username: req.Username,
 		Password: req.Password, // TODO：实际应用中应该加密密码
@@ -72,7 +72,7 @@ func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, 
 }
 
 // UpdateUser 修改用户
-func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error) {
+func (s *userService) UpdateUser(userId datatypes.UUID, req dto.UpdateUserRequest) (*models.UserModel, error) {
 	var user models.UserModel
 	if err := s.commonService.GetItemByID(userId, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -112,7 +112,7 @@ func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*
 }
 
 // AssignRole 分配角色
-func (s *userService) AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*models.UserModel, error) {
+func (s *userService) AssignRole(userId datatypes.UUID, req dto.AssignRoleRequest) (*models.UserModel, error) {
 	var user models.UserModel
 	if err := s.commonService.GetItemByID(userId, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {

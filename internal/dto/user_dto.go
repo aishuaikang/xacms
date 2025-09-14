@@ -3,16 +3,16 @@ package dto
 import (
 	"xacms/internal/models"
 
-	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 // UserQueryRequest 用户查询请求结构
 type UserQueryRequest struct {
 	BaseQueryRequest
 	// Status       *models.Status `query:"status" validate:"omitempty,oneof=0 1"`
-	// RoleID       *uuid.UUID     `query:"role_id" validate:"omitempty,uuid"`
-	// TenantID     *uuid.UUID     `query:"tenant_id" validate:"omitempty,uuid"`
-	// DepartmentID *uuid.UUID     `query:"department_id" validate:"omitempty,uuid"`
+	// RoleID       *datatypes.UUID `query:"role_id" validate:"omitempty,uuid"`
+	// TenantID     *datatypes.UUID `query:"tenant_id" validate:"omitempty,uuid"`
+	// DepartmentID *datatypes.UUID `query:"department_id" validate:"omitempty,uuid"`
 }
 
 // CreateUserRequest 创建用户请求结构
@@ -38,7 +38,7 @@ type UpdateUserRequest struct {
 
 // AssignRoleRequest 分配角色请求结构
 type AssignRoleRequest struct {
-	RoleID uuid.UUID `json:"role_id" validate:"required,uuid"`
+	RoleID datatypes.UUID `json:"role_id" validate:"required,uuid"`
 }
 
 // // ChangePasswordRequest 修改密码请求结构
@@ -49,6 +49,6 @@ type AssignRoleRequest struct {
 
 // // ResetPasswordRequest 重置密码请求结构
 // type ResetPasswordRequest struct {
-// 	UserID      uuid.UUID `json:"user_id" validate:"required,uuid"`
+// 	UserID      datatypes.UUID `json:"user_id" validate:"required,uuid"`
 // 	NewPassword string    `json:"new_password" validate:"required,min=6,max=128"`
 // }

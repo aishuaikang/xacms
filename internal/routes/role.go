@@ -7,7 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -62,8 +62,8 @@ func (h *RoleHandler) GetRole(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
-	if err != nil {
+	roleUUID := datatypes.UUID{}
+	if err := roleUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "角色ID格式无效"))
 	}
 
@@ -85,8 +85,8 @@ func (h *RoleHandler) UpdateRole(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
-	if err != nil {
+	roleUUID := datatypes.UUID{}
+	if err := roleUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "角色ID格式无效"))
 	}
 
@@ -111,8 +111,8 @@ func (h *RoleHandler) DeleteRole(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
-	if err != nil {
+	roleUUID := datatypes.UUID{}
+	if err := roleUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "角色ID格式无效"))
 	}
 
@@ -130,8 +130,8 @@ func (h *RoleHandler) GetRoleMenus(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
-	if err != nil {
+	roleUUID := datatypes.UUID{}
+	if err := roleUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "角色ID格式无效"))
 	}
 
@@ -150,8 +150,8 @@ func (h *RoleHandler) AssignMenus(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
-	if err != nil {
+	roleUUID := datatypes.UUID{}
+	if err := roleUUID.Scan(id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "角色ID格式无效"))
 	}
 

@@ -1,12 +1,12 @@
 package models
 
 import (
-	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type DeviceModel struct {
-	ID uuid.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"` // 唯一ID
+	ID datatypes.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"` // 唯一ID
 
 	Name      string  `json:"name" gorm:"uniqueIndex;size:64;not null;comment:设备名称"` // 设备名称
 	Longitude float64 `json:"longitude" gorm:"type:decimal(10,6);comment:设备经度"`      // 设备经度
@@ -38,8 +38,8 @@ func (DeviceModel) TableName() string {
 
 // BeforeCreate GORM钩子，在创建记录之前调用
 func (d *DeviceModel) BeforeCreate(tx *gorm.DB) (err error) {
-	if d.ID == uuid.Nil {
-		d.ID = uuid.New()
+	if d.ID.IsEmptyPtr() {
+		d.ID = datatypes.NewUUIDv4()
 	}
 	// 如果 Status 是零值（StatusDisabled = 0），但我们想要明确设置它
 	// 可以根据业务需求决定是否需要默认值
