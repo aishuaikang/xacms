@@ -44,6 +44,20 @@ type UpdateDeviceRequest struct {
 	StreamServerIP *string `json:"stream_server_ip" validate:"omitempty"` // 流媒体服务器IP
 
 	// 打击模块
-	StrikeIP   *string `json:"strike_ip" validate:"omitempty"`   // 打击模块IP
-	StrikePort *int    `json:"strike_port" validate:"omitempty"` // 打击模块端口
+	StrikeIP *string `json:"strike_ip" validate:"omitempty"` // 打击模块IP
 }
+
+// // StrikeState 打击状态
+// type StrikeState struct {
+// 	Mode      int      `json:"mode"`      // 1-宽频 2-无人值守
+// 	Status    string   `json:"status"`    // 1-宽频 2-无人值守
+// 	Frequency []string `json:"frequency"` // 频段
+// }
+
+// // DeviceStatusInfo 设备状态信息
+// type DeviceStatusInfo struct {
+// 	HeartbeatCount int   `json:"heartbeat_count"` // 心跳计数
+// 	Expires        int64 `json:"expires"`         // 过期时间戳
+// 	Status         int   `json:"status"`          // 设备状态，0-离线，1-在线
+// 	StrikeState    int   `json:"strike_state"`    // 打击状态，0-未打击，1-打击中，2-打击完成
+// }
