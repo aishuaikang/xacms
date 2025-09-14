@@ -79,7 +79,7 @@ func (c *droneTargetCache) FindDroneTargetBySerial(serial string) (*models.Drone
 
 // addDroneTargetFromParseData 从解析数据创建并添加新的无人机目标
 func (c *droneTargetCache) addDroneTargetFromParseData(parseData dto.ParseData, coordValid bool) {
-	log.Infof("创建无人机目标: %s", parseData.Serial)
+	log.Debugf("创建无人机目标: %s", parseData.Serial)
 	now := time.Now()
 	var trajectory datatypes.JSONSlice[models.Trajectory]
 
@@ -92,7 +92,7 @@ func (c *droneTargetCache) addDroneTargetFromParseData(parseData dto.ParseData, 
 			},
 		}
 
-		log.Infof("为目标 %s 添加初始轨迹点: (%.6f, %.6f, %.1f)",
+		log.Debugf("为目标 %s 添加初始轨迹点: (%.6f, %.6f, %.1f)",
 			parseData.Serial, parseData.DroneGPS.Latitude, parseData.DroneGPS.Longitude, parseData.Height)
 	}
 
@@ -117,7 +117,7 @@ func (c *droneTargetCache) addDroneTargetFromParseData(parseData dto.ParseData, 
 
 	c.AppendDroneTarget(droneTarget)
 
-	log.Infof("无人机目标 %s 已添加到缓存", parseData.Serial)
+	log.Debugf("无人机目标 %s 已添加到缓存", parseData.Serial)
 }
 
 // updateDroneTargetFromParseData 使用解析数据更新现有的无人机目标

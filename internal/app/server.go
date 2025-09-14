@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -28,7 +30,7 @@ func NewFiberServer() *FiberServer {
 
 	// 设置日志中间件
 	app.Use(logger.New(logger.Config{
-		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
+		TimeFormat: time.DateTime,
 	}))
 
 	server := &FiberServer{

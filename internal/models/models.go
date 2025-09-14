@@ -4,8 +4,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"time"
-
-	"github.com/gofiber/fiber/v2/log"
 )
 
 type CommonModel struct {
@@ -55,7 +53,6 @@ type CustomTime time.Time
 // MarshalJSON 自定义时间的 JSON 序列化
 func (ct CustomTime) MarshalJSON() ([]byte, error) {
 	formatted := time.Time(ct).Format(time.DateTime)
-	log.Debugf("格式化时间: %s", formatted)
 	return []byte(`"` + formatted + `"`), nil
 }
 
@@ -63,11 +60,9 @@ func (ct CustomTime) MarshalJSON() ([]byte, error) {
 func (ct *CustomTime) UnmarshalJSON(data []byte) error {
 	t, err := time.Parse(time.DateTime, string(data))
 	if err != nil {
-		log.Errorf("反序列化时间失败: %v", err)
 		return err
 	}
 	*ct = CustomTime(t)
-	log.Debugf("反序列化时间: %s", t)
 	return nil
 }
 
@@ -75,10 +70,9 @@ func (ct *CustomTime) UnmarshalJSON(data []byte) error {
 func (ct CustomTime) Value() (driver.Value, error) {
 	t := time.Time(ct)
 	if t.IsZero() {
-		log.Warn("时间为零值，返回 nil")
 		return nil, nil
 	}
-	log.Debugf("存储时间: %s", t)
+
 	return t, nil
 }
 
@@ -96,10 +90,8 @@ func (ct *CustomTime) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case time.Time:
 		*ct = CustomTime(v)
-		log.Debugf("扫描时间: %s", v)
 		return nil
 	default:
-		log.Errorf("不支持的扫描类型: %T", v)
 		return fmt.Errorf("unsupported scan type: %T", v)
 	}
 }
