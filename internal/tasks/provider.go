@@ -7,5 +7,6 @@ var TaskSet = wire.NewSet(
 	NewDecryptTokenTask,
 	NewDevicesTask,
 	NewParseTask,
+	NewFPVTask,
 	NewTasks,
 )

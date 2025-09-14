@@ -29,7 +29,7 @@ func (t *ParseTask) Execute() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				log.Info("设备存储停止刷新")
+				log.Debug("ParseTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-ticker.C:
 

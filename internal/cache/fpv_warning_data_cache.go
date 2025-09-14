@@ -2,6 +2,7 @@ package cache
 
 import (
 	"sync"
+	"time"
 	"xacms/internal/dto"
 )
 
@@ -9,11 +10,18 @@ type FPVWarningDataCache interface {
 	SetFPVWarningDataList(warnings []*dto.FPVWarningData)
 	GetFPVWarningDataList() []*dto.FPVWarningData
 	PushFPVWarning(warning *dto.FPVWarningData)
+	SetLastUpdated(t time.Time)
+	GetLastUpdated() time.Time
+	ResetCacheIfExpired(expireDuration time.Duration)
 }
 
 type fpvWarningDataCache struct {
 	fpvWarnings      []*dto.FPVWarningData
 	fpvWarningsMutex sync.RWMutex
+
+	// 最后更新时间
+	lastUpdated      time.Time
+	lastUpdatedMutex sync.RWMutex
 }
 
 func NewFPVWarningDataCache() FPVWarningDataCache {
@@ -52,4 +60,29 @@ func (c *fpvWarningDataCache) PushFPVWarning(warning *dto.FPVWarningData) {
 	filteredWarnings = append(filteredWarnings, warning)
 
 	c.SetFPVWarningDataList(filteredWarnings)
+}
+
+// SetLastUpdated 设置最后更新时间
+func (c *fpvWarningDataCache) SetLastUpdated(t time.Time) {
+	c.lastUpdatedMutex.Lock()
+	defer c.lastUpdatedMutex.Unlock()
+	c.lastUpdated = t
+}
+
+// GetLastUpdated 获取最后更新时间
+func (c *fpvWarningDataCache) GetLastUpdated() time.Time {
+	c.lastUpdatedMutex.RLock()
+	defer c.lastUpdatedMutex.RUnlock()
+	return c.lastUpdated
+}
+
+// ResetCacheIfExpired 如果缓存过期则重置缓存
+func (c *fpvWarningDataCache) ResetCacheIfExpired(expireDuration time.Duration) {
+	c.lastUpdatedMutex.Lock()
+	defer c.lastUpdatedMutex.Unlock()
+	now := time.Now()
+	if now.Sub(c.lastUpdated) > expireDuration {
+		c.fpvWarnings = make([]*dto.FPVWarningData, 0)
+		c.lastUpdated = now
+	}
 }

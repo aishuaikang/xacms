@@ -42,7 +42,8 @@ func wireRouter(ctx context.Context, cfg *config.Config, server *app.FiberServer
 	droneTargetTask := tasks.NewDroneTargetTask(ctx, droneTargetCache, droneTargetService)
 	commonCache := cache.NewCommonCache(cfg)
 	parseTask := tasks.NewParseTask(ctx, commonCache, parseCache)
-	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, droneTargetTask, parseTask)
+	fpvTask := tasks.NewFPVTask(ctx, commonCache, fpvWarningDataCache)
+	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, droneTargetTask, parseTask, fpvTask)
 	userService := services.NewUserService(db, commonService)
 	userHandler := &routes.UserHandler{
 		CommonService: commonService,
@@ -59,18 +60,22 @@ func wireRouter(ctx context.Context, cfg *config.Config, server *app.FiberServer
 		CommonService: commonService,
 	}
 	deviceHandler := &routes.DeviceHandler{
-		Ctx:                 ctx,
-		DeviceService:       deviceService,
-		CommonService:       commonService,
-		DevicesCache:        devicesCache,
-		FPVWarningDataCache: fpvWarningDataCache,
-		ParseCache:          parseCache,
+		Ctx:           ctx,
+		DeviceService: deviceService,
+		CommonService: commonService,
+		DevicesCache:  devicesCache,
 	}
 	droneTargetHandler := &routes.DroneTargetHandler{
 		Ctx:                ctx,
 		CommonService:      commonService,
 		DroneTargetService: droneTargetService,
 	}
-	router := routes.NewRouter(server, devicesDevices, tasksTasks, userHandler, menuHandler, roleHandler, deviceHandler, droneTargetHandler)
+	sseHandler := &routes.SSEHandler{
+		Ctx:                 ctx,
+		DevicesCache:        devicesCache,
+		FPVWarningDataCache: fpvWarningDataCache,
+		ParseCache:          parseCache,
+	}
+	router := routes.NewRouter(server, devicesDevices, tasksTasks, userHandler, menuHandler, roleHandler, deviceHandler, droneTargetHandler, sseHandler)
 	return router
 }

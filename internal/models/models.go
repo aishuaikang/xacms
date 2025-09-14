@@ -4,12 +4,14 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type CommonModel struct {
-	CreatedAt CustomTime `json:"created_at" gorm:"autoCreateTime;comment:创建时间"`
-	UpdatedAt CustomTime `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
-	// DeletedAt gorm.DeletedAt  `json:"-" gorm:"index;comment:删除时间"`
+	CreatedAt CustomTime     `json:"created_at" gorm:"autoCreateTime;comment:创建时间"`
+	UpdatedAt CustomTime     `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index;comment:删除时间"`
 }
 
 type CommonNotDeletedModel struct {

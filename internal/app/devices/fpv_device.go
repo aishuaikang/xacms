@@ -109,9 +109,9 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 			if utils.IsFPVWaringData(fullLine) {
 				ip := conn.RemoteAddr().String()
 
-				time := time.Now().Unix()
+				time := time.Now()
 
-				warningData, err := utils.ParseFPVWarningData(fullLine, ip, time, device.DetectionID)
+				warningData, err := utils.ParseFPVWarningData(fullLine, ip, time.Unix(), device.DetectionID)
 				if err != nil {
 					log.Errorf("[%s] 解析 FPV 警告数据失败: %v", module, err)
 					continue
@@ -121,6 +121,8 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 
 				// 将新的警告数据添加到列表中
 				s.fpvWarningDataCache.PushFPVWarning(warningData)
+
+				s.fpvWarningDataCache.SetLastUpdated(time)
 			}
 
 			// 移除已处理部分（包括 \r\n）

@@ -19,8 +19,8 @@ type DecryptTokenResponse struct {
 	Data    DecryptTokenData `json:"data"`
 }
 
-// GetDecryptToken 获取解密token
-func GetDecryptToken() (string, error) {
+// RefreshDecryptToken 刷新解密token
+func RefreshDecryptToken() (string, error) {
 	// 构造请求 URL
 	url := fmt.Sprintf("http://101.227.171.238:5000/api/login?username=%s&password=%s", "zkzp", "askewrp23k2j")
 
