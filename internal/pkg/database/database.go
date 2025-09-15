@@ -2,8 +2,8 @@ package database
 
 import (
 	"log"
-	"xacms/internal/models"
-	"xacms/internal/pkg/config"
+	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/config"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

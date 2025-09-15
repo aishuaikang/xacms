@@ -2,12 +2,13 @@ package routes
 
 import (
 	"context"
-	"xacms/internal/cache"
-	"xacms/internal/dto"
-	"xacms/internal/models"
-	"xacms/internal/services"
+	"net/http"
+	"uav_defender/internal/cache"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
+	"uav_defender/internal/services"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
@@ -24,34 +25,37 @@ type DeviceHandler struct {
 }
 
 // RegisterRoutes 注册设备相关路由
-func (h *DeviceHandler) RegisterRoutes(router fiber.Router) {
-	deviceGroup := router.Group("/devices").Name("设备管理.")
+func (h *DeviceHandler) RegisterRoutes(router *gin.RouterGroup) {
+	deviceGroup := router.Group("/devices")
 
-	deviceGroup.Get("", h.GetDevices).Name("获取设备列表")
-	deviceGroup.Post("", h.CreateDevice).Name("创建设备")
-	deviceGroup.Get("/:id<guid>", h.GetDevice).Name("获取设备详情")
-	deviceGroup.Put("/:id<guid>", h.UpdateDevice).Name("更新设备")
-	deviceGroup.Delete("/:id<guid>", h.DeleteDevice).Name("删除设备")
+	deviceGroup.GET("", h.GetDevices)
+	deviceGroup.POST("", h.CreateDevice)
+	deviceGroup.GET("/:id", h.GetDevice)
+	deviceGroup.PUT("/:id", h.UpdateDevice)
+	deviceGroup.DELETE("/:id", h.DeleteDevice)
 }
 
 // GetDevices 获取设备列表
-func (h *DeviceHandler) GetDevices(c *fiber.Ctx) error {
+func (h *DeviceHandler) GetDevices(c *gin.Context) {
 	// 获取设备列表
 	var devices []models.DeviceModel
 	if err := h.CommonService.GetItems(&devices); err != nil {
 		log.Errorf("获取设备列表失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取设备列表失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取设备列表失败"))
+		return
 	}
 
-	return c.JSON(dto.SuccessResponse(devices))
+	c.JSON(http.StatusOK, dto.SuccessResponse(devices))
 }
 
 // CreateDevice 创建设备
-func (h *DeviceHandler) CreateDevice(c *fiber.Ctx) error {
+func (h *DeviceHandler) CreateDevice(c *gin.Context) {
 	// 解析请求体
 	var req dto.CreateDeviceRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+
 	}
 
 	// 创建设备
@@ -61,55 +65,62 @@ func (h *DeviceHandler) CreateDevice(c *fiber.Ctx) error {
 
 		if sqliteErr, ok := err.(sqlite3.Error); ok {
 			if sqliteErr.Code == sqlite3.ErrConstraint {
-				return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备已存在"))
+				c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备已存在"))
+				return
 			}
 		}
 
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "创建设备失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "创建设备失败"))
+		return
 	}
 
 	h.DevicesCache.NotifyRefresh()
 
-	return c.Status(fiber.StatusCreated).JSON(dto.SuccessResponse(device))
+	c.JSON(http.StatusCreated, dto.SuccessResponse(device))
 }
 
 // GetDevice 获取设备详情
-func (h *DeviceHandler) GetDevice(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *DeviceHandler) GetDevice(c *gin.Context) {
+	id := c.Param("id")
 
 	// 验证 UUID 格式
 	deviceUUID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备ID格式无效"))
+		return
 	}
 
 	// 获取设备
 	var device models.DeviceModel
 	if err := h.CommonService.GetItemByID(deviceUUID, &device); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(fiber.StatusNotFound, "设备不存在"))
+			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "设备不存在"))
+			return
 		}
 		log.Errorf("获取设备失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取设备失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取设备失败"))
+		return
 	}
 
-	return c.JSON(dto.SuccessResponse(device))
+	c.JSON(http.StatusOK, dto.SuccessResponse(device))
 }
 
 // UpdateDevice 更新设备
-func (h *DeviceHandler) UpdateDevice(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *DeviceHandler) UpdateDevice(c *gin.Context) {
+	id := c.Param("id")
 
 	// 验证 UUID 格式
 	deviceUUID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备ID格式无效"))
+		return
 	}
 
 	// 解析请求体
 	var req dto.UpdateDeviceRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
 	}
 
 	// 更新设备
@@ -118,36 +129,42 @@ func (h *DeviceHandler) UpdateDevice(c *fiber.Ctx) error {
 		log.Errorf("更新设备失败: %v", err)
 		if sqliteErr, ok := err.(sqlite3.Error); ok {
 			if sqliteErr.Code == sqlite3.ErrConstraint {
-				return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备已存在"))
+				c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备已存在"))
+				return
 			}
 		}
 
 		log.Errorf("更新设备失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "更新设备失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新设备失败"))
+		return
 	}
 
 	h.DevicesCache.NotifyRefresh()
 
-	return c.JSON(dto.SuccessResponse(device))
+	c.JSON(http.StatusOK, dto.SuccessResponse(device))
 }
 
 // DeleteDevice 删除设备
-func (h *DeviceHandler) DeleteDevice(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
+	id := c.Param("id")
 
 	// 验证 UUID 格式
 	deviceUUID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
+		// return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备ID格式无效"))
+		return
 	}
 
 	// 删除设备
 	if err := h.CommonService.DeleteItemByID(&models.DeviceModel{}, deviceUUID); err != nil {
 		log.Errorf("删除设备失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除设备失败"))
+		// return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除设备失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除设备失败"))
+		return
 	}
 
 	h.DevicesCache.NotifyRefresh()
 
-	return c.JSON(dto.SuccessResponse(nil))
+	c.JSON(http.StatusOK, dto.SuccessResponse(nil))
 }

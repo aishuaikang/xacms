@@ -1,11 +1,12 @@
 package routes
 
 import (
-	"xacms/internal/dto"
-	"xacms/internal/models"
-	"xacms/internal/services"
+	"net/http"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
+	"uav_defender/internal/services"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -18,144 +19,159 @@ type UserHandler struct {
 }
 
 // RegisterRoutes 注册用户相关路由
-func (h *UserHandler) RegisterRoutes(router fiber.Router) {
-	userGroup := router.Group("/users").Name("用户管理.")
+func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup) {
+	userGroup := router.Group("/users")
 
-	userGroup.Get("", h.GetUsers).Name("获取用户列表")
-	userGroup.Post("", h.CreateUser).Name("创建用户")
-	userGroup.Get("/:id<guid>", h.GetUser).Name("获取用户详情")
-	userGroup.Put("/:id<guid>", h.UpdateUser).Name("更新用户")
-	userGroup.Delete("/:id<guid>", h.DeleteUser).Name("删除用户")
-	userGroup.Post("/:id<guid>/role", h.AssignRole).Name("分配角色")
+	userGroup.GET("", h.GetUsers)
+	userGroup.POST("", h.CreateUser)
+	userGroup.GET("/:id", h.GetUser)
+	userGroup.PUT("/:id", h.UpdateUser)
+	userGroup.DELETE("/:id", h.DeleteUser)
+	userGroup.POST("/:id/role", h.AssignRole)
 }
 
 // GetUsers 获取用户列表
-func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
+func (h *UserHandler) GetUsers(c *gin.Context) {
 	// 解析查询参数
 	var req dto.UserQueryRequest
 	err := h.CommonService.ValidateQuery(c, &req)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
 	}
 
 	// 获取用户列表
 	users, err := h.UserService.GetUsers(req)
 	if err != nil {
 		log.Errorf("获取用户列表失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取用户列表失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取用户列表失败"))
+		return
 	}
 
-	return c.JSON(dto.SuccessResponse(users))
+	c.JSON(http.StatusOK, dto.SuccessResponse(users))
 }
 
 // CreateUser 创建用户
-func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
+func (h *UserHandler) CreateUser(c *gin.Context) {
 	// 解析请求体
 	var req dto.CreateUserRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
 	}
 
 	// 创建用户
 	user, err := h.UserService.CreateUser(req)
 	if err != nil {
 		log.Errorf("创建用户失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "创建用户失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "创建用户失败"))
+		return
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(dto.SuccessResponse(user))
+	c.JSON(http.StatusCreated, dto.SuccessResponse(user))
 }
 
 // GetUser 获取用户详情
-func (h *UserHandler) GetUser(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *UserHandler) GetUser(c *gin.Context) {
+	id := c.Param("id")
 
 	// 验证 UUID 格式
 	userUUID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
+		return
 	}
 
 	// 获取用户
 	var user models.UserModel
 	if err := h.CommonService.GetItemByID(userUUID, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(fiber.StatusNotFound, "用户不存在"))
+			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "用户不存在"))
+			return
 		}
 		log.Errorf("获取用户失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取用户失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取用户失败"))
+		return
 	}
 
-	return c.JSON(dto.SuccessResponse(user))
+	c.JSON(http.StatusOK, dto.SuccessResponse(user))
 }
 
 // UpdateUser 更新用户
-func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	id := c.Param("id")
 
 	// 验证 UUID 格式
 	userUUID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
+		return
 	}
 
 	// 解析请求体
 	var req dto.UpdateUserRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
 	}
 
 	// 更新用户
 	user, err := h.UserService.UpdateUser(userUUID, req)
 	if err != nil {
 		log.Errorf("更新用户失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "更新用户失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新用户失败"))
+		return
 	}
 
-	return c.JSON(dto.SuccessResponse(user))
+	c.JSON(http.StatusOK, dto.SuccessResponse(user))
 }
 
 // DeleteUser 删除用户
-func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	id := c.Param("id")
 
 	// 验证 UUID 格式
 	userUUID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
+		return
 	}
 
 	// 删除用户
 	if err := h.CommonService.DeleteItemByID(&models.UserModel{}, userUUID); err != nil {
 		log.Errorf("删除用户失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除用户失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除用户失败"))
+		return
 	}
 
-	return c.JSON(dto.SuccessResponse(nil))
+	c.JSON(http.StatusOK, dto.SuccessResponse(nil))
 }
 
 // AssignRole 分配角色
-func (h *UserHandler) AssignRole(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *UserHandler) AssignRole(c *gin.Context) {
+	id := c.Param("id")
 
 	// 验证 UUID 格式
 	userUUID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "用户ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
+		return
 	}
 
 	// 解析请求体
 	var req dto.AssignRoleRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, err.Error()))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
 	}
 
 	// 分配角色
 	user, err := h.UserService.AssignRole(userUUID, req)
 	if err != nil {
 		log.Errorf("分配角色失败: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "分配角色失败"))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "分配角色失败"))
+		return
 	}
 
-	return c.JSON(dto.SuccessResponse(user))
+	c.JSON(http.StatusOK, dto.SuccessResponse(user))
 }

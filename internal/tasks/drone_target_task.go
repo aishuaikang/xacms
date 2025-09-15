@@ -3,8 +3,8 @@ package tasks
 import (
 	"context"
 	"time"
-	"xacms/internal/cache"
-	"xacms/internal/services"
+	"uav_defender/internal/cache"
+	"uav_defender/internal/services"
 
 	"github.com/gofiber/fiber/v2/log"
 )

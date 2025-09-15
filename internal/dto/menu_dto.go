@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"xacms/internal/models"
+	"uav_defender/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -36,7 +36,13 @@ type UpdateMenuRequest struct {
 	Order        *uint            `json:"order" validate:"omitempty,min=0"`
 }
 
-type MenuTreeItem struct {
+type MenuWithChildren struct {
 	models.MenuModel
-	Children []MenuTreeItem `json:"children"`
+	Children []MenuWithChildren `json:"children"`
+}
+
+type APIInfo struct {
+	Method  string `json:"method"`
+	Path    string `json:"path"`
+	Handler string `json:"handler"`
 }

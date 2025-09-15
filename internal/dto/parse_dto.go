@@ -1,6 +1,6 @@
 package dto
 
-import "xacms/internal/models"
+import "uav_defender/internal/models"
 
 // GPS 结构体表示 GPS 坐标
 type GPS struct {

@@ -102,7 +102,7 @@ func validatePasswordStrength(fl validator.FieldLevel) bool {
 
 // // ValidateJSON 中间件：验证JSON请求体
 // func ValidateJSON(validator *ValidationMiddleware, target interface{}) fiber.Handler {
-// 	return func(c *fiber.Ctx) error {
+// 	return func(c *gin.Context) error {
 // 		if err := c.BodyParser(target); err != nil {
 // 			return c.Status(400).JSON(fiber.Map{
 // 				"code":    400,

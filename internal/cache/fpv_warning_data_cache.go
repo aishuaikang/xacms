@@ -3,7 +3,7 @@ package cache
 import (
 	"sync"
 	"time"
-	"xacms/internal/dto"
+	"uav_defender/internal/dto"
 )
 
 type FPVWarningDataCache interface {

@@ -1,8 +1,8 @@
 package services
 
 import (
-	"xacms/internal/dto"
-	"xacms/internal/models"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

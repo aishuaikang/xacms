@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
-	"xacms/internal/dto"
-	"xacms/internal/models"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

@@ -2,7 +2,7 @@ package tasks
 
 import (
 	"context"
-	"xacms/internal/cache"
+	"uav_defender/internal/cache"
 
 	"github.com/gofiber/fiber/v2/log"
 )

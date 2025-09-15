@@ -2,8 +2,8 @@ package cache
 
 import (
 	"sync"
-	"xacms/internal/dto"
-	"xacms/internal/services"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/services"
 )
 
 type DevicesCache interface {

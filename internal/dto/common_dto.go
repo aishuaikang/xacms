@@ -2,9 +2,9 @@ package dto
 
 // BaseQueryRequest 基础查询请求结构
 type BaseQueryRequest struct {
-	Page     int `query:"page,string" validate:"min=1"`
-	PageSize int `query:"page_size,string" validate:"min=1,max=100"`
-	// Keyword  string `query:"keyword" validate:"omitempty,max=100"`
+	Page     int `form:"page,string" validate:"min=1"`
+	PageSize int `form:"page_size,string" validate:"min=1,max=100"`
+	// Keyword  string `form:"keyword" validate:"omitempty,max=100"`
 }
 
 // // IDRequest 通用ID请求结构

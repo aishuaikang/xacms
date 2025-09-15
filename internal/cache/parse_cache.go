@@ -4,7 +4,7 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"xacms/internal/dto"
+	"uav_defender/internal/dto"
 )
 
 type ParseCache interface {

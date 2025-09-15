@@ -1,6 +1,6 @@
 package cache
 
-import "xacms/internal/pkg/config"
+import "uav_defender/internal/pkg/config"
 
 type CommonCache interface {
 	SetTTL(ttl int64)

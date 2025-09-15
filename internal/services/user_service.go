@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
-	"xacms/internal/dto"
-	"xacms/internal/models"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -22,13 +22,15 @@ type UserService interface {
 type userService struct {
 	db            *gorm.DB
 	commonService CommonService
+	roleService   RoleService
 }
 
 // NewUserService 创建用户服务实例
-func NewUserService(db *gorm.DB, commonService CommonService) UserService {
+func NewUserService(db *gorm.DB, commonService CommonService, roleService RoleService) UserService {
 	return &userService{
 		db:            db,
 		commonService: commonService,
+		roleService:   roleService,
 	}
 }
 
@@ -119,6 +121,16 @@ func (s *userService) AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*
 			return nil, errors.New("用户不存在")
 		}
 		return nil, err
+	}
+
+	// 检查角色是否存在
+	exists, err := s.roleService.IsRoleExist(req.RoleID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New("角色不存在")
 	}
 
 	user.RoleID = &req.RoleID

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sync"
 	"time"
-	"xacms/internal/dto"
-	"xacms/internal/models"
-	"xacms/internal/pkg/utils"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2/log"
 	"gorm.io/datatypes"

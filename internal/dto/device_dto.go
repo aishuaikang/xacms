@@ -1,6 +1,6 @@
 package dto
 
-import "xacms/internal/models"
+import "uav_defender/internal/models"
 
 // CreateDeviceRequest 创建设备请求结构
 type CreateDeviceRequest struct {

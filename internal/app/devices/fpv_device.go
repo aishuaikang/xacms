@@ -8,10 +8,10 @@ import (
 	"net"
 	"strings"
 	"time"
-	conn_ "xacms/internal/app/devices/conn"
-	"xacms/internal/cache"
-	"xacms/internal/pkg/config"
-	"xacms/internal/pkg/utils"
+	conn_ "uav_defender/internal/app/devices/conn"
+	"uav_defender/internal/cache"
+	"uav_defender/internal/pkg/config"
+	"uav_defender/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2/log"
 )

@@ -2,10 +2,9 @@ package services
 
 import (
 	"errors"
-	"xacms/internal/app"
-	"xacms/internal/dto"
-	"xacms/internal/models"
-	"xacms/internal/pkg/utils"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/utils"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
@@ -16,7 +15,7 @@ import (
 type MenuService interface {
 	CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel, error)
 	UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error)
-	GetMenuTree() ([]dto.MenuTreeItem, error)
+	GetMenuTree() ([]dto.MenuWithChildren, error)
 }
 
 // menuService 菜单服务实现
@@ -26,7 +25,7 @@ type menuService struct {
 }
 
 // NewMenuService 创建菜单服务实例
-func NewMenuService(db *gorm.DB, commonService CommonService, fiberServer *app.FiberServer) MenuService {
+func NewMenuService(db *gorm.DB, commonService CommonService) MenuService {
 	return &menuService{
 		db:            db,
 		commonService: commonService,
@@ -35,6 +34,15 @@ func NewMenuService(db *gorm.DB, commonService CommonService, fiberServer *app.F
 
 // CreateMenu 创建菜单
 func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel, error) {
+	// 判断 ParentID 是否存在
+	if req.ParentID != nil {
+		var parentMenu models.MenuModel
+		if exists, err := s.commonService.IsExistByID(*req.ParentID, &parentMenu); err != nil {
+			return nil, err
+		} else if !exists {
+			return nil, errors.New("父菜单不存在")
+		}
+	}
 
 	menu := &models.MenuModel{
 		ParentID:     req.ParentID,
@@ -111,20 +119,23 @@ func (s *menuService) UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest)
 }
 
 // GetMenuTree 获取菜单树
-func (s *menuService) GetMenuTree() ([]dto.MenuTreeItem, error) {
+func (s *menuService) GetMenuTree() ([]dto.MenuWithChildren, error) {
 	var menus []models.MenuModel
 	if err := s.commonService.GetItems(&menus); err != nil {
 		log.Errorf("获取菜单列表失败: %v", err)
 		return nil, errors.New("获取菜单列表失败")
 	}
 
+	// log.Debugf("所有菜单: %+v", menus)
+
 	// 递归组装菜单树
-	var buildMenuTree func(parentID *uuid.UUID) []dto.MenuTreeItem
-	buildMenuTree = func(parentID *uuid.UUID) []dto.MenuTreeItem {
-		var children []dto.MenuTreeItem
+	var buildMenuTree func(parentID *uuid.UUID) []dto.MenuWithChildren
+	buildMenuTree = func(parentID *uuid.UUID) []dto.MenuWithChildren {
+		var children []dto.MenuWithChildren
 		for _, menu := range menus {
+			log.Debugf(" 父ID: %v , 当前菜单ID: %v", menu.ParentID, parentID)
 			if utils.EqualUUID(menu.ParentID, parentID) {
-				children = append(children, dto.MenuTreeItem{
+				children = append(children, dto.MenuWithChildren{
 					MenuModel: menu,
 					Children:  buildMenuTree(&menu.ID),
 				})

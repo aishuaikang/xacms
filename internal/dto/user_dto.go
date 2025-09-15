@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"xacms/internal/models"
+	"uav_defender/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -9,10 +9,10 @@ import (
 // UserQueryRequest 用户查询请求结构
 type UserQueryRequest struct {
 	BaseQueryRequest
-	// Status       *models.Status `query:"status" validate:"omitempty,oneof=0 1"`
-	// RoleID       *uuid.UUID `query:"role_id" validate:"omitempty,uuid"`
-	// TenantID     *uuid.UUID `query:"tenant_id" validate:"omitempty,uuid"`
-	// DepartmentID *uuid.UUID `query:"department_id" validate:"omitempty,uuid"`
+	// Status       *models.Status `form:"status" validate:"omitempty,oneof=0 1"`
+	// RoleID       *uuid.UUID `form:"role_id" validate:"omitempty,uuid"`
+	// TenantID     *uuid.UUID `form:"tenant_id" validate:"omitempty,uuid"`
+	// DepartmentID *uuid.UUID `form:"department_id" validate:"omitempty,uuid"`
 }
 
 // CreateUserRequest 创建用户请求结构

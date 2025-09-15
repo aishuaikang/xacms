@@ -2,11 +2,13 @@ package services
 
 import (
 	"errors"
+	"net/http"
 	"sort"
-	"xacms/internal/app"
-	"xacms/internal/pkg/utils"
+	"uav_defender/internal/app"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/pkg/utils"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -16,25 +18,26 @@ import (
 type CommonService interface {
 	GetItems(model any) error
 	GetItemByID(id uuid.UUID, model any) error
+	IsExistByID(id uuid.UUID, model any) (bool, error)
 	DeleteItemByID(model any, id uuid.UUID) error
-	ValidateBody(c *fiber.Ctx, model any) error
-	ValidateQuery(c *fiber.Ctx, model any) error
-	GetAPIs() []fiber.Route
+	ValidateBody(c *gin.Context, model any) error
+	ValidateQuery(c *gin.Context, model any) error
+	GetAPIs() []dto.APIInfo
 }
 
 // commonService 公共服务实现
 type commonService struct {
-	db          *gorm.DB
-	validator   *utils.ValidationMiddleware
-	fiberServer *app.FiberServer
+	db        *gorm.DB
+	validator *utils.ValidationMiddleware
+	ginServer *app.GinServer
 }
 
 // NewCommonService 创建公共服务实例
-func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware, fiberServer *app.FiberServer) CommonService {
+func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware, ginServer *app.GinServer) CommonService {
 	return &commonService{
-		db:          db,
-		validator:   validator,
-		fiberServer: fiberServer,
+		db:        db,
+		validator: validator,
+		ginServer: ginServer,
 	}
 }
 
@@ -58,6 +61,15 @@ func (s *commonService) GetItemByID(id uuid.UUID, model any) error {
 	return nil
 }
 
+// IsExistByID 检查ID是否存在
+func (s *commonService) IsExistByID(id uuid.UUID, model any) (bool, error) {
+	var count int64
+	if err := s.db.Model(model).Where("id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // DeleteItemByID 根据ID删除单个数据
 func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
 	if err := s.db.Delete(model, "id = ?", id).Error; err != nil {
@@ -67,9 +79,9 @@ func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
 }
 
 // ValidateBody 验证请求体
-func (s *commonService) ValidateBody(c *fiber.Ctx, model any) error {
+func (s *commonService) ValidateBody(c *gin.Context, model any) error {
 	// 解析请求体
-	if err := c.BodyParser(model); err != nil {
+	if err := c.ShouldBindJSON(model); err != nil {
 		log.Errorf("解析请求体失败: %v", err)
 		return errors.New("请求体格式错误")
 	}
@@ -82,9 +94,9 @@ func (s *commonService) ValidateBody(c *fiber.Ctx, model any) error {
 }
 
 // ValidateQuery 验证查询参数
-func (s *commonService) ValidateQuery(c *fiber.Ctx, model any) error {
+func (s *commonService) ValidateQuery(c *gin.Context, model any) error {
 	// 解析查询参数
-	if err := c.QueryParser(model); err != nil {
+	if err := c.ShouldBindQuery(model); err != nil {
 		log.Errorf("解析查询参数失败: %v", err)
 		return errors.New("查询参数格式错误")
 	}
@@ -97,18 +109,24 @@ func (s *commonService) ValidateQuery(c *fiber.Ctx, model any) error {
 }
 
 // GetAPIs 获取API列表
-func (s *commonService) GetAPIs() []fiber.Route {
-	routeMap := make(map[string][]fiber.Route) // 键: 路径+名称, 值: 具有相同路径+名称的路由
+func (s *commonService) GetAPIs() []dto.APIInfo {
+	routeMap := make(map[string][]dto.APIInfo) // 键: 路径+名称, 值: 具有相同路径+名称的路由
 
-	allroutes := s.fiberServer.GetRoutes(true)
+	allroutes := s.ginServer.Routes()
+
+	// log.Debugf("所有路由: %+v", allroutes)
 
 	// 按路径+名称分组路由
 	for _, route := range allroutes {
-		key := route.Path + "|" + route.Name
-		routeMap[key] = append(routeMap[key], route)
+		key := route.Path + "|" + route.Method
+		routeMap[key] = append(routeMap[key], dto.APIInfo{
+			Method:  route.Method,
+			Path:    route.Path,
+			Handler: route.Handler,
+		})
 	}
 
-	var result []fiber.Route
+	var result []dto.APIInfo
 	// 处理每个分组
 	for _, routes := range routeMap {
 		if len(routes) == 1 {
@@ -118,10 +136,10 @@ func (s *commonService) GetAPIs() []fiber.Route {
 		} else {
 			// 具有相同路径+名称的多个路由
 			hasNonHead := false
-			var headRoute *fiber.Route
+			var headRoute *dto.APIInfo
 
 			for i := range routes {
-				if routes[i].Method == fiber.MethodHead {
+				if routes[i].Method == http.MethodHead {
 					if headRoute == nil {
 						headRoute = &routes[i]
 					}
@@ -140,7 +158,7 @@ func (s *commonService) GetAPIs() []fiber.Route {
 
 	// 排序
 	sort.Slice(result, func(i, j int) bool {
-		return result[i].Name < result[j].Name
+		return result[i].Path < result[j].Path
 	})
 	return result
 }

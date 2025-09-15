@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
-	"xacms/internal/dto"
-	"xacms/internal/models"
+	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -15,6 +15,7 @@ type RoleService interface {
 	UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error)
 	GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error)
 	AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error)
+	IsRoleExist(roleId uuid.UUID) (bool, error)
 }
 
 // roleService 角色服务实现
@@ -103,4 +104,13 @@ func (s *roleService) AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) 
 	}
 
 	return &role, nil
+}
+
+// IsRoleExist 检查角色是否存在
+func (s *roleService) IsRoleExist(roleId uuid.UUID) (bool, error) {
+	var count int64
+	if err := s.db.Model(&models.RoleModel{}).Where("id = ?", roleId).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
