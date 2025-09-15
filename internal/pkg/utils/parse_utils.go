@@ -300,41 +300,10 @@ func parseDistance(value string) float64 {
 	return parseFloat(value)
 }
 
-// func parseDistance(value []byte) float64 {
-// 	distanceStr := string(value)
-// 	if strings.HasSuffix(distanceStr, "km") {
-// 		distanceStr = strings.TrimSuffix(distanceStr, "km") // 去掉 "km" 单位
-// 	}
-// 	return parseFloat([]byte(distanceStr))
-// }
-
-// fillTrajectoryAndCoords 坐标转换及轨迹
-// func fillTrajectoryAndCoords(parseData *ParseData) {
-// 	ji, err := service.FindDroneTrajectory(parseData.Serial)
-// 	if err != nil {
-// 		log.Errorf("获取轨迹失败: %v", err)
-// 		return
-// 	}
-// 	parseData.TrajectoryList = ji
-// 	if cache.Map != 3 {
-// 		parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude = Wgs84ToGcj02(parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude)
-// 		parseData.HomeGPS.Longitude, parseData.HomeGPS.Latitude = Wgs84ToGcj02(parseData.HomeGPS.Longitude, parseData.HomeGPS.Latitude)
-// 		parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude = Wgs84ToGcj02(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
-// 	} else {
-// 		//alert.DroneGPS.Longi = math.Round(alert.DroneGPS.Longi*1e3) / 1e3
-// 		//alert.DroneGPS.Lati = math.Round(alert.DroneGPS.Lati*1e3) / 1e3
-// 		//alert.HomeGPS.Longi = math.Round(alert.HomeGPS.Longi*1e3) / 1e3
-// 		//alert.HomeGPS.Lati = math.Round(alert.HomeGPS.Lati*1e3) / 1e3
-// 		//alert.PilotGPS.Longi = math.Round(alert.PilotGPS.Longi*1e3) / 1e3
-// 		//alert.PilotGPS.Lati = math.Round(alert.PilotGPS.Lati*1e3) / 1e3
-
-// 	}
-
-// }
-
 // 连续解密失败计数器
 var decryptFailCount int32
 
+// ParseEncryption 解析加密字段值并赋值给 ParseData 结构体
 func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, isHasSerial *bool) error {
 	freq, rssi, hexStr, id, err := extractFreqRssiAndHexString(fullLine)
 	if err != nil {
@@ -468,6 +437,7 @@ func extractFreqRssiAndHexString(data []byte) (float64, float64, string, string,
 	return freq, rssi, hexStr.String(), encryptedID, nil
 }
 
+// decryptWithAPI 调用外部API进行解密
 func decryptWithAPI(hexStr, token string) (*dto.ParseData, error) {
 	url := fmt.Sprintf("http://101.227.171.238:5000/api/yd/decryptl?hex=%s&token=%s", hexStr, token)
 	resp, err := http.Get(url)
@@ -531,6 +501,7 @@ func calculateFlightSpeed(eastV, northV, upV float64) float64 {
 	return math.Sqrt(horizontalSpeed*horizontalSpeed + upV*upV)
 }
 
+// MergeParseData 合并解析数据
 func MergeParseData(oldData, newData dto.ParseData) (dto.ParseData, error) {
 	// 更新其他字段
 	oldData.DroneGPS = newData.DroneGPS
