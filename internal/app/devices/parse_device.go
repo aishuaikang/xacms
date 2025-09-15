@@ -140,11 +140,9 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 			}
 
 			// gps 与解析出来的提供的都是 wgs84
-
 			// 验证了这条告警是不是完整的
 			if parseData.Serial != "" {
 				s.droneTargetCache.HandleParseDataToDroneTarget(parseData)
-
 			}
 
 			// TODO: 1、根据设置的map类型设置进行坐标转换
@@ -209,7 +207,7 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dt
 				parseData.DroneGPS.Latitude,  // 无人机纬度
 				parseData.DroneGPS.Longitude, // 无人机经度
 			)
-			if targetLat != 0 && parseData.DroneGPS.Longitude > 0.1 {
+			if parseData.DroneGPS.Longitude > 0.1 {
 				azimuth := utils.CalculateBearing(
 					targetLat,                    // 设备纬度
 					targetLon,                    // 设备经度
