@@ -17,11 +17,11 @@ server:
 # account:
 #     init-password: 123456
 
-# jwt:
-#     signing-key: aaa123
-#     expires-time: 7d
-#     buffer-time: 1d
-#     issuer: qmPlus
+jwt:
+    singingKey: uav_defender_key_123456
+    expiresTime: 7d
+    bufferTime: 1d
+    issuer: uav_defender
 
 configuration:
     # # 1关使用侦测设备默认的gps 2开使用专用的gps模块

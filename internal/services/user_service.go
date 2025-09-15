@@ -16,6 +16,7 @@ type UserService interface {
 	CreateUser(req dto.CreateUserRequest) (*models.UserModel, error)
 	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error)
 	AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*models.UserModel, error)
+	Login(req dto.LoginRequest) (*dto.LoginResponse, error)
 }
 
 // userService 用户服务实现
@@ -139,4 +140,24 @@ func (s *userService) AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (s *userService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
+	var user models.UserModel
+	if err := s.db.Where("username = ? AND password = ?", req.Username, req.Password).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("用户名或密码错误")
+		}
+		return nil, err
+	}
+
+	// 判断用户是否有分配角色
+	if user.RoleID == nil {
+		return nil, errors.New("用户未分配角色")
+	}
+
+	return &dto.LoginResponse{
+		UserModel: user,
+		Token:     "some-jwt-token",
+	}, nil
 }

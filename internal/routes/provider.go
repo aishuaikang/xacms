@@ -9,5 +9,10 @@ var RoutesSet = wire.NewSet(
 	wire.Struct(new(DeviceHandler), "*"),
 	wire.Struct(new(DroneTargetHandler), "*"),
 	wire.Struct(new(SSEHandler), "*"),
+	publicRoutesSet,
 	NewRouter,
+)
+
+var publicRoutesSet = wire.NewSet(
+	wire.Struct(new(UserPublicHandler), "*"),
 )

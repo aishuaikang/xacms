@@ -28,6 +28,13 @@ type Configuration struct {
 	StrikePort int   `yaml:"strikePort"`
 }
 
+type JWT struct {
+	SigningKey  string `yaml:"singingKey"`
+	ExpiresTime string
+	BufferTime  string
+	Issuer      string
+}
+
 type Config struct {
 	Log           LogConfig      `yaml:"log"`
 	Database      DatabaseConfig `yaml:"database"`

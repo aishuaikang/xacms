@@ -15,8 +15,9 @@ type RouteModule interface {
 
 // Router 路由注册器
 type Router struct {
-	server  *app.GinServer
-	modules []RouteModule
+	server       *app.GinServer
+	modules      []RouteModule
+	publicModule []RouteModule
 }
 
 // NewRouter 创建路由注册器
@@ -29,6 +30,7 @@ func NewRouter(server *app.GinServer,
 	deviceHandler *DeviceHandler,
 	droneTargetHandler *DroneTargetHandler,
 	sseHandler *SSEHandler,
+	userPublicHandler *UserPublicHandler,
 ) *Router {
 
 	// 启动设备相关服务
@@ -47,7 +49,11 @@ func NewRouter(server *app.GinServer,
 			droneTargetHandler,
 			sseHandler,
 		},
+		publicModule: []RouteModule{
+			userPublicHandler,
+		},
 	}
+
 }
 
 // RegisterRoutes 注册所有模块路由
@@ -56,7 +62,7 @@ func (r *Router) RegisterRoutes() {
 	apiV1 := r.server.Engine.Group("/api/v1")
 
 	// 注册公开路由（不需要认证）
-	// publicRoutes := apiV1.Group("/public")
+	publicRoutes := apiV1.Group("/public")
 	// publicRoutes.Get("/health", r.HealthCheck)
 
 	// 注册需要认证的路由
@@ -72,8 +78,14 @@ func (r *Router) RegisterRoutes() {
 	// protectedRoutes.Use(middlewares.AuthMiddleware())
 	// protectedRoutes.Use(middlewares.TenantMiddleware())
 
+	// 注册所有模块路由到公开路由组
+	for _, module := range r.publicModule {
+		module.RegisterRoutes(publicRoutes)
+	}
+
 	// 注册所有模块路由到受保护的路由组
 	for _, module := range r.modules {
 		module.RegisterRoutes(protectedRoutes)
 	}
+
 }

@@ -52,3 +52,13 @@ type AssignRoleRequest struct {
 // 	UserID      uuid.UUID `json:"user_id" validate:"required,uuid"`
 // 	NewPassword string    `json:"new_password" validate:"required,min=6,max=128"`
 // }
+
+type LoginRequest struct {
+	Username string `json:"username" validate:"required,min=3,max=64"`
+	Password string `json:"password" validate:"required,min=6,max=128"`
+}
+
+type LoginResponse struct {
+	models.UserModel
+	Token string `json:"token"`
+}

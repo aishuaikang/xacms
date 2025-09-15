@@ -76,6 +76,10 @@ func wireRouter(ctx context.Context, cfg *config.Config, server *app.GinServer, 
 		FPVWarningDataCache: fpvWarningDataCache,
 		ParseCache:          parseCache,
 	}
-	router := routes.NewRouter(server, devicesDevices, tasksTasks, userHandler, menuHandler, roleHandler, deviceHandler, droneTargetHandler, sseHandler)
+	userPublicHandler := &routes.UserPublicHandler{
+		CommonService: commonService,
+		UserService:   userService,
+	}
+	router := routes.NewRouter(server, devicesDevices, tasksTasks, userHandler, menuHandler, roleHandler, deviceHandler, droneTargetHandler, sseHandler, userPublicHandler)
 	return router
 }
