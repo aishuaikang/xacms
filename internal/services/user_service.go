@@ -37,20 +37,20 @@ func NewUserService(db *gorm.DB, commonService CommonService, roleService RoleSe
 
 // GetUsers 获取用户列表
 func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error) {
-	var users []models.UserModel
 	query := s.db.Model(&models.UserModel{}).Preload(clause.Associations)
 
-	// 分页参数
-	page := req.Page
-	pageSize := req.PageSize
-
-	offset := (page - 1) * pageSize
-
-	if err := query.Offset(offset).Limit(pageSize).Find(&users).Order("created_at DESC").Error; err != nil {
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
+
+	var users []models.UserModel
+	if err := paginate(query, req.Page, req.PageSize).Order("created_at DESC").Find(&users).Error; err != nil {
+		return nil, err
+	}
+
 	return &dto.PaginatedResponse[models.UserModel]{
-		Total: len(users),
+		Total: total,
 		Items: users,
 	}, nil
 }

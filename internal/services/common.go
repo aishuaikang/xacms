@@ -161,3 +161,15 @@ func (s *commonService) GetAPIs() []dto.APIInfo {
 	})
 	return result
 }
+
+// paginate 分页辅助函数
+func paginate(query *gorm.DB, page, pageSize int) *gorm.DB {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+	return query.Offset(offset).Limit(pageSize)
+}

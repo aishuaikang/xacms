@@ -9,8 +9,8 @@ type Response struct {
 
 // PaginatedResponse 分页响应结构
 type PaginatedResponse[T any] struct {
-	Total int `json:"total"`
-	Items []T `json:"items"`
+	Total int64 `json:"total"`
+	Items []T   `json:"items"`
 }
 
 // SuccessResponse 成功响应

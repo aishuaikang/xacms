@@ -29,12 +29,7 @@ func NewDronTargetService(db *gorm.DB, commonService CommonService) DroneTargetS
 
 // GetDroneTargets 获取无人机目标列表
 func (s *droneTargetService) GetDroneTargets(req dto.DroneTargetQueryRequest) (*dto.PaginatedResponse[models.DroneTargetModel], error) {
-	var droneTargets []models.DroneTargetModel
 	query := s.db.Model(&models.DroneTargetModel{}).Preload(clause.Associations)
-
-	// 分页参数
-	page := req.Page
-	pageSize := req.PageSize
 
 	if req.Model != nil {
 		query = query.Where("model LIKE ?", "%"+*req.Model+"%")
@@ -50,14 +45,18 @@ func (s *droneTargetService) GetDroneTargets(req dto.DroneTargetQueryRequest) (*
 		query = query.Where("created_at <= ?", req.EndTime)
 	}
 
-	offset := (page - 1) * pageSize
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
 
-	if err := query.Offset(offset).Limit(pageSize).Find(&droneTargets).Order("created_at DESC").Error; err != nil {
+	var droneTargets []models.DroneTargetModel
+	if err := paginate(query, req.Page, req.PageSize).Order("created_at DESC").Find(&droneTargets).Error; err != nil {
 		return nil, err
 	}
 
 	return &dto.PaginatedResponse[models.DroneTargetModel]{
-		Total: len(droneTargets),
+		Total: total,
 		Items: droneTargets,
 	}, nil
 }

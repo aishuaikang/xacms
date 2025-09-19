@@ -17,7 +17,6 @@ import (
 	"uav_defender/internal/pkg/global"
 
 	"github.com/bytedance/sonic"
-	"github.com/gofiber/fiber/v2/log"
 	"go.uber.org/zap"
 
 	"github.com/skip2/go-qrcode"
@@ -175,7 +174,7 @@ func parseFloat(value string) float64 {
 
 	v, err := strconv.ParseFloat(value, 64)
 	if err != nil {
-		log.Warnf("无法解析浮点数 '%s': %v", value, err)
+		global.Logger.Warn("无法解析浮点数", zap.String("value", value), zap.Error(err))
 		return 0.0
 	}
 	return v
@@ -243,7 +242,7 @@ func parseDIDFieldValue(key string, value string, parseData *dto.ParseData) {
 	case "device":
 		device, err := strconv.Atoi(value)
 		if err != nil {
-			log.Warnf("无法解析设备ID '%s': %v", value, err)
+			global.Logger.Warn("无法解析设备ID", zap.String("value", value), zap.Error(err))
 		}
 		parseData.Device = device
 	case "serial":
@@ -310,7 +309,7 @@ var decryptFailCount int32
 func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, isHasSerial *bool) error {
 	freq, rssi, hexStr, id, err := extractFreqRssiAndHexString(fullLine)
 	if err != nil {
-		log.Errorf("提取频率、RSSI 和十六进制字符串失败: %v", err)
+		global.Logger.Error("提取频率、RSSI 和十六进制字符串失败", zap.String("fullLine", string(fullLine)), zap.Error(err))
 		return err
 	}
 
@@ -321,7 +320,7 @@ func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, is
 
 		// 仅当连续失败达到20次时，启用降级方案
 		if failCount >= 20 {
-			log.Warnf("解密失败(%d/30): %v，启用降级方案", failCount, err)
+			global.Logger.Warn("解密失败，启用降级方案", zap.Int32("failCount", failCount), zap.Error(err))
 
 			parseData.Freq = freq
 			parseData.RSSI = rssi
@@ -335,7 +334,7 @@ func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, is
 			// 重置计数器以便后续重新计数
 			atomic.StoreInt32(&decryptFailCount, 0)
 		} else {
-			log.Warnf("解密失败(%d/30): %v", failCount, err)
+			global.Logger.Warn("解密失败", zap.Int32("failCount", failCount), zap.Error(err))
 		}
 		return err
 	}
