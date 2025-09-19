@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 	"uav_defender/internal/cache"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/services"
 
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
 )
 
 type DroneTargetTask struct {
@@ -30,7 +31,7 @@ func (t *DroneTargetTask) Execute() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				log.Debug("DroneTargetTask 上下文已取消，正在退出 goroutine")
+				global.Logger.Info("DroneTargetTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-ticker.C:
 				staleTargets := t.droneTargetCache.MarkStaleTargetsAsVanishedAndRemove(10)
@@ -38,10 +39,10 @@ func (t *DroneTargetTask) Execute() {
 					continue
 				}
 
-				log.Infof("找到 %d 个超过2分钟未更新且未消失的无人机目标", len(staleTargets))
+				global.Logger.Debug("找到 %d 个超过2分钟未更新且未消失的无人机目标", zap.Int("count", len(staleTargets)))
 				for _, target := range staleTargets {
 					if _, err := t.droneTargetService.CreateDroneTarget(target); err != nil {
-						log.Errorf("存储无人机目标 %s 失败: %v", target.Serial, err)
+						global.Logger.Error("存储无人机目标失败", zap.String("serial", target.Serial), zap.Error(err))
 						continue
 					}
 				}

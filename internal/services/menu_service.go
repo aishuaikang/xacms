@@ -4,10 +4,11 @@ import (
 	"errors"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -122,18 +123,18 @@ func (s *menuService) UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest)
 func (s *menuService) GetMenuTree() ([]dto.MenuWithChildren, error) {
 	var menus []models.MenuModel
 	if err := s.commonService.GetItems(&menus); err != nil {
-		log.Errorf("获取菜单列表失败: %v", err)
+		global.Logger.Error("获取菜单列表失败", zap.Error(err))
 		return nil, errors.New("获取菜单列表失败")
 	}
 
-	// log.Debugf("所有菜单: %+v", menus)
+	// global.Logger.Debugf("所有菜单: %+v", menus)
 
 	// 递归组装菜单树
 	var buildMenuTree func(parentID *uuid.UUID) []dto.MenuWithChildren
 	buildMenuTree = func(parentID *uuid.UUID) []dto.MenuWithChildren {
 		var children []dto.MenuWithChildren
 		for _, menu := range menus {
-			log.Debugf(" 父ID: %v , 当前菜单ID: %v", menu.ParentID, parentID)
+			global.Logger.Debug("检查菜单父ID", zap.Any("菜单ID", menu.ID), zap.Any("菜单父ID", menu.ParentID), zap.Any("当前父ID", parentID))
 			if utils.EqualUUID(menu.ParentID, parentID) {
 				children = append(children, dto.MenuWithChildren{
 					MenuModel: menu,

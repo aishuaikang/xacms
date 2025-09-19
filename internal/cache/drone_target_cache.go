@@ -6,9 +6,10 @@ import (
 	"time"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
 	"gorm.io/datatypes"
 )
 
@@ -39,8 +40,7 @@ func (c *droneTargetCache) HandleParseDataToDroneTarget(parseData dto.ParseData)
 	// 检查坐标有效性
 	coordValid := utils.IsValidCoord(parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude, coordThreshold)
 	if !coordValid {
-		log.Warnf("目标 %s 坐标无效: (%.6f, %.6f)",
-			parseData.Serial, parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude)
+		global.Logger.Warn("目标坐标无效", zap.String("serial", parseData.Serial), zap.Float64("longitude", parseData.DroneGPS.Longitude), zap.Float64("latitude", parseData.DroneGPS.Latitude))
 	}
 
 	droneTarget, droneTargetIndex := c.FindDroneTargetBySerial(parseData.Serial)
@@ -79,7 +79,7 @@ func (c *droneTargetCache) FindDroneTargetBySerial(serial string) (*models.Drone
 
 // addDroneTargetFromParseData 从解析数据创建并添加新的无人机目标
 func (c *droneTargetCache) addDroneTargetFromParseData(parseData dto.ParseData, coordValid bool) {
-	log.Debugf("创建无人机目标: %s", parseData.Serial)
+	global.Logger.Info("创建无人机目标", zap.String("serial", parseData.Serial))
 	now := time.Now()
 	var trajectory datatypes.JSONSlice[models.Trajectory]
 
@@ -92,8 +92,7 @@ func (c *droneTargetCache) addDroneTargetFromParseData(parseData dto.ParseData, 
 			},
 		}
 
-		log.Debugf("为目标 %s 添加初始轨迹点: (%.6f, %.6f, %.1f)",
-			parseData.Serial, parseData.DroneGPS.Latitude, parseData.DroneGPS.Longitude, parseData.Height)
+		global.Logger.Info("为目标添加初始轨迹点", zap.String("serial", parseData.Serial), zap.Float64("latitude", parseData.DroneGPS.Latitude), zap.Float64("longitude", parseData.DroneGPS.Longitude), zap.Float64("height", parseData.Height))
 	}
 
 	droneTarget := &models.DroneTargetModel{
@@ -117,12 +116,12 @@ func (c *droneTargetCache) addDroneTargetFromParseData(parseData dto.ParseData, 
 
 	c.AppendDroneTarget(droneTarget)
 
-	log.Debugf("无人机目标 %s 已添加到缓存", parseData.Serial)
+	global.Logger.Info("无人机目标已添加到缓存", zap.String("serial", parseData.Serial))
 }
 
 // updateDroneTargetFromParseData 使用解析数据更新现有的无人机目标
 func (c *droneTargetCache) updateDroneTargetFromParseData(droneTargetIndex int, parseData dto.ParseData, coordValid bool) error {
-	log.Debugf("更新无人机目标: %s", parseData.Serial)
+	global.Logger.Debug("更新无人机目标", zap.String("serial", parseData.Serial))
 	if droneTargetCount := c.GetDroneTargetCount(); droneTargetIndex < 0 || droneTargetIndex >= droneTargetCount {
 		return errors.New("无效的目标索引")
 	}
@@ -165,8 +164,7 @@ func (c *droneTargetCache) updateDroneTargetFromParseData(droneTargetIndex int, 
 		target.Trajectory = append(target.Trajectory, newTrajectory)
 	}
 
-	log.Debugf("更新目标 %s 轨迹点: (%.6f, %.6f, %.1f)",
-		parseData.Serial, parseData.DroneGPS.Latitude, parseData.DroneGPS.Longitude, parseData.Height)
+	global.Logger.Debug("更新目标轨迹点", zap.String("serial", parseData.Serial), zap.Float64("latitude", parseData.DroneGPS.Latitude), zap.Float64("longitude", parseData.DroneGPS.Longitude), zap.Float64("height", parseData.Height))
 	return nil
 }
 
@@ -200,7 +198,8 @@ func (c *droneTargetCache) MarkStaleTargetsAsVanishedAndRemove(thresholdSeconds 
 			// 设置消失时间
 			target.VanishTime = models.CustomTime(now)
 			staleTargets = append(staleTargets, target)
-			log.Infof("目标 %s 超过 %d 秒未更新，设置消失时间并准备移除", target.Serial, thresholdSeconds)
+			global.Logger.Info("目标超时未更新", zap.String("serial", target.Serial), zap.Int64("threshold", thresholdSeconds))
+
 		} else {
 			activeTargets = append(activeTargets, target)
 		}

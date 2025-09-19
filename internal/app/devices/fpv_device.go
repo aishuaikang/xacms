@@ -11,9 +11,10 @@ import (
 	conn_ "uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/pkg/config"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
 )
 
 type FPVDevice struct {
@@ -41,13 +42,13 @@ func (s *FPVDevice) Start() {
 // handleConnection 处理每个连接
 func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	log.Infof("[%s] 新的FPV连接来自: %s", module, addr)
+	global.Logger.Info("新的FPV连接来自", zap.String("module", module), zap.String("address", addr))
 
 	// 根据连接的IP地址查找对应的设备
 	fpvIP := strings.Split(addr, ":")[0]
 	device, ok := s.devicesCache.GetDeviceByFPVIP(fpvIP)
 	if !ok {
-		log.Warnf("[%s] 未找到匹配的设备，关闭连接: %s", module, addr)
+		global.Logger.Warn("未找到匹配的设备，关闭连接", zap.String("module", module), zap.String("address", addr))
 		conn.Close()
 		return
 	}
@@ -59,7 +60,7 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 	// 发送给客户端AT 指令
 	at := []byte{0x41, 0x54, 0x0D, 0x0A} // 对应 "AT\r\n"
 	if _, err := conn.Write(at); err != nil {
-		log.Errorf("[%s] 发送AT指令失败: %v", module, err)
+		global.Logger.Error("发送AT指令失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 		return
 	}
 
@@ -74,16 +75,16 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 		line, err := scanner.ReadBytes('\n')
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				log.Infof("[%s] 连接超时，关闭连接: %s", module, conn.RemoteAddr().String())
+				global.Logger.Info("连接超时，关闭连接", zap.String("module", module), zap.String("address", addr))
 			} else {
-				log.Errorf("[%s] 读取数据失败: %v", module, err)
+				global.Logger.Warn("读取数据失败", zap.String("module", module), zap.Error(err))
 			}
 			break
 		}
 
 		// 判断 buffer 是否超过 10kB，防止内存耗尽攻击
 		if buffer.Len() > 10*1024 {
-			log.Warnf("[%s] 缓冲区数据过大，关闭连接: %s", module, conn.RemoteAddr().String())
+			global.Logger.Warn("缓冲区数据过大，关闭连接", zap.String("module", module), zap.String("address", addr))
 			break
 		}
 
@@ -113,7 +114,8 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 
 				warningData, err := utils.ParseFPVWarningData(fullLine, ip, time.Unix(), device.DetectionID)
 				if err != nil {
-					log.Errorf("[%s] 解析 FPV 警告数据失败: %v", module, err)
+					// log.Errorf("[%s] 解析 FPV 警告数据失败: %v", module, err)
+					global.Logger.Error("解析 FPV 警告数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 					continue
 				}
 

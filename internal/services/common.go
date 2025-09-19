@@ -4,12 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"sort"
-	"uav_defender/internal/app"
 	"uav_defender/internal/dto"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -29,15 +30,13 @@ type CommonService interface {
 type commonService struct {
 	db        *gorm.DB
 	validator *utils.ValidationMiddleware
-	ginServer *app.GinServer
 }
 
 // NewCommonService 创建公共服务实例
-func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware, ginServer *app.GinServer) CommonService {
+func NewCommonService(db *gorm.DB, validator *utils.ValidationMiddleware) CommonService {
 	return &commonService{
 		db:        db,
 		validator: validator,
-		ginServer: ginServer,
 	}
 }
 
@@ -82,7 +81,7 @@ func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
 func (s *commonService) ValidateBody(c *gin.Context, model any) error {
 	// 解析请求体
 	if err := c.ShouldBindJSON(model); err != nil {
-		log.Errorf("解析请求体失败: %v", err)
+		global.Logger.Error("解析请求体失败", zap.Error(err))
 		return errors.New("请求体格式错误")
 	}
 
@@ -97,7 +96,7 @@ func (s *commonService) ValidateBody(c *gin.Context, model any) error {
 func (s *commonService) ValidateQuery(c *gin.Context, model any) error {
 	// 解析查询参数
 	if err := c.ShouldBindQuery(model); err != nil {
-		log.Errorf("解析查询参数失败: %v", err)
+		global.Logger.Error("解析查询参数失败", zap.Error(err))
 		return errors.New("查询参数格式错误")
 	}
 
@@ -112,19 +111,19 @@ func (s *commonService) ValidateQuery(c *gin.Context, model any) error {
 func (s *commonService) GetAPIs() []dto.APIInfo {
 	routeMap := make(map[string][]dto.APIInfo) // 键: 路径+名称, 值: 具有相同路径+名称的路由
 
-	allroutes := s.ginServer.Routes()
+	// allroutes := s.ginServer.Routes()
 
 	// log.Debugf("所有路由: %+v", allroutes)
 
-	// 按路径+名称分组路由
-	for _, route := range allroutes {
-		key := route.Path + "|" + route.Method
-		routeMap[key] = append(routeMap[key], dto.APIInfo{
-			Method:  route.Method,
-			Path:    route.Path,
-			Handler: route.Handler,
-		})
-	}
+	// // 按路径+名称分组路由
+	// for _, route := range allroutes {
+	// 	key := route.Path + "|" + route.Method
+	// 	routeMap[key] = append(routeMap[key], dto.APIInfo{
+	// 		Method:  route.Method,
+	// 		Path:    route.Path,
+	// 		Handler: route.Handler,
+	// 	})
+	// }
 
 	var result []dto.APIInfo
 	// 处理每个分组

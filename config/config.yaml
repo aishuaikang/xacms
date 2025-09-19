@@ -1,13 +1,18 @@
 log:
-    # LevelTrace Level = iota 0
-    # LevelDebug 1
-    # LevelInfo 2
-    # LevelWarn 3
-    # LevelError 4
-    # LevelFatal 5
-    # LevelPanic 6
-    level: 1
-    enabled: false
+    # DebugLevel -1
+    # InfoLevel 0
+    # WarnLevel 1
+    # ErrorLevel 2
+    # DPanicLevel 3
+    # PanicLevel 4
+    # FatalLevel 5
+    level: 0
+    # Silent 1
+    # Error 2
+    # Warn 3
+    # Info 4
+    databaseLevel: 4
+    enabled: true
 database:
     name: "spbatc.db"
 

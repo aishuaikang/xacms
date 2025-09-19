@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 	"uav_defender/internal/cache"
-
-	"github.com/gofiber/fiber/v2/log"
+	"uav_defender/internal/pkg/global"
 )
 
 type ParseTask struct {
@@ -29,7 +28,7 @@ func (t *ParseTask) Execute() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				log.Debug("ParseTask 上下文已取消，正在退出 goroutine")
+				global.Logger.Info("ParseTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-ticker.C:
 

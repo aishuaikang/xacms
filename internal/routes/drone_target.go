@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/google/uuid"
 )
 
@@ -44,7 +46,8 @@ func (h *DroneTargetHandler) GetDroneTargets(c *gin.Context) {
 	// 获取无人机目标列表
 	droneTargets, err := h.DroneTargetService.GetDroneTargets(req)
 	if err != nil {
-		log.Errorf("获取无人机目标列表失败: %v", err)
+		// log.Errorf("获取无人机目标列表失败: %v", err)
+		global.Logger.Error("获取无人机目标列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取无人机目标列表失败"))
 		return
 	}
@@ -63,11 +66,11 @@ func (h *DroneTargetHandler) DeleteDroneTarget(c *gin.Context) {
 		return
 	}
 
-	log.Infof("删除无人机目标 ID: %s", userUUID.String())
+	global.Logger.Info("删除无人机目标", zap.String("id", userUUID.String()))
 
 	// 删除无人机目标
 	if err := h.CommonService.DeleteItemByID(&models.DroneTargetModel{}, userUUID); err != nil {
-		log.Errorf("删除无人机目标失败: %v", err)
+		global.Logger.Error("删除无人机目标失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除无人机目标失败"))
 		return
 	}

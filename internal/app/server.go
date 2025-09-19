@@ -1,6 +1,13 @@
 package app
 
 import (
+	"time"
+	"uav_defender/internal/app/devices"
+	"uav_defender/internal/pkg/global"
+	"uav_defender/internal/routes"
+	"uav_defender/internal/tasks"
+
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,39 +17,36 @@ import (
 
 type GinServer struct {
 	*gin.Engine
+	router  *routes.Router
+	tasks   *tasks.Tasks
+	devices *devices.Devices
 }
 
-func NewFiberServer() *GinServer {
+func NewGinServer(router *routes.Router, tasks *tasks.Tasks, devices *devices.Devices) *GinServer {
 	engine := gin.New()
-	engine.Use(gin.Logger())   // 日志中间件
-	engine.Use(gin.Recovery()) // Recovery 中间件，捕获 panic
-	// engine.Use(middleware.Cors)
+
+	engine.Use(ginzap.Ginzap(global.Logger, time.DateTime, false))
+	engine.Use(ginzap.RecoveryWithZap(global.Logger, true))
+
 	engine.MaxMultipartMemory = 2 << 30
 
-	// app := fiber.New(fiber.Config{
-	// 	ServerHeader:  "uav_defender",
-	// 	AppName:       "uav_defender",
-	// 	CaseSensitive: true,
-	// 	JSONEncoder:   sonic.Marshal,
-	// 	JSONDecoder:   sonic.Unmarshal,
-	// })
-
-	// // 设置压缩中间件
-	// app.Use(compress.New(compress.Config{
-	// 	Level: compress.LevelBestCompression, // 2
-	// }))
-
-	// // 设置日志中间件
-	// app.Use(logger.New(logger.Config{
-	// 	TimeFormat: time.DateTime,
-	// }))
-
-	// server := &FiberServer{
-	// 	App: app,
-	// }
 	server := &GinServer{
-		Engine: engine,
+		Engine:  engine,
+		router:  router,
+		tasks:   tasks,
+		devices: devices,
 	}
+
+	apiV1 := engine.Group("/api/v1")
+
+	// 注冊路由
+	server.router.RegisterRoutes(apiV1)
+
+	// 启动设备处理
+	server.devices.Start()
+
+	// 执行任务
+	server.tasks.Execute()
 
 	return server
 }

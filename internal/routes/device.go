@@ -6,10 +6,12 @@ import (
 	"uav_defender/internal/cache"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
@@ -40,7 +42,8 @@ func (h *DeviceHandler) GetDevices(c *gin.Context) {
 	// 获取设备列表
 	var devices []models.DeviceModel
 	if err := h.CommonService.GetItems(&devices); err != nil {
-		log.Errorf("获取设备列表失败: %v", err)
+		// log.Errorf("获取设备列表失败: %v", err)
+		global.Logger.Error("获取设备列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取设备列表失败"))
 		return
 	}
@@ -61,7 +64,7 @@ func (h *DeviceHandler) CreateDevice(c *gin.Context) {
 	// 创建设备
 	device, err := h.DeviceService.CreateDevice(req)
 	if err != nil {
-		log.Errorf("创建设备失败: %v", err)
+		global.Logger.Error("创建设备失败", zap.Error(err))
 
 		if sqliteErr, ok := err.(sqlite3.Error); ok {
 			if sqliteErr.Code == sqlite3.ErrConstraint {
@@ -97,7 +100,7 @@ func (h *DeviceHandler) GetDevice(c *gin.Context) {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "设备不存在"))
 			return
 		}
-		log.Errorf("获取设备失败: %v", err)
+		global.Logger.Error("获取设备失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取设备失败"))
 		return
 	}
@@ -126,7 +129,6 @@ func (h *DeviceHandler) UpdateDevice(c *gin.Context) {
 	// 更新设备
 	device, err := h.DeviceService.UpdateDevice(deviceUUID, req)
 	if err != nil {
-		log.Errorf("更新设备失败: %v", err)
 		if sqliteErr, ok := err.(sqlite3.Error); ok {
 			if sqliteErr.Code == sqlite3.ErrConstraint {
 				c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备已存在"))
@@ -134,7 +136,7 @@ func (h *DeviceHandler) UpdateDevice(c *gin.Context) {
 			}
 		}
 
-		log.Errorf("更新设备失败: %v", err)
+		global.Logger.Error("更新设备失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新设备失败"))
 		return
 	}
@@ -158,8 +160,7 @@ func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
 
 	// 删除设备
 	if err := h.CommonService.DeleteItemByID(&models.DeviceModel{}, deviceUUID); err != nil {
-		log.Errorf("删除设备失败: %v", err)
-		// return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除设备失败"))
+		global.Logger.Error("删除设备失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除设备失败"))
 		return
 	}

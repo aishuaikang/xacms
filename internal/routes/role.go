@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -35,7 +37,7 @@ func (h *RoleHandler) RegisterRoutes(router *gin.RouterGroup) {
 func (h *RoleHandler) GetRoles(c *gin.Context) {
 	var roles []models.RoleModel
 	if err := h.CommonService.GetItems(&roles); err != nil {
-		log.Errorf("获取角色列表失败: %v", err)
+		global.Logger.Error("获取角色列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取角色列表失败"))
 		return
 	}
@@ -54,8 +56,7 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 	// 创建角色
 	role, err := h.RoleService.CreateRole(req)
 	if err != nil {
-		log.Errorf("创建角色失败: %v", err)
-		// return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "创建角色失败"))
+		global.Logger.Error("创建角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "创建角色失败"))
 		return
 	}
@@ -81,7 +82,7 @@ func (h *RoleHandler) GetRole(c *gin.Context) {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "角色不存在"))
 			return
 		}
-		log.Errorf("获取角色失败: %v", err)
+		global.Logger.Error("获取角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取角色失败"))
 		return
 	}
@@ -110,7 +111,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	// 更新角色
 	role, err := h.RoleService.UpdateRole(roleUUID, req)
 	if err != nil {
-		log.Errorf("更新角色失败: %v", err)
+		global.Logger.Error("更新角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新角色失败"))
 		return
 	}
@@ -131,8 +132,7 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 
 	// 删除角色
 	if err := h.CommonService.DeleteItemByID(&models.RoleModel{}, roleUUID); err != nil {
-		log.Errorf("删除角色失败: %v", err)
-		// return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "删除角色失败"))
+		global.Logger.Error("删除角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除角色失败"))
 		return
 	}
@@ -155,8 +155,7 @@ func (h *RoleHandler) GetRoleMenus(c *gin.Context) {
 	// 获取角色菜单
 	menus, err := h.RoleService.GetRoleMenus(roleUUID)
 	if err != nil {
-		log.Errorf("获取角色菜单失败: %v", err)
-		// return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(fiber.StatusInternalServerError, "获取角色菜单失败"))
+		global.Logger.Error("获取角色菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取角色菜单失败"))
 		return
 	}
@@ -184,7 +183,7 @@ func (h *RoleHandler) AssignMenus(c *gin.Context) {
 	// 分配菜单
 	role, err := h.RoleService.AssignMenus(roleUUID, req)
 	if err != nil {
-		log.Errorf("分配菜单失败: %v", err)
+		global.Logger.Error("分配菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "分配菜单失败"))
 		return
 	}

@@ -3,25 +3,26 @@ package utils
 import (
 	"context"
 	"net"
+	"uav_defender/internal/pkg/global"
 
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
 )
 
 // 构建TCP服务器
 func BuildTcpServer(ctx context.Context, module string, addr string, handler func(module string, conn net.Conn)) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Errorf("%s 服务器监听地址 %s 失败: %v", module, addr, err)
+		global.Logger.Error("启动TCP服务器失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 		return
 	}
 	defer listener.Close()
 
-	log.Infof("%s 服务器启动成功，监听地址: %s", module, addr)
+	global.Logger.Info("启动TCP服务器成功", zap.String("module", module), zap.String("address", addr))
 
 	// 用一个 goroutine 监听 ctx.Done()，在取消时关闭 listener
 	go func() {
 		<-ctx.Done()
-		log.Infof("%s 服务器正在停止...", module)
+		global.Logger.Info("停止TCP服务器", zap.String("module", module))
 		listener.Close() // 会导致 Accept 返回错误，从而退出主循环
 	}()
 
@@ -30,10 +31,10 @@ func BuildTcpServer(ctx context.Context, module string, addr string, handler fun
 		if err != nil {
 			select {
 			case <-ctx.Done():
-				log.Infof("%s 服务器已正常退出", module)
+				global.Logger.Info("停止TCP服务器", zap.String("module", module))
 				return
 			default:
-				log.Errorf("%s 服务器接受连接失败: %v", module, err)
+				global.Logger.Error("启动TCP服务器失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 				continue
 			}
 		}

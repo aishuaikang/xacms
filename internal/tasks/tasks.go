@@ -1,16 +1,17 @@
 package tasks
 
-type TaskExecutor interface {
+type Executor interface {
 	Execute()
 }
 
+// 任务管理器
 type Tasks struct {
-	tasks []TaskExecutor
+	tasks []Executor
 }
 
 func NewTasks(decryptTokenTask *DecryptTokenTask, devicesTask *DevicesTask, droneTargetTask *DroneTargetTask, parseTask *ParseTask, fpvTask *FPVTask) *Tasks {
 	return &Tasks{
-		tasks: []TaskExecutor{
+		tasks: []Executor{
 			decryptTokenTask,
 			devicesTask,
 			droneTargetTask,

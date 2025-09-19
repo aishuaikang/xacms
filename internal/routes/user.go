@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -43,7 +45,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	// 获取用户列表
 	users, err := h.UserService.GetUsers(req)
 	if err != nil {
-		log.Errorf("获取用户列表失败: %v", err)
+		global.Logger.Error("获取用户列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取用户列表失败"))
 		return
 	}
@@ -63,7 +65,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	// 创建用户
 	user, err := h.UserService.CreateUser(req)
 	if err != nil {
-		log.Errorf("创建用户失败: %v", err)
+		global.Logger.Error("创建用户失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "创建用户失败"))
 		return
 	}
@@ -89,7 +91,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "用户不存在"))
 			return
 		}
-		log.Errorf("获取用户失败: %v", err)
+		global.Logger.Error("获取用户失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取用户失败"))
 		return
 	}
@@ -118,7 +120,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	// 更新用户
 	user, err := h.UserService.UpdateUser(userUUID, req)
 	if err != nil {
-		log.Errorf("更新用户失败: %v", err)
+		global.Logger.Error("更新用户失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新用户失败"))
 		return
 	}
@@ -139,7 +141,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 
 	// 删除用户
 	if err := h.CommonService.DeleteItemByID(&models.UserModel{}, userUUID); err != nil {
-		log.Errorf("删除用户失败: %v", err)
+		global.Logger.Error("删除用户失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除用户失败"))
 		return
 	}
@@ -168,7 +170,7 @@ func (h *UserHandler) AssignRole(c *gin.Context) {
 	// 分配角色
 	user, err := h.UserService.AssignRole(userUUID, req)
 	if err != nil {
-		log.Errorf("分配角色失败: %v", err)
+		global.Logger.Error("分配角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "分配角色失败"))
 		return
 	}

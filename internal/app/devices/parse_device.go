@@ -12,9 +12,10 @@ import (
 	"uav_defender/internal/cache"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/pkg/config"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
 )
 
 type ParseDevice struct {
@@ -50,13 +51,14 @@ func (s *ParseDevice) Start() {
 // handleConnection 处理每个连接
 func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	log.Infof("[%s] 新的解析连接来自: %s", module, addr)
+	// log.Infof("[%s] 新的解析连接来自: %s", module, addr)
+	global.Logger.Info("新的解析连接来自", zap.String("module", module), zap.String("address", addr))
 
 	// 根据连接的IP地址查找对应的设备
 	parseIP := strings.Split(addr, ":")[0]
 	device, ok := s.devicesCache.GetDeviceByParseIP(parseIP)
 	if !ok {
-		log.Warnf("[%s] 未找到匹配的设备，关闭连接: %s", module, addr)
+		global.Logger.Warn("未找到匹配的设备，关闭连接", zap.String("module", module), zap.String("address", addr))
 		conn.Close()
 		return
 	}
@@ -76,9 +78,9 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 		line, err := scanner.ReadBytes('\n')
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				log.Infof("[%s] 连接超时，关闭连接: %s", module, conn.RemoteAddr().String())
+				global.Logger.Info("连接超时，关闭连接", zap.String("module", module), zap.String("address", addr))
 			} else {
-				log.Errorf("[%s] 读取数据失败: %v", module, err)
+				global.Logger.Warn("读取数据失败", zap.String("module", module), zap.Error(err))
 			}
 			break
 		}
@@ -101,7 +103,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 
 			if utils.IsRID(fullLine) {
 				if err := utils.ParseRID(fullLine, &parseData); err != nil {
-					log.Errorf("解析 RID 数据失败: %v", err)
+					global.Logger.Error("解析 RID 数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 					continue
 				}
 
@@ -113,13 +115,13 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 				decryptToken := s.decryptTokenCache.GetDecryptToken()
 
 				if err := utils.ParseEncryption(fullLine, &parseData, decryptToken, &isHasSerial); err != nil {
-					log.Errorf("解析 Encryption 数据失败: %v", err)
+					global.Logger.Error("解析 Encryption 数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 					continue
 				}
 
 			} else if utils.IsDID(fullLine) {
 				if err := utils.ParseDID(fullLine, &parseData); err != nil {
-					log.Errorf("解析 DID 数据失败: %v", err)
+					global.Logger.Error("解析 DID 数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 					continue
 				}
 
@@ -131,7 +133,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 
 			// 这里进行报文内容校验，确保数据 hasSerial 是否存在Serial字段
 			if !isHasSerial {
-				log.Warnf("报文内容无效，缺少 Serial 字段，忽略该报文: %s", string(fullLine))
+				global.Logger.Warn("报文内容无效，缺少 Serial 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
 				continue
 			}
 
@@ -153,6 +155,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 	}
 }
 
+// updateParseDataList 更新解析数据列表
 func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dto.DeviceInfo) {
 	// 查找符合条件的定位数据
 	var parseDataIndex int = -1

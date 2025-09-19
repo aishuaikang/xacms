@@ -3,8 +3,9 @@ package tasks
 import (
 	"context"
 	"uav_defender/internal/cache"
+	"uav_defender/internal/pkg/global"
 
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
 )
 
 type DevicesTask struct {
@@ -21,18 +22,18 @@ func NewDevicesTask(ctx context.Context, devicesCache cache.DevicesCache) *Devic
 
 func (t *DevicesTask) Execute() {
 	if err := t.devicesCache.RefreshDevices(); err != nil {
-		log.Errorf("刷新设备列表失败: %v", err)
+		global.Logger.Error("刷新设备列表失败", zap.Error(err))
 	}
 
 	go func() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				log.Debug("DevicesTask 上下文已取消，正在退出 goroutine")
+				global.Logger.Info("DevicesTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-t.devicesCache.GetRefreshChan():
 				if err := t.devicesCache.RefreshDevices(); err != nil {
-					log.Errorf("刷新设备列表失败: %v", err)
+					global.Logger.Error("刷新设备列表失败", zap.Error(err))
 					continue
 				}
 			}

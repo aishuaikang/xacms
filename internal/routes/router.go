@@ -1,29 +1,22 @@
 package routes
 
 import (
-	"uav_defender/internal/app"
-	"uav_defender/internal/app/devices"
-	"uav_defender/internal/tasks"
-
 	"github.com/gin-gonic/gin"
 )
 
-// RouteModule 定义路由模块接口
-type RouteModule interface {
+// Route 定义路由接口
+type Route interface {
 	RegisterRoutes(router *gin.RouterGroup)
 }
 
-// Router 路由注册器
+// Router 路由器
 type Router struct {
-	server       *app.GinServer
-	modules      []RouteModule
-	publicModule []RouteModule
+	routes       []Route
+	publicRoutes []Route
 }
 
-// NewRouter 创建路由注册器
-func NewRouter(server *app.GinServer,
-	devices *devices.Devices,
-	tasks *tasks.Tasks,
+// NewRouter 创建路由器
+func NewRouter(
 	userHandler *UserHandler,
 	menuHandler *MenuHandler,
 	roleHandler *RoleHandler,
@@ -33,15 +26,8 @@ func NewRouter(server *app.GinServer,
 	userPublicHandler *UserPublicHandler,
 ) *Router {
 
-	// 启动设备相关服务
-	devices.Start()
-
-	// 执行任务
-	tasks.Execute()
-
 	return &Router{
-		server: server,
-		modules: []RouteModule{
+		routes: []Route{
 			userHandler,
 			menuHandler,
 			roleHandler,
@@ -49,7 +35,7 @@ func NewRouter(server *app.GinServer,
 			droneTargetHandler,
 			sseHandler,
 		},
-		publicModule: []RouteModule{
+		publicRoutes: []Route{
 			userPublicHandler,
 		},
 	}
@@ -57,16 +43,13 @@ func NewRouter(server *app.GinServer,
 }
 
 // RegisterRoutes 注册所有模块路由
-func (r *Router) RegisterRoutes() {
-	// 创建 API 版本组
-	apiV1 := r.server.Engine.Group("/api/v1")
+func (r *Router) RegisterRoutes(router *gin.RouterGroup) {
 
 	// 注册公开路由（不需要认证）
-	publicRoutes := apiV1.Group("/public")
-	// publicRoutes.Get("/health", r.HealthCheck)
+	publicRoutes := router.Group("/public")
 
 	// 注册需要认证的路由
-	protectedRoutes := apiV1.Group("/")
+	protectedRoutes := router.Group("/")
 
 	// protectedRoutes.Use(func(c *gin.Context) {
 	// 	// 如何匹配路由是否有权限
@@ -79,12 +62,12 @@ func (r *Router) RegisterRoutes() {
 	// protectedRoutes.Use(middlewares.TenantMiddleware())
 
 	// 注册所有模块路由到公开路由组
-	for _, module := range r.publicModule {
+	for _, module := range r.publicRoutes {
 		module.RegisterRoutes(publicRoutes)
 	}
 
 	// 注册所有模块路由到受保护的路由组
-	for _, module := range r.modules {
+	for _, module := range r.routes {
 		module.RegisterRoutes(protectedRoutes)
 	}
 

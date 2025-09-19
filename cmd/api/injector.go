@@ -19,8 +19,9 @@ import (
 	"github.com/google/wire"
 )
 
-func wireRouter(ctx context.Context, cfg *config.Config, server *app.GinServer, validator *utils.ValidationMiddleware) *routes.Router {
+func wireServer(ctx context.Context, cfg *config.Config, validator *utils.ValidationMiddleware) *app.GinServer {
 	wire.Build(
+		app.NewGinServer,
 		database.NewDB,
 		services.ServicesSet,
 		routes.RoutesSet,

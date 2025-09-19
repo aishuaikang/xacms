@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 	"uav_defender/internal/cache"
+	"uav_defender/internal/pkg/global"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
 )
 
 type SSEHandler struct {
@@ -39,10 +39,10 @@ func (h *SSEHandler) DeviceInfoListSSE(c *gin.Context) {
 		// 客户端断开链接后退出
 		select {
 		case <-h.Ctx.Done():
-			log.Infof("服务器关闭，停止发送SSE")
+			global.Logger.Info("服务器关闭，停止发送SSE")
 			return
 		case <-c.Request.Context().Done():
-			log.Infof("客户端断开连接，停止发送SSE")
+			global.Logger.Info("客户端断开连接，停止发送SSE")
 			return
 		case <-ticker.C:
 			devices := h.DevicesCache.GetDevices()
@@ -53,8 +53,6 @@ func (h *SSEHandler) DeviceInfoListSSE(c *gin.Context) {
 				fmt.Fprintf(c.Writer, "data: %s\n\n", data)
 			}
 			c.Writer.Flush()
-		default:
-			continue
 		}
 	}
 
@@ -73,10 +71,10 @@ func (s *SSEHandler) FPVWarningDataListSSE(c *gin.Context) {
 		// 客户端断开链接后退出
 		select {
 		case <-s.Ctx.Done():
-			log.Infof("服务器关闭，停止发送SSE")
+			global.Logger.Info("服务器关闭，停止发送SSE")
 			return
 		case <-c.Request.Context().Done():
-			log.Infof("客户端断开连接，停止发送SSE")
+			global.Logger.Info("客户端断开连接，停止发送SSE")
 			return
 		case <-ticker.C:
 			fpvWarningDataList := s.FPVWarningDataCache.GetFPVWarningDataList()
@@ -87,8 +85,6 @@ func (s *SSEHandler) FPVWarningDataListSSE(c *gin.Context) {
 				fmt.Fprintf(c.Writer, "data: %s\n\n", data)
 			}
 			c.Writer.Flush()
-		default:
-			continue
 		}
 	}
 }
@@ -106,10 +102,10 @@ func (h *SSEHandler) ParseDataListSSE(c *gin.Context) {
 		// 客户端断开链接后退出
 		select {
 		case <-h.Ctx.Done():
-			log.Infof("服务器关闭，停止发送SSE")
+			global.Logger.Info("服务器关闭，停止发送SSE")
 			return
 		case <-c.Request.Context().Done():
-			log.Infof("客户端断开连接，停止发送SSE")
+			global.Logger.Info("客户端断开连接，停止发送SSE")
 			return
 		case <-ticker.C:
 			parseDataList := h.ParseCache.GetParseDataList()
@@ -121,8 +117,6 @@ func (h *SSEHandler) ParseDataListSSE(c *gin.Context) {
 			}
 
 			c.Writer.Flush()
-		default:
-			continue
 		}
 	}
 

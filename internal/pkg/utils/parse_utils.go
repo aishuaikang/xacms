@@ -14,9 +14,12 @@ import (
 	"sync/atomic"
 	"time"
 	"uav_defender/internal/dto"
+	"uav_defender/internal/pkg/global"
 
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/skip2/go-qrcode"
 )
 
@@ -155,7 +158,7 @@ func parseGPS(value string, gps *dto.GPS) {
 	coords := strings.Split(value, ",")
 	if len(coords) != 2 {
 		gps.Longitude, gps.Latitude = 0, 0
-		log.Warnf("无法解析 GPS 坐标: %s", value)
+		global.Logger.Warn("无法解析 GPS 坐标", zap.String("value", value))
 		return
 	}
 

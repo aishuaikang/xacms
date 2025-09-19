@@ -3,9 +3,11 @@ package models
 import (
 	"database/sql/driver"
 	"fmt"
+	"uav_defender/internal/pkg/global"
 
 	"github.com/bytedance/sonic"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -14,7 +16,7 @@ type ApiNames []string
 
 // Value 实现 driver.Valuer 接口，用于将 ApiNames 转换为数据库存储格式
 func (a *ApiNames) Value() (driver.Value, error) {
-	log.Errorf("无法将 ApiNames 转换为数据库存储格式: %v", a)
+	global.Logger.Error("无法将 ApiNames 转换为数据库存储格式", zap.Any("ApiNames", a))
 
 	jsonData, err := sonic.Marshal(a)
 	if err != nil {
@@ -28,7 +30,7 @@ func (a *ApiNames) Value() (driver.Value, error) {
 func (a *ApiNames) Scan(value any) error {
 	v, ok := value.([]byte)
 	if !ok {
-		log.Errorf("无法将数据库中的值转换为 ApiNames: %v", value)
+		global.Logger.Error("无法将数据库中的值转换为 ApiNames", zap.Any("value", value))
 		return fmt.Errorf("无法将数据库中的值转换为 ApiNames: %v", value)
 	}
 

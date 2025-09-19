@@ -1,16 +1,16 @@
 package devices
 
-type DeviceStarter interface {
+type Starter interface {
 	Start()
 }
 
 type Devices struct {
-	devices []DeviceStarter
+	devices []Starter
 }
 
 func NewDevices(fpvDevice *FPVDevice, parseDevice *ParseDevice) *Devices {
 	return &Devices{
-		devices: []DeviceStarter{
+		devices: []Starter{
 			fpvDevice,
 			parseDevice,
 		},

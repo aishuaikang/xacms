@@ -3,13 +3,15 @@ package config
 import (
 	"fmt"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
+	"gorm.io/gorm/logger"
 )
 
 type LogConfig struct {
-	Level   log.Level `yaml:"level"`
-	Enabled bool      `yaml:"enabled"`
+	Level         zapcore.Level   `yaml:"level"`
+	DatabaseLevel logger.LogLevel `yaml:"databaseLevel"`
+	Enabled       bool            `yaml:"enabled"`
 }
 
 type DatabaseConfig struct {
@@ -45,7 +47,7 @@ type Config struct {
 func NewConfig() *Config {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
 	viper.AutomaticEnv()
 	if err := viper.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("读取配置文件失败: %w", err))
@@ -55,8 +57,6 @@ func NewConfig() *Config {
 	if err := viper.Unmarshal(&config); err != nil {
 		panic(fmt.Errorf("解码配置结构体失败: %w", err))
 	}
-
-	log.Infof("配置文件: %+v", config)
 
 	return &config
 }

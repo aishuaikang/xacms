@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+
 	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
@@ -38,7 +40,7 @@ func (h *MenuHandler) RegisterRoutes(router *gin.RouterGroup) {
 func (h *MenuHandler) GetMenus(c *gin.Context) {
 	var menus []models.MenuModel
 	if err := h.CommonService.GetItems(&menus); err != nil {
-		log.Errorf("获取菜单列表失败: %v", err)
+		global.Logger.Error("获取菜单列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取菜单列表失败"))
 		return
 	}
@@ -58,14 +60,13 @@ func (h *MenuHandler) CreateMenu(c *gin.Context) {
 	// 创建菜单
 	menu, err := h.MenuService.CreateMenu(&req)
 	if err != nil {
-		log.Errorf("创建菜单失败: %v", err)
 		if sqliteErr, ok := err.(sqlite3.Error); ok {
 			if sqliteErr.Code == sqlite3.ErrConstraint {
 				c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单已存在"))
 				return
 			}
 		}
-
+		global.Logger.Error("创建菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "创建菜单失败"))
 		return
 	}
@@ -91,7 +92,7 @@ func (h *MenuHandler) GetMenu(c *gin.Context) {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "菜单不存在"))
 			return
 		}
-		log.Errorf("获取菜单失败: %v", err)
+		global.Logger.Error("获取菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取菜单失败"))
 		return
 	}
@@ -120,14 +121,13 @@ func (h *MenuHandler) UpdateMenu(c *gin.Context) {
 	// 更新菜单
 	menu, err := h.MenuService.UpdateMenu(menuUUID, &req)
 	if err != nil {
-		log.Errorf("更新菜单失败: %v", err)
 		if sqliteErr, ok := err.(sqlite3.Error); ok {
 			if sqliteErr.Code == sqlite3.ErrConstraint {
 				c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单已存在"))
 				return
 			}
 		}
-		log.Errorf("更新菜单失败: %v", err)
+		global.Logger.Error("更新菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新菜单失败"))
 		return
 	}
@@ -148,7 +148,7 @@ func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 
 	// 删除菜单
 	if err := h.CommonService.DeleteItemByID(&models.MenuModel{}, menuUUID); err != nil {
-		log.Errorf("删除菜单失败: %v", err)
+		global.Logger.Error("删除菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除菜单失败"))
 		return
 	}
@@ -161,7 +161,7 @@ func (h *MenuHandler) GetMenuTree(c *gin.Context) {
 	// 组装为树形结构
 	menuTree, err := h.MenuService.GetMenuTree()
 	if err != nil {
-		log.Errorf("获取菜单树失败: %v", err)
+		global.Logger.Error("获取菜单树失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取菜单树失败"))
 		return
 	}

@@ -5,8 +5,9 @@ import (
 	"net"
 	"sync"
 	"time"
+	"uav_defender/internal/pkg/global"
 
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
 )
 
 var (
@@ -42,7 +43,7 @@ func NewConn(c net.Conn) Conn {
 
 // WaitResponse 等待来自 FPV 的响应，超时返回错误
 func (f *conn) WaitResponse() (string, error) {
-	log.Infof("等待来自 %s 的响应...\n", f.conn.RemoteAddr().String())
+	global.Logger.Info("等待响应", zap.String("address", f.conn.RemoteAddr().String()))
 	select {
 	case resp := <-f.response:
 		return resp, nil
