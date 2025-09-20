@@ -132,8 +132,8 @@ func parseRIDFieldValue(key string, value string, parseData *dto.ParseData) {
 		parseData.RSSI = parseFloat(value)
 	case "freq":
 		parseData.Freq = parseFloat(value)
-	case "ua_type":
-		parseData.MType = dto.MType(parseFloat(value))
+	// case "ua_type":
+	// 	parseData.MType = dto.MType(parseFloat(value))
 	case "mac":
 		parseData.Mac = value
 	}
@@ -248,16 +248,15 @@ func parseDIDFieldValue(key string, value string, parseData *dto.ParseData) {
 	case "distance":
 		parseData.Distance = parseDistance(value) / 1000
 		// parseData.Expires = models.CustomTime(time.Now())
-		parseData.MType = dto.MTypeSHL
-		parseData.Sign = dto.SignTypeO2O3
-		parseData.TargetId = parseData.Serial
-		if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = dto.DroneTypeRC
-		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
-			parseData.DroneType = dto.DroneTypeUAV
-		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = dto.DroneTypeBoth
-		}
+		// parseData.MType = dto.MTypeSHL
+
+		// if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
+		// 	parseData.DroneType = dto.DroneTypeRC
+		// } else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
+		// 	parseData.DroneType = dto.DroneTypeUAV
+		// } else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
+		// 	parseData.DroneType = dto.DroneTypeBoth
+		// }
 	}
 }
 
@@ -303,8 +302,7 @@ func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string) er
 			parseData.Model = "DJI-Drone"
 			parseData.Serial = id
 			// parseData.Expires = now
-			parseData.Sign = dto.SignTypeO2O3
-			parseData.MType = dto.MTypeSHL
+			// parseData.MType = dto.MTypeSHL
 			// *isHasSerial = true
 
 			// 重置计数器以便后续重新计数
@@ -333,11 +331,9 @@ func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string) er
 	parseData.EastV = pd.EastV
 	parseData.NorthV = pd.NorthV
 	parseData.UpV = pd.UpV
-	parseData.TargetId = parseData.Serial
 	// *isHasSerial = true
 	// parseData.Expires = now
-	parseData.MType = dto.MTypeSHL
-	parseData.Sign = dto.SignTypeO2O3
+	// parseData.MType = dto.MTypeSHL
 	parseData.Freq = freq
 	parseData.RSSI = rssi
 

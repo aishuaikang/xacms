@@ -48,7 +48,6 @@ type ParseData struct {
 	Model          string              `json:"model"`              // 设备型号
 	Freq           float64             `json:"freq"`               // 频率
 	RSSI           float64             `json:"rssi"`               // 信号强度
-	Expires        models.CustomTime   `json:"expires"`            // 过期时间
 	Height         float64             `json:"height"`             // 高度
 	Altitude       float64             `json:"altitude"`           // 海拔
 	EastV          float64             `json:"eastv"`              // 东向速度
@@ -60,14 +59,15 @@ type ParseData struct {
 	HomeGPS        GPS                 `json:"return_positioning"` // 家（起飞点）GPS 坐标
 	PilotGPS       GPS                 `json:"rc_gps"`             // 飞行员 GPS 坐标
 	TrajectoryList []models.Trajectory `json:"trajectory_list"`    // 轨迹
-	MType          MType               `json:"m_type"`             // 1 -zk ,2-上海l板
-	TargetId       string              `json:"target_id"`          // 目标ID
-	LdResult       LdResult            `json:"ld_result"`          // 距离关系
-	DroneType      DroneType           `json:"drone_type"`         // 目标类别:[0-未知,1-遥控器/飞手,2-无人机]
-	InWhiteList    bool                `json:"in_white_list"`      // 是否在白名单内
-	Png            string              `json:"png"`                // base64 编码的图片 二维码
-	Sign           SignType            `json:"sign"`               // 1 O2，O3 飞机的报文格式；O3+, O4飞机的报文格式 2.RID
-	Mac            string              `json:"mac"`                // MAC 地址
-	IntrusionTime  models.CustomTime   `json:"intrusion_time"`     // 入侵时间
-	Speed          float64             `json:"speed"`              // 速度
+	// MType          MType               `json:"m_type"`             // 1 -zk ,2-上海l板
+	TargetId       string            `json:"target_id"`         // 目标ID
+	LdResult       LdResult          `json:"ld_result"`         // 距离关系
+	DroneType      DroneType         `json:"drone_type"`        // 目标类别:[0-未知,1-遥控器/飞手,2-无人机]
+	HasInWhiteList bool              `json:"has_in_white_list"` // 是否在白名单内
+	Png            string            `json:"png"`               // base64 编码的图片 二维码
+	Sign           SignType          `json:"sign"`              // 1 O2，O3 飞机的报文格式；O3+, O4飞机的报文格式 2.RID
+	Mac            string            `json:"mac"`               // MAC 地址
+	IntrusionTime  models.CustomTime `json:"intrusion_time"`    // 入侵时间
+	Speed          float64           `json:"speed"`             // 速度
+	Expires        models.CustomTime `json:"expires"`           // 过期时间
 }

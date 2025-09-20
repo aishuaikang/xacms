@@ -124,8 +124,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 				utils.ParseRID(fullLine, &parseData)
 
 				parseData.Device = device.ParseID
-				parseData.TargetId = parseData.Serial
-				// parseData.Expires = models.CustomTime(time.Now())
+
 				parseData.Sign = dto.SignTypeO3Plus
 
 				// isHasSerial = true
@@ -136,8 +135,11 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 					continue
 				}
 
+				parseData.Sign = dto.SignTypeO2O3
+
 			} else if utils.IsDID(fullLine) {
 				utils.ParseDID(fullLine, &parseData)
+				parseData.Sign = dto.SignTypeO2O3
 			}
 
 			// 这里进行报文内容校验，确保数据 hasSerial 是否存在Serial字段
@@ -158,17 +160,21 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 				continue
 			}
 
+			// 目标ID
+			parseData.TargetId = parseData.Serial
+
 			// 解析无人机类型
 			utils.ParseDroneType(&parseData)
 
 			now := models.CustomTime(time.Now())
-
 			// 更新过期时间
 			parseData.Expires = now
+
 			// 记录入侵时间
 			parseData.IntrusionTime = now
+
 			// TODO: 需要去白名单查询是否在白名单内
-			parseData.InWhiteList = false
+			parseData.HasInWhiteList = false
 
 			// 判断飞手经纬度是否有效
 			if utils.IsValidCoord(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude) {
@@ -218,13 +224,13 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dt
 		parseData.RSSI = newParseData.RSSI
 		parseData.Distance = newParseData.Distance
 		parseData.Png = newParseData.Png
-		parseData.InWhiteList = newParseData.InWhiteList
+		parseData.HasInWhiteList = newParseData.HasInWhiteList
 
 		// 这是新增的更新字段
 		parseData.Mac = newParseData.Mac
 		parseData.Sign = newParseData.Sign
 		parseData.TargetId = newParseData.TargetId
-		parseData.MType = newParseData.MType
+		// parseData.MType = newParseData.MType
 		parseData.Serial = newParseData.Serial
 
 		now := models.CustomTime(time.Now())
