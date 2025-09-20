@@ -14,14 +14,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// RoleHandler 角色处理器
-type RoleHandler struct {
+// RoleRouter 角色处理器
+type RoleRouter struct {
 	RoleService   services.RoleService
 	CommonService services.CommonService
 }
 
 // RegisterRoutes 注册角色相关路由
-func (h *RoleHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *RoleRouter) RegisterRoutes(router *gin.RouterGroup) {
 	roleGroup := router.Group("/roles")
 
 	roleGroup.GET("", h.GetRoles)
@@ -34,7 +34,7 @@ func (h *RoleHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // GetRoles 获取角色列表
-func (h *RoleHandler) GetRoles(c *gin.Context) {
+func (h *RoleRouter) GetRoles(c *gin.Context) {
 	var roles []models.RoleModel
 	if err := h.CommonService.GetItems(&roles); err != nil {
 		global.Logger.Error("获取角色列表失败", zap.Error(err))
@@ -45,7 +45,7 @@ func (h *RoleHandler) GetRoles(c *gin.Context) {
 }
 
 // CreateRole 创建角色
-func (h *RoleHandler) CreateRole(c *gin.Context) {
+func (h *RoleRouter) CreateRole(c *gin.Context) {
 	// 解析请求体
 	var req dto.CreateRoleRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
@@ -65,7 +65,7 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 }
 
 // GetRole 获取角色详情
-func (h *RoleHandler) GetRole(c *gin.Context) {
+func (h *RoleRouter) GetRole(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -91,7 +91,7 @@ func (h *RoleHandler) GetRole(c *gin.Context) {
 }
 
 // UpdateRole 更新角色
-func (h *RoleHandler) UpdateRole(c *gin.Context) {
+func (h *RoleRouter) UpdateRole(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -120,7 +120,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 }
 
 // DeleteRole 删除角色
-func (h *RoleHandler) DeleteRole(c *gin.Context) {
+func (h *RoleRouter) DeleteRole(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -141,7 +141,7 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 }
 
 // GetRoleMenus 获取角色菜单
-func (h *RoleHandler) GetRoleMenus(c *gin.Context) {
+func (h *RoleRouter) GetRoleMenus(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -164,7 +164,7 @@ func (h *RoleHandler) GetRoleMenus(c *gin.Context) {
 }
 
 // AssignMenus 分配菜单给角色
-func (h *RoleHandler) AssignMenus(c *gin.Context) {
+func (h *RoleRouter) AssignMenus(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式

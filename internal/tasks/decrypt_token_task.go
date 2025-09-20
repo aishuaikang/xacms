@@ -15,6 +15,7 @@ type DecryptTokenTask struct {
 	decryptTokenCache cache.DecryptTokenCache
 }
 
+// NewDecryptTokenTask 用于刷新解密Token的定时任务
 func NewDecryptTokenTask(ctx context.Context, decryptTokenCache cache.DecryptTokenCache) *DecryptTokenTask {
 	return &DecryptTokenTask{
 		ctx:               ctx,

@@ -2,6 +2,7 @@ package cache
 
 import (
 	"sync"
+	"uav_defender/internal/app/devices/conn"
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
 	parse_fsm "uav_defender/internal/app/devices/fms/parse"
 	"uav_defender/internal/dto"
@@ -26,14 +27,16 @@ type devicesCache struct {
 	devicesMutex         sync.RWMutex           // 保护设备列表的读写锁
 	devicesRefreshSignal chan struct{}          // 设备列表刷新信号通道
 	deviceService        services.DeviceService // 设备服务
+	fpvConnection        *conn.FpvConnection
 }
 
-func NewDevicesCache(deviceService services.DeviceService) DevicesCache {
+func NewDevicesCache(deviceService services.DeviceService, fpvConnection *conn.FpvConnection) DevicesCache {
 	return &devicesCache{
 		devices:              []dto.DeviceInfo{},
 		devicesMutex:         sync.RWMutex{},
 		devicesRefreshSignal: make(chan struct{}, 1),
 		deviceService:        deviceService,
+		fpvConnection:        fpvConnection,
 	}
 }
 
@@ -133,7 +136,7 @@ func (c *devicesCache) RefreshDevices() error {
 	for _, device := range devices {
 		deviceInfos = append(deviceInfos, dto.DeviceInfo{
 			DeviceModel: device,
-			FPVFsm:      fpv_fsm.NewFPVFsm(),
+			FPVFsm:      fpv_fsm.NewFPVFsm(c.fpvConnection),
 			ParseFsm:    parse_fsm.NewParseFsm(),
 		})
 	}

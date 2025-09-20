@@ -13,7 +13,6 @@ import (
 	"uav_defender/internal/app/devices"
 	"uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/cache"
-	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/routes"
 	"uav_defender/internal/services"
@@ -22,61 +21,72 @@ import (
 
 // Injectors from injector.go:
 
-func wireServer(ctx context.Context, cfg *config.Config, db *gorm.DB, validator *utils.ValidationMiddleware) *app.GinServer {
+func wireServer(ctx context.Context, db *gorm.DB, validator *utils.ValidationMiddleware) *app.GinServer {
 	commonService := services.NewCommonService(db, validator)
 	roleService := services.NewRoleService(db, commonService)
 	userService := services.NewUserService(db, commonService, roleService)
-	userHandler := &routes.UserHandler{
+	userRouter := &routes.UserRouter{
 		CommonService: commonService,
 		UserService:   userService,
 	}
 	menuService := services.NewMenuService(db, commonService)
-	menuHandler := &routes.MenuHandler{
+	menuRouter := &routes.MenuRouter{
 		CommonService: commonService,
 		MenuService:   menuService,
 	}
-	roleHandler := &routes.RoleHandler{
+	roleRouter := &routes.RoleRouter{
 		RoleService:   roleService,
 		CommonService: commonService,
 	}
 	deviceService := services.NewDeviceService(db, commonService)
-	devicesCache := cache.NewDevicesCache(deviceService)
-	deviceHandler := &routes.DeviceHandler{
+	fpvConnection := conn.NewFPVConnection()
+	devicesCache := cache.NewDevicesCache(deviceService, fpvConnection)
+	deviceRouter := &routes.DeviceRouter{
 		Ctx:           ctx,
 		DeviceService: deviceService,
 		CommonService: commonService,
 		DevicesCache:  devicesCache,
 	}
 	droneTargetService := services.NewDronTargetService(db, commonService)
-	droneTargetHandler := &routes.DroneTargetHandler{
+	droneTargetRouter := &routes.DroneTargetRouter{
 		Ctx:                ctx,
 		CommonService:      commonService,
 		DroneTargetService: droneTargetService,
 	}
 	fpvWarningDataCache := cache.NewFPVWarningDataCache()
 	parseCache := cache.NewParseCache(droneTargetService)
-	sseHandler := &routes.SSEHandler{
+	sseRouter := &routes.SSERouter{
 		Ctx:                 ctx,
 		DevicesCache:        devicesCache,
 		FPVWarningDataCache: fpvWarningDataCache,
 		ParseCache:          parseCache,
 	}
-	userPublicHandler := &routes.UserPublicHandler{
+	userPublicRouter := &routes.UserPublicRouter{
 		CommonService: commonService,
 		UserService:   userService,
 	}
-	router := routes.NewRouter(userHandler, menuHandler, roleHandler, deviceHandler, droneTargetHandler, sseHandler, userPublicHandler)
+	whitelistService := services.NewWhitelistService(db, commonService)
+	whitelistRouter := &routes.WhitelistRouter{
+		CommonService:    commonService,
+		WhitelistService: whitelistService,
+	}
+	fpvService := services.NewFPVService(db, commonService)
+	fpvRouter := &routes.FPVRouter{
+		CommonService: commonService,
+		FPVService:    fpvService,
+		DevicesCache:  devicesCache,
+	}
+	router := routes.NewRouter(userRouter, menuRouter, roleRouter, deviceRouter, droneTargetRouter, sseRouter, userPublicRouter, whitelistRouter, fpvRouter)
 	decryptTokenCache := cache.NewDecryptTokenCache()
 	decryptTokenTask := tasks.NewDecryptTokenTask(ctx, decryptTokenCache)
 	devicesTask := tasks.NewDevicesTask(ctx, devicesCache)
-	commonCache := cache.NewCommonCache(cfg)
+	commonCache := cache.NewCommonCache()
 	parseTask := tasks.NewParseTask(ctx, commonCache, parseCache)
 	fpvTask := tasks.NewFPVTask(ctx, commonCache, fpvWarningDataCache)
 	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, parseTask, fpvTask)
-	fpvConnection := conn.NewFPVConnection()
-	fpvDevice := devices.NewFPVDevice(ctx, cfg, fpvWarningDataCache, devicesCache, fpvConnection)
+	fpvDevice := devices.NewFPVDevice(ctx, fpvWarningDataCache, devicesCache, fpvConnection)
 	parseConnection := conn.NewParseConnection()
-	parseDevice := devices.NewParseDevice(ctx, cfg, decryptTokenCache, parseCache, devicesCache, parseConnection)
+	parseDevice := devices.NewParseDevice(ctx, decryptTokenCache, parseCache, devicesCache, parseConnection, whitelistService)
 	devicesDevices := devices.NewDevices(fpvDevice, parseDevice)
 	ginServer := app.NewGinServer(router, tasksTasks, devicesDevices)
 	return ginServer

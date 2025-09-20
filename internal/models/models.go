@@ -100,4 +100,10 @@ func (ct *CustomTime) Scan(value interface{}) error {
 	default:
 		return fmt.Errorf("unsupported scan type: %T", v)
 	}
+
+}
+
+// NewCustomTimeFromInt64 从时间戳创建 CustomTime
+func NewCustomTimeFromInt64(timestamp int64) CustomTime {
+	return CustomTime(time.Unix(timestamp, 0))
 }

@@ -108,5 +108,5 @@ func (c *parseCache) CleanupExpiredParseData(ttl int64) {
 		global.Logger.Error("同步解析数据列表到无人机目标数据库失败", zap.Error(err))
 		return
 	}
-	global.Logger.Info("清理过期解析数据", zap.Int("清理前数量", len(validData)+len(invalidData)), zap.Int("清理后数量", len(validData)), zap.Int("清理数量", len(invalidData)))
+	global.Logger.Info("入库过期解析数据", zap.Int("入库前数量", len(validData)+len(invalidData)), zap.Int("入库后数量", len(validData)), zap.Int("清理数量", len(invalidData)))
 }

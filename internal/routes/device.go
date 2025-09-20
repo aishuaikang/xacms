@@ -17,8 +17,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// DeviceHandler 设备处理器
-type DeviceHandler struct {
+// DeviceRouter 设备处理器
+type DeviceRouter struct {
 	Ctx           context.Context
 	DeviceService services.DeviceService
 	CommonService services.CommonService
@@ -27,7 +27,7 @@ type DeviceHandler struct {
 }
 
 // RegisterRoutes 注册设备相关路由
-func (h *DeviceHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *DeviceRouter) RegisterRoutes(router *gin.RouterGroup) {
 	deviceGroup := router.Group("/devices")
 
 	deviceGroup.GET("", h.GetDevices)
@@ -38,11 +38,10 @@ func (h *DeviceHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // GetDevices 获取设备列表
-func (h *DeviceHandler) GetDevices(c *gin.Context) {
+func (h *DeviceRouter) GetDevices(c *gin.Context) {
 	// 获取设备列表
 	var devices []models.DeviceModel
 	if err := h.CommonService.GetItems(&devices); err != nil {
-		// log.Errorf("获取设备列表失败: %v", err)
 		global.Logger.Error("获取设备列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取设备列表失败"))
 		return
@@ -52,7 +51,7 @@ func (h *DeviceHandler) GetDevices(c *gin.Context) {
 }
 
 // CreateDevice 创建设备
-func (h *DeviceHandler) CreateDevice(c *gin.Context) {
+func (h *DeviceRouter) CreateDevice(c *gin.Context) {
 	// 解析请求体
 	var req dto.CreateDeviceRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
@@ -78,12 +77,12 @@ func (h *DeviceHandler) CreateDevice(c *gin.Context) {
 	}
 
 	h.DevicesCache.NotifyRefresh()
-
+	h.DeviceService.RefreshMediaMtxConfig()
 	c.JSON(http.StatusCreated, dto.SuccessResponse(device))
 }
 
 // GetDevice 获取设备详情
-func (h *DeviceHandler) GetDevice(c *gin.Context) {
+func (h *DeviceRouter) GetDevice(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -109,7 +108,7 @@ func (h *DeviceHandler) GetDevice(c *gin.Context) {
 }
 
 // UpdateDevice 更新设备
-func (h *DeviceHandler) UpdateDevice(c *gin.Context) {
+func (h *DeviceRouter) UpdateDevice(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -142,18 +141,18 @@ func (h *DeviceHandler) UpdateDevice(c *gin.Context) {
 	}
 
 	h.DevicesCache.NotifyRefresh()
+	h.DeviceService.RefreshMediaMtxConfig()
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(device))
 }
 
 // DeleteDevice 删除设备
-func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
+func (h *DeviceRouter) DeleteDevice(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
 	deviceUUID, err := uuid.Parse(id)
 	if err != nil {
-		// return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "设备ID格式无效"))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备ID格式无效"))
 		return
 	}
@@ -166,6 +165,7 @@ func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
 	}
 
 	h.DevicesCache.NotifyRefresh()
+	h.DeviceService.RefreshMediaMtxConfig()
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(nil))
 }

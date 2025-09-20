@@ -2,6 +2,7 @@ package fpv_fsm
 
 import (
 	"context"
+	"uav_defender/internal/app/devices/conn"
 
 	"github.com/looplab/fsm"
 )
@@ -14,10 +15,12 @@ type FPVFsm struct {
 }
 
 // NewFPVFsm 创建新的FPV状态机实例
-func NewFPVFsm() *FPVFsm {
+func NewFPVFsm(fpvConnection *conn.FpvConnection) *FPVFsm {
 	d := &FPVFsm{
-		offlineHandler:  &OfflineHandler{},
-		gazingHandler:   &GazingHandler{},
+		offlineHandler: &OfflineHandler{},
+		gazingHandler: &GazingHandler{
+			fpvConnection: fpvConnection,
+		},
 		scanningHandler: &ScanningHandler{},
 	}
 

@@ -1,9 +1,17 @@
 package utils
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"os"
+	"path"
+	"strings"
 	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
+
+	"go.uber.org/zap"
 )
 
 // IsFPVResponse 判断 fullLine 是否是响应
@@ -49,3 +57,106 @@ func ParseFPVWarningData(fullLine []byte, ip string, time int64, DetectionID int
 		Time:        time,
 	}, nil
 }
+
+// UpdateMediaMtxConfigPaths 以文本流方式插入 stream_X 配置
+func UpdateMediaMtxConfigPaths(devices []models.DeviceModel) {
+	wd, _ := os.Getwd()
+	filePath := path.Join(wd, "config", "mediamtx.yml")
+
+	inputFile, err := os.Open(filePath)
+	if err != nil {
+		global.Logger.Error("打开配置文件失败", zap.Error(err))
+		return
+	}
+	defer inputFile.Close()
+	scanner := bufio.NewScanner(inputFile)
+	var lines []string
+	var afterPaths []string
+	var pathsIndex int = -1
+	streamIndex := 0
+
+	// 扫描所有行，记录第一个 paths: 的索引，跳过后续所有 paths:
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(strings.TrimSpace(line), "paths:") {
+			if pathsIndex == -1 {
+				pathsIndex = len(lines)
+				lines = append(lines, line)
+			}
+			// 跳过多余的 paths:
+			continue
+		}
+		// paths: 之后的内容，遇到下一个顶级节点（无缩进）则开始收集 afterPaths
+		if pathsIndex != -1 && (len(line) > 0 && line[0] != ' ' && !strings.HasPrefix(strings.TrimSpace(line), "paths:")) {
+			afterPaths = append(afterPaths, line)
+		} else {
+			lines = append(lines, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		global.Logger.Error("扫描文件失败", zap.Error(err))
+		return
+	}
+
+	// 构造新的 stream_X 配置
+	var streamLines []string
+	for _, device := range devices {
+		streamIndex++
+		newStream := fmt.Sprintf("%sstream_%02d:", strings.Repeat(" ", 4), device.DetectionID)
+		newSource := fmt.Sprintf("%ssource: rtsp://%s:554/live/1_1", strings.Repeat(" ", 6), device.RTSPIP)
+		streamLines = append(streamLines, newStream, newSource)
+	}
+
+	// 组装最终内容
+	var finalLines []string
+	if pathsIndex != -1 {
+		// 只保留第一个 paths: 节点，插入 streamXX
+		finalLines = append(finalLines, lines[:pathsIndex+1]...)
+		finalLines = append(finalLines, streamLines...)
+		finalLines = append(finalLines, afterPaths...)
+	} else {
+		// 没有 paths: 节点则追加
+		finalLines = append(lines, "paths:")
+		finalLines = append(finalLines, streamLines...)
+		finalLines = append(finalLines, afterPaths...)
+	}
+
+	// 写回文件
+	outputFile, err := os.Create(filePath)
+	if err != nil {
+		global.Logger.Error("创建配置文件失败", zap.Error(err))
+		return
+	}
+	defer outputFile.Close()
+
+	writer := bufio.NewWriter(outputFile)
+	for _, line := range finalLines {
+		_, err := writer.WriteString(line + "\n")
+		if err != nil {
+			global.Logger.Error("写入配置失败", zap.Error(err))
+			return
+		}
+	}
+	writer.Flush()
+}
+
+// // RemoveMediaMtxConfigPath 删除 MediaMtx 配置中的路径
+// func RemoveMediaMtxConfigPath(detectionID int) {
+// 	viper.SetConfigName("mediamtx")
+// 	paths := viper.GetStringMap("paths")
+// 	key := fmt.Sprintf("stream_%d", detectionID)
+// 	if _, exists := paths[key]; exists {
+// 		delete(paths, key)
+// 		global.Logger.Info("已删除 MediaMtx 配置中的路径:", zap.Int("detectionID", detectionID))
+// 	} else {
+// 		global.Logger.Warn("MediaMtx 配置中不存在该路径, 无需删除:", zap.Int("detectionID", detectionID))
+// 	}
+// 	viper.Set("paths", paths)
+
+// 	global.Logger.Info("当前 MediaMtx 路径配置:", zap.Any("paths", paths))
+// 	// 写回文件
+// 	if err := viper.WriteConfig(); err != nil {
+// 		global.Logger.Error("写回 MediaMtx 配置文件失败", zap.Error(err))
+// 	}
+// }

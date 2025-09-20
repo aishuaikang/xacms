@@ -17,26 +17,30 @@ type Router struct {
 
 // NewRouter 创建路由器
 func NewRouter(
-	userHandler *UserHandler,
-	menuHandler *MenuHandler,
-	roleHandler *RoleHandler,
-	deviceHandler *DeviceHandler,
-	droneTargetHandler *DroneTargetHandler,
-	sseHandler *SSEHandler,
-	userPublicHandler *UserPublicHandler,
+	userRouter *UserRouter,
+	menuRouter *MenuRouter,
+	roleRouter *RoleRouter,
+	deviceRouter *DeviceRouter,
+	droneTargetRouter *DroneTargetRouter,
+	sseRouter *SSERouter,
+	userPublicRouter *UserPublicRouter,
+	whitelistRouter *WhitelistRouter,
+	fpvRouter *FPVRouter,
 ) *Router {
 
 	return &Router{
 		routes: []Route{
-			userHandler,
-			menuHandler,
-			roleHandler,
-			deviceHandler,
-			droneTargetHandler,
-			sseHandler,
+			userRouter,
+			menuRouter,
+			roleRouter,
+			deviceRouter,
+			droneTargetRouter,
+			whitelistRouter,
+			sseRouter,
+			fpvRouter,
 		},
 		publicRoutes: []Route{
-			userPublicHandler,
+			userPublicRouter,
 		},
 	}
 

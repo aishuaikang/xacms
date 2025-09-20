@@ -20,16 +20,14 @@ import (
 
 type FPVDevice struct {
 	ctx                 context.Context
-	config              *config.Config
 	fpvWarningDataCache cache.FPVWarningDataCache
 	devicesCache        cache.DevicesCache
 	fpvConnection       *conn_.FpvConnection
 }
 
-func NewFPVDevice(ctx context.Context, config *config.Config, fpvWarningDataCache cache.FPVWarningDataCache, devicesCache cache.DevicesCache, fpvConnection *conn_.FpvConnection) *FPVDevice {
+func NewFPVDevice(ctx context.Context, fpvWarningDataCache cache.FPVWarningDataCache, devicesCache cache.DevicesCache, fpvConnection *conn_.FpvConnection) *FPVDevice {
 	return &FPVDevice{
 		ctx:                 ctx,
-		config:              config,
 		fpvWarningDataCache: fpvWarningDataCache,
 		devicesCache:        devicesCache,
 		fpvConnection:       fpvConnection,
@@ -37,11 +35,13 @@ func NewFPVDevice(ctx context.Context, config *config.Config, fpvWarningDataCach
 }
 
 func (s *FPVDevice) Start() {
-	utils.BuildTcpServer(s.ctx, "FPV模块", fmt.Sprintf(":%d", s.config.Configuration.FPVPort), s.handleConnection)
+	utils.BuildTcpServer(s.ctx, "FPV模块", fmt.Sprintf(":%d", config.AppConfig.Configuration.FPVPort), s.handleConnection)
 }
 
 // handleConnection 处理每个连接
 func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
+	isFirstResponse := false
+
 	defer conn.Close()
 	addr := conn.RemoteAddr().String()
 	global.Logger.Info("新的FPV连接来自", zap.String("module", module), zap.String("address", addr))
@@ -117,7 +117,16 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 
 			// 处理 FPV 响应数据
 			if utils.IsFPVResponse(fullLine) {
-				// TODO: 这里可以根据需要处理响应数据
+				if !isFirstResponse {
+					isFirstResponse = true
+					// 首次响应，忽略
+					continue
+				}
+				select {
+				case c.GetResponseChannel() <- string(fullLine):
+				case <-time.After(2 * time.Second):
+					global.Logger.Warn("写入 Response 超时(响应):", zap.String("module", module), zap.String("address", addr))
+				}
 				continue
 			}
 

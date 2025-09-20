@@ -1,6 +1,8 @@
 package conn
 
-import "sync"
+import (
+	"sync"
+)
 
 type FpvConnection struct {
 	Connection

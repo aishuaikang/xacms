@@ -16,36 +16,38 @@ import (
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
+	"uav_defender/internal/services"
 
 	"go.uber.org/zap"
 )
 
 type ParseDevice struct {
-	ctx    context.Context
-	config *config.Config
+	ctx context.Context
 
 	decryptTokenCache cache.DecryptTokenCache
 	parseCache        cache.ParseCache
 	devicesCache      cache.DevicesCache
 
 	parseConnection *conn_.ParseConnection
+
+	whitelistService services.WhitelistService
 }
 
-func NewParseDevice(ctx context.Context, config *config.Config, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseCache, devicesCache cache.DevicesCache, parseConnection *conn_.ParseConnection) *ParseDevice {
+func NewParseDevice(ctx context.Context, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseCache, devicesCache cache.DevicesCache, parseConnection *conn_.ParseConnection, whitelistService services.WhitelistService) *ParseDevice {
 	parseDevice := &ParseDevice{
 		ctx:               ctx,
-		config:            config,
 		decryptTokenCache: decryptTokenCache,
 		devicesCache:      devicesCache,
 		parseCache:        parseDataCache,
 		parseConnection:   parseConnection,
+		whitelistService:  whitelistService,
 	}
 
 	return parseDevice
 }
 
 func (s *ParseDevice) Start() {
-	utils.BuildTcpServer(s.ctx, "解析模块", fmt.Sprintf(":%d", s.config.Configuration.ParsePort), s.handleConnection)
+	utils.BuildTcpServer(s.ctx, "解析模块", fmt.Sprintf(":%d", config.AppConfig.Configuration.ParsePort), s.handleConnection)
 }
 
 // handleConnection 处理每个连接
@@ -173,8 +175,11 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 			// 记录入侵时间
 			parseData.IntrusionTime = now
 
-			// TODO: 需要去白名单查询是否在白名单内
-			parseData.HasInWhiteList = false
+			// 去白名单查询是否在白名单内
+			parseData.HasInWhiteList, err = s.whitelistService.IsSerialWhitelisted(parseData.Serial)
+			if err != nil {
+				global.Logger.Error("查询白名单失败", zap.String("module", module), zap.String("address", addr), zap.String("serial", parseData.Serial), zap.Error(err))
+			}
 
 			// 判断飞手经纬度是否有效
 			if utils.IsValidCoord(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude) {

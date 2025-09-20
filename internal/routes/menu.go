@@ -15,14 +15,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// MenuHandler 菜单处理器
-type MenuHandler struct {
+// MenuRouter 菜单处理器
+type MenuRouter struct {
 	CommonService services.CommonService
 	MenuService   services.MenuService
 }
 
 // RegisterRoutes 注册菜单相关路由
-func (h *MenuHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *MenuRouter) RegisterRoutes(router *gin.RouterGroup) {
 
 	menuGroup := router.Group("/menus")
 
@@ -37,7 +37,7 @@ func (h *MenuHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // GetMenus 获取菜单列表
-func (h *MenuHandler) GetMenus(c *gin.Context) {
+func (h *MenuRouter) GetMenus(c *gin.Context) {
 	var menus []models.MenuModel
 	if err := h.CommonService.GetItems(&menus); err != nil {
 		global.Logger.Error("获取菜单列表失败", zap.Error(err))
@@ -49,7 +49,7 @@ func (h *MenuHandler) GetMenus(c *gin.Context) {
 }
 
 // CreateMenu 创建菜单
-func (h *MenuHandler) CreateMenu(c *gin.Context) {
+func (h *MenuRouter) CreateMenu(c *gin.Context) {
 	// 解析请求体
 	var req dto.CreateMenuRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
@@ -75,7 +75,7 @@ func (h *MenuHandler) CreateMenu(c *gin.Context) {
 }
 
 // GetMenu 获取单个菜单
-func (h *MenuHandler) GetMenu(c *gin.Context) {
+func (h *MenuRouter) GetMenu(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -101,7 +101,7 @@ func (h *MenuHandler) GetMenu(c *gin.Context) {
 }
 
 // UpdateMenu 更新菜单
-func (h *MenuHandler) UpdateMenu(c *gin.Context) {
+func (h *MenuRouter) UpdateMenu(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -136,7 +136,7 @@ func (h *MenuHandler) UpdateMenu(c *gin.Context) {
 }
 
 // DeleteMenu 删除菜单
-func (h *MenuHandler) DeleteMenu(c *gin.Context) {
+func (h *MenuRouter) DeleteMenu(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -157,7 +157,7 @@ func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 }
 
 // GetMenuTree 获取菜单树结构
-func (h *MenuHandler) GetMenuTree(c *gin.Context) {
+func (h *MenuRouter) GetMenuTree(c *gin.Context) {
 	// 组装为树形结构
 	menuTree, err := h.MenuService.GetMenuTree()
 	if err != nil {
@@ -170,6 +170,6 @@ func (h *MenuHandler) GetMenuTree(c *gin.Context) {
 }
 
 // GetAPIs 获取API列表
-func (h *MenuHandler) GetAPIs(c *gin.Context) {
+func (h *MenuRouter) GetAPIs(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SuccessResponse(h.CommonService.GetAPIs()))
 }

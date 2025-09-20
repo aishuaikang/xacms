@@ -14,14 +14,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserHandler 用户处理器
-type UserHandler struct {
+// UserRouter 用户路由器
+type UserRouter struct {
 	CommonService services.CommonService
 	UserService   services.UserService
 }
 
 // RegisterRoutes 注册用户相关路由
-func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *UserRouter) RegisterRoutes(router *gin.RouterGroup) {
 	userGroup := router.Group("/users")
 
 	userGroup.GET("", h.GetUsers)
@@ -33,11 +33,10 @@ func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // GetUsers 获取用户列表
-func (h *UserHandler) GetUsers(c *gin.Context) {
+func (h *UserRouter) GetUsers(c *gin.Context) {
 	// 解析查询参数
 	var req dto.UserQueryRequest
-	err := h.CommonService.ValidateQuery(c, &req)
-	if err != nil {
+	if err := h.CommonService.ValidateQuery(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
@@ -54,7 +53,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 }
 
 // CreateUser 创建用户
-func (h *UserHandler) CreateUser(c *gin.Context) {
+func (h *UserRouter) CreateUser(c *gin.Context) {
 	// 解析请求体
 	var req dto.CreateUserRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {
@@ -74,7 +73,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 
 // GetUser 获取用户详情
-func (h *UserHandler) GetUser(c *gin.Context) {
+func (h *UserRouter) GetUser(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -100,7 +99,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 }
 
 // UpdateUser 更新用户
-func (h *UserHandler) UpdateUser(c *gin.Context) {
+func (h *UserRouter) UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -129,7 +128,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 }
 
 // DeleteUser 删除用户
-func (h *UserHandler) DeleteUser(c *gin.Context) {
+func (h *UserRouter) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -150,7 +149,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 }
 
 // AssignRole 分配角色
-func (h *UserHandler) AssignRole(c *gin.Context) {
+func (h *UserRouter) AssignRole(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式

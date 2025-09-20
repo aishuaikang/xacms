@@ -4,8 +4,11 @@ import (
 	"errors"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/global"
+	"uav_defender/internal/pkg/utils"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -14,6 +17,7 @@ type DeviceService interface {
 	CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error)
 	UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error)
 	GetAllDevices() ([]models.DeviceModel, error)
+	RefreshMediaMtxConfig()
 }
 
 // deviceService 设备服务实现
@@ -48,8 +52,8 @@ func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.Devic
 		ParseIP: req.ParseIP,
 
 		// FPV模块
-		FPVIP:          req.FPVIP,
-		StreamServerIP: req.StreamServerIP,
+		FPVIP:  req.FPVIP,
+		RTSPIP: req.RTSPIP,
 
 		// 打击模块
 		StrikeIP: req.StrikeIP,
@@ -108,8 +112,8 @@ func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceReque
 		user.FPVIP = *req.FPVIP
 	}
 
-	if req.StreamServerIP != nil {
-		user.StreamServerIP = *req.StreamServerIP
+	if req.RTSPIP != nil {
+		user.RTSPIP = *req.RTSPIP
 	}
 
 	if req.StrikeIP != nil {
@@ -129,4 +133,17 @@ func (s *deviceService) GetAllDevices() ([]models.DeviceModel, error) {
 		return nil, err
 	}
 	return devices, nil
+}
+
+// 刷新 MediaMtx 配置
+func (s *deviceService) RefreshMediaMtxConfig() {
+	var devices []models.DeviceModel
+	if err := s.db.Find(&devices).Error; err != nil {
+		global.Logger.Error("获取设备列表失败, 无法刷新 MediaMtx 配置", zap.Error(err))
+		return
+	}
+
+	utils.UpdateMediaMtxConfigPaths(devices)
+
+	global.Logger.Info("已刷新 MediaMtx 配置")
 }

@@ -22,8 +22,8 @@ type CreateDeviceRequest struct {
 	ParseIP string `json:"parse_ip" validate:"required"` // 解析模块IP
 
 	// FPV模块
-	FPVIP          string `json:"fpv_ip" validate:"required"`           // FPV模块IP
-	StreamServerIP string `json:"stream_server_ip" validate:"required"` // 流媒体服务器IP
+	FPVIP  string `json:"fpv_ip" validate:"required"`  // FPV模块IP
+	RTSPIP string `json:"rtsp_ip" validate:"required"` // RTSPIP
 
 	// 打击模块
 	StrikeIP   string `json:"strike_ip" validate:"required"`   // 打击模块IP
@@ -46,8 +46,8 @@ type UpdateDeviceRequest struct {
 	ParseIP *string `json:"parse_ip" validate:"omitempty"` // 解析模块IP
 
 	// FPV模块
-	FPVIP          *string `json:"fpv_ip" validate:"omitempty"`           // FPV模块IP
-	StreamServerIP *string `json:"stream_server_ip" validate:"omitempty"` // 流媒体服务器IP
+	FPVIP  *string `json:"fpv_ip" validate:"omitempty"`  // FPV模块IP
+	RTSPIP *string `json:"rtsp_ip" validate:"omitempty"` // RTSPIP
 
 	// 打击模块
 	StrikeIP *string `json:"strike_ip" validate:"omitempty"` // 打击模块IP

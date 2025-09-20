@@ -29,7 +29,6 @@ func (t *DevicesTask) Execute() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				global.Logger.Info("DevicesTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-t.devicesCache.GetRefreshChan():
 				if err := t.devicesCache.RefreshDevices(); err != nil {

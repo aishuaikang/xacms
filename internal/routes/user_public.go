@@ -8,19 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UserPublicHandler 用户处理器
-type UserPublicHandler struct {
+// UserPublicRouter 用户处理器
+type UserPublicRouter struct {
 	CommonService services.CommonService
 	UserService   services.UserService
 }
 
 // RegisterRoutes 注册用户相关路由
-func (h *UserPublicHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *UserPublicRouter) RegisterRoutes(router *gin.RouterGroup) {
 	// 用户登陆
 	router.POST("/login", h.Login)
 }
 
-func (h *UserPublicHandler) Login(c *gin.Context) {
+func (h *UserPublicRouter) Login(c *gin.Context) {
 	// 解析请求体
 	var req dto.LoginRequest
 	if err := h.CommonService.ValidateBody(c, &req); err != nil {

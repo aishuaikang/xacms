@@ -16,6 +16,7 @@ var (
 )
 
 type Conn interface {
+	SendCommand(command string) error
 	WaitResponse() (string, error)
 	IsAlive() bool
 	Close()
@@ -39,6 +40,13 @@ func NewConn(c net.Conn) Conn {
 		response: make(chan string, 1),
 	}
 
+}
+
+// SendCommand 发送命令到 FPV 设备
+func (f *conn) SendCommand(command string) error {
+	global.Logger.Info("发送命令", zap.String("address", f.conn.RemoteAddr().String()), zap.String("command", command))
+	_, err := f.conn.Write([]byte(command))
+	return err
 }
 
 // WaitResponse 等待来自 FPV 的响应，超时返回错误

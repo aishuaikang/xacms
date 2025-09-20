@@ -39,6 +39,8 @@ func NewDB(config *config.Config) (*gorm.DB, error) {
 		&models.UserModel{},
 		&models.DeviceModel{},
 		&models.DroneTargetModel{},
+		&models.WhitelistModel{},
+		&models.FPVModel{},
 	); err != nil {
 		return nil, err
 	}

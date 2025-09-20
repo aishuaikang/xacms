@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SSEHandler struct {
+type SSERouter struct {
 	Ctx                 context.Context
 	DevicesCache        cache.DevicesCache
 	FPVWarningDataCache cache.FPVWarningDataCache
@@ -19,7 +19,7 @@ type SSEHandler struct {
 }
 
 // RegisterRoutes 注册SSE相关路由
-func (s *SSEHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (s *SSERouter) RegisterRoutes(router *gin.RouterGroup) {
 	sseGroup := router.Group("/sse")
 	sseGroup.GET("/device", s.DeviceInfoListSSE)
 	sseGroup.GET("/fpv", s.FPVWarningDataListSSE)
@@ -27,7 +27,7 @@ func (s *SSEHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // DeviceInfoListSSE 使用 SSE 实时获取设备信息
-func (h *SSEHandler) DeviceInfoListSSE(c *gin.Context) {
+func (h *SSERouter) DeviceInfoListSSE(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
@@ -59,7 +59,7 @@ func (h *SSEHandler) DeviceInfoListSSE(c *gin.Context) {
 }
 
 // FPVWarningDataListSSE 使用 SSE 实时获取 FPV 警告数据
-func (s *SSEHandler) FPVWarningDataListSSE(c *gin.Context) {
+func (s *SSERouter) FPVWarningDataListSSE(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
@@ -90,7 +90,7 @@ func (s *SSEHandler) FPVWarningDataListSSE(c *gin.Context) {
 }
 
 // ParseDataListSSE 使用 SSE 实时获取 Parse 数据
-func (h *SSEHandler) ParseDataListSSE(c *gin.Context) {
+func (h *SSERouter) ParseDataListSSE(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")

@@ -16,15 +16,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// DroneTargetHandler 无人机目标处理器
-type DroneTargetHandler struct {
+// DroneTargetRouter 无人机目标处理器
+type DroneTargetRouter struct {
 	Ctx                context.Context
 	CommonService      services.CommonService
 	DroneTargetService services.DroneTargetService
 }
 
 // RegisterRoutes 注册无人机目标相关路由
-func (h *DroneTargetHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *DroneTargetRouter) RegisterRoutes(router *gin.RouterGroup) {
 	droneTargetGroup := router.Group("/drone-targets")
 
 	droneTargetGroup.GET("", h.GetDroneTargets)
@@ -35,7 +35,7 @@ func (h *DroneTargetHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // GetDroneTargets 获取无人机目标列表
-func (h *DroneTargetHandler) GetDroneTargets(c *gin.Context) {
+func (h *DroneTargetRouter) GetDroneTargets(c *gin.Context) {
 	// 解析查询参数
 	var req dto.DroneTargetQueryRequest
 	err := h.CommonService.ValidateQuery(c, &req)
@@ -57,7 +57,7 @@ func (h *DroneTargetHandler) GetDroneTargets(c *gin.Context) {
 }
 
 // DeleteDroneTarget 删除无人机目标
-func (h *DroneTargetHandler) DeleteDroneTarget(c *gin.Context) {
+func (h *DroneTargetRouter) DeleteDroneTarget(c *gin.Context) {
 	id := c.Param("id")
 
 	// 验证 UUID 格式
@@ -80,7 +80,7 @@ func (h *DroneTargetHandler) DeleteDroneTarget(c *gin.Context) {
 }
 
 // DeleteMultipleDroneTargets 批量删除无人机目标
-func (h *DroneTargetHandler) DeleteMultipleDroneTargets(c *gin.Context) {
+func (h *DroneTargetRouter) DeleteMultipleDroneTargets(c *gin.Context) {
 	var req dto.DeleteMultipleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
@@ -99,7 +99,7 @@ func (h *DroneTargetHandler) DeleteMultipleDroneTargets(c *gin.Context) {
 }
 
 // ExportDroneTargetsCSV 导出无人机目标为 CSV 文件
-func (h *DroneTargetHandler) ExportDroneTargetsCSV(c *gin.Context) {
+func (h *DroneTargetRouter) ExportDroneTargetsCSV(c *gin.Context) {
 	var req dto.DroneTargetExportRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))

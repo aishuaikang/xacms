@@ -22,8 +22,8 @@ type DeviceModel struct {
 	ParseIP string `json:"parse_ip" gorm:"size:64;comment:解析模块IP"`                   // 解析模块IP
 
 	// FPV模块
-	FPVIP          string `json:"fpv_ip" gorm:"size:64;comment:FPV模块IP"`            // FPV模块IP
-	StreamServerIP string `json:"stream_server_ip" gorm:"size:64;comment:流媒体服务器IP"` // 流媒体服务器IP
+	FPVIP  string `json:"fpv_ip" gorm:"size:64;comment:FPV模块IP"` // FPV模块IP
+	RTSPIP string `json:"rtsp_ip" gorm:"size:64;comment:RTSPIP"` // RTSPIP
 
 	// 打击模块
 	StrikeIP string `json:"strike_ip" gorm:"size:64;comment:打击模块IP"` // 打击模块IP

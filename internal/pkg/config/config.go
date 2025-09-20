@@ -3,9 +3,14 @@ package config
 import (
 	"fmt"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm/logger"
+)
+
+var (
+	AppConfig *Config
 )
 
 type LogConfig struct {
@@ -23,11 +28,12 @@ type ServerConfig struct {
 }
 
 type Configuration struct {
-	TTL        int64 `yaml:"ttl"`
-	FPVPort    int   `yaml:"fpvPort"`
-	GpsPort    int   `yaml:"gpsPort"`
-	ParsePort  int   `yaml:"parsePort"`
-	StrikePort int   `yaml:"strikePort"`
+	TTL            int64  `yaml:"ttl"`
+	StreamMediaUrl string `yaml:"streamMediaUrl"`
+	FPVPort        int    `yaml:"fpvPort"`
+	GpsPort        int    `yaml:"gpsPort"`
+	ParsePort      int    `yaml:"parsePort"`
+	StrikePort     int    `yaml:"strikePort"`
 }
 
 type JWT struct {
@@ -44,7 +50,7 @@ type Config struct {
 	Configuration Configuration  `yaml:"configuration"`
 }
 
-func NewConfig() *Config {
+func InitConfig() *Config {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./config")
@@ -57,6 +63,18 @@ func NewConfig() *Config {
 	if err := viper.Unmarshal(&config); err != nil {
 		panic(fmt.Errorf("解码配置结构体失败: %w", err))
 	}
+
+	AppConfig = &config
+
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		var newConfig Config
+		if err := viper.Unmarshal(&newConfig); err != nil {
+			panic(fmt.Errorf("解码配置结构体失败: %w", err))
+		}
+		// 更新全局结构体
+		AppConfig = &newConfig
+	})
 
 	return &config
 }

@@ -33,6 +33,7 @@ configuration:
     # gpsSwitch: 1
     # # 1测向开 2 侧向关
     # orientationSwitch: 2
+    streamMediaUrl: http://192.168.200.178:8889
 
     # fpv服务
     fpvPort: 10000

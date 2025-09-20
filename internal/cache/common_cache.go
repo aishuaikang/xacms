@@ -11,9 +11,9 @@ type commonCache struct {
 	ttl int64
 }
 
-func NewCommonCache(config *config.Config) CommonCache {
+func NewCommonCache() CommonCache {
 	return &commonCache{
-		ttl: config.Configuration.TTL,
+		ttl: config.AppConfig.Configuration.TTL,
 	}
 }
 

@@ -32,7 +32,7 @@ func (t *FPVTask) Execute() {
 				return
 			case <-ticker.C:
 
-				t.fpVCache.ResetCacheIfExpired(30 * time.Second) // 假设TTL为30秒
+				t.fpVCache.ResetCacheIfExpired(time.Duration(t.commonCache.GetTTL())) // 假设TTL为30秒
 			}
 		}
 	}()

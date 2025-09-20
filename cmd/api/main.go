@@ -46,7 +46,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := config.NewConfig()
+	cfg := config.InitConfig()
+	config.InitMediaMtxConfig()
 
 	logger := global.NewZapLogger(cfg.Log.Level, cfg.Log.Enabled)
 	defer logger.Sync() // 确保日志被刷新
@@ -67,7 +68,7 @@ func main() {
 		}
 	}()
 
-	server := wireServer(ctx, cfg, db, utils.NewValidationMiddleware())
+	server := wireServer(ctx, db, utils.NewValidationMiddleware())
 
 	httpServer := &http.Server{
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),

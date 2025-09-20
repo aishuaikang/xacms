@@ -9,4 +9,6 @@ var ServicesSet = wire.NewSet(
 	NewCommonService,
 	NewDeviceService,
 	NewDronTargetService,
+	NewWhitelistService,
+	NewFPVService,
 )
