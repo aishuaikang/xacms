@@ -8,9 +8,9 @@ import (
 type DeviceModel struct {
 	ID uuid.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"` // 唯一ID
 
-	Name      string  `json:"name" gorm:"uniqueIndex;size:64;not null;comment:设备名称"` // 设备名称
-	Longitude float64 `json:"longitude" gorm:"type:decimal(10,6);comment:设备经度"`      // 设备经度
-	Latitude  float64 `json:"latitude" gorm:"type:decimal(10,6);comment:设备纬度"`       // 设备纬度
+	Name      string   `json:"name" gorm:"uniqueIndex;size:64;not null;comment:设备名称"` // 设备名称
+	Longitude *float64 `json:"longitude" gorm:"type:decimal(10,6);comment:设备经度"`      // 设备经度
+	Latitude  *float64 `json:"latitude" gorm:"type:decimal(10,6);comment:设备纬度"`       // 设备纬度
 
 	// 侦测模块
 	DetectionID   int    `json:"detection_id" gorm:"uniqueIndex;type:char(36);comment:侦测模块ID"` // 侦测模块ID

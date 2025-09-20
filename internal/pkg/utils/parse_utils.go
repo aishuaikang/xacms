@@ -5,14 +5,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"time"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/pkg/global"
 
@@ -44,8 +42,8 @@ func IsEncryption(fullLine []byte) bool {
 	return bytes.Contains(fullLine, []byte("byte"))
 }
 
-func ParseRID(fullLine []byte, parseData *dto.ParseData) error {
-
+// ParseRID 解析 RID 字段值并赋值给 ParseData 结构体
+func ParseRID(fullLine []byte, parseData *dto.ParseData) {
 	fields := splitFields(fullLine)
 	for _, field := range fields {
 		key, value := parseKV(field)
@@ -55,20 +53,19 @@ func ParseRID(fullLine []byte, parseData *dto.ParseData) error {
 		parseRIDFieldValue(string(key), string(value), parseData)
 	}
 
-	if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
-		parseData.DroneType = dto.DroneTypeRC
-	} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
-		parseData.DroneType = dto.DroneTypeUAV
-	} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
-		parseData.DroneType = dto.DroneTypeBoth
+}
+
+// ParseDID 解析 DID 字段值并赋值给 ParseData 结构体
+func ParseDID(fullLine []byte, parseData *dto.ParseData) {
+	fields := splitFields(fullLine)
+	for _, field := range fields {
+		key, value := parseKV(field)
+		if key == nil || value == nil {
+			continue
+		}
+		parseDIDFieldValue(string(key), string(value), parseData)
 	}
 
-	parseData.TargetId = parseData.Serial
-	parseData.Expires = time.Now().Unix()
-	parseData.Png, _ = generateQRCodeBase64(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
-	parseData.Sign = dto.SignTypeO3Plus
-
-	return nil
 }
 
 // splitFields 按逗号分割字段，同时处理字段值中可能包含的逗号
@@ -142,6 +139,18 @@ func parseRIDFieldValue(key string, value string, parseData *dto.ParseData) {
 	}
 }
 
+// ParseDroneType 解析无人机类型
+func ParseDroneType(parseData *dto.ParseData) {
+	if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
+		parseData.DroneType = dto.DroneTypeRC
+	} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
+		parseData.DroneType = dto.DroneTypeUAV
+	} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
+		parseData.DroneType = dto.DroneTypeBoth
+	}
+
+}
+
 // parseGPS 解析 GPS 字符串并赋值给 GPS 结构体
 func parseGPS(value string, gps *dto.GPS) {
 	if gps == nil {
@@ -180,27 +189,8 @@ func parseFloat(value string) float64 {
 	return v
 }
 
-// // GenerateQRCodeBase64 生成飞手位置二维码
-// func generateQRCodeBase64(lon, lat float64) (string, error) {
-// 	name := url.QueryEscape("飞手位置")
-// 	qrURL := fmt.Sprintf(
-// 		"https://m.amap.com/share/index/lnglat=%f,%f&name=%s&src=mypage&callnative=1&innersrc=uriapi",
-// 		lon, lat, name,
-// 	)
-
-// 	qr, err := qrcode.New(qrURL, qrcode.Medium)
-// 	if err != nil {
-// 		return "", fmt.Errorf("创建二维码失败: %w", err)
-// 	}
-// 	pngData, err := qr.PNG(256)
-// 	if err != nil {
-// 		return "", fmt.Errorf("编码 PNG 失败: %w", err)
-// 	}
-// 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngData), nil
-// }
-
-// generateQRCodeBase64 生成飞手位置二维码
-func generateQRCodeBase64(lon, lat float64) (string, error) {
+// GenerateQRCodeBase64 生成飞手位置二维码
+func GenerateQRCodeBase64(lon, lat float64) (string, error) {
 	// 检查经纬度有效性
 	if lon == 0 && lat == 0 {
 		return "", fmt.Errorf("无效的经纬度: 经度和纬度均为0")
@@ -219,22 +209,6 @@ func generateQRCodeBase64(lon, lat float64) (string, error) {
 	}
 
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngData), nil
-}
-
-// ParseDID 解析 DID 字段值并赋值给 ParseData 结构体
-func ParseDID(fullLine []byte, parseData *dto.ParseData) error {
-	fields := splitFields(fullLine)
-	for _, field := range fields {
-		key, value := parseKV(field)
-		if key == nil || value == nil {
-			continue
-		}
-		parseDIDFieldValue(string(key), string(value), parseData)
-	}
-
-	parseData.Png, _ = generateQRCodeBase64(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
-
-	return nil
 }
 
 func parseDIDFieldValue(key string, value string, parseData *dto.ParseData) {
@@ -273,7 +247,7 @@ func parseDIDFieldValue(key string, value string, parseData *dto.ParseData) {
 		parseData.RSSI = parseFloat(value)
 	case "distance":
 		parseData.Distance = parseDistance(value) / 1000
-		parseData.Expires = time.Now().Unix()
+		// parseData.Expires = models.CustomTime(time.Now())
 		parseData.MType = dto.MTypeSHL
 		parseData.Sign = dto.SignTypeO2O3
 		parseData.TargetId = parseData.Serial
@@ -306,12 +280,14 @@ func parseDistance(value string) float64 {
 var decryptFailCount int32
 
 // ParseEncryption 解析加密字段值并赋值给 ParseData 结构体
-func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, isHasSerial *bool) error {
+func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string) error {
 	freq, rssi, hexStr, id, err := extractFreqRssiAndHexString(fullLine)
 	if err != nil {
 		global.Logger.Error("提取频率、RSSI 和十六进制字符串失败", zap.String("fullLine", string(fullLine)), zap.Error(err))
 		return err
 	}
+
+	// now := models.CustomTime(time.Now())
 
 	pd, err := decryptWithAPI(hexStr, token)
 	if err != nil {
@@ -326,10 +302,10 @@ func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, is
 			parseData.RSSI = rssi
 			parseData.Model = "DJI-Drone"
 			parseData.Serial = id
-			parseData.Expires = time.Now().Unix()
+			// parseData.Expires = now
 			parseData.Sign = dto.SignTypeO2O3
 			parseData.MType = dto.MTypeSHL
-			*isHasSerial = true
+			// *isHasSerial = true
 
 			// 重置计数器以便后续重新计数
 			atomic.StoreInt32(&decryptFailCount, 0)
@@ -339,37 +315,34 @@ func ParseEncryption(fullLine []byte, parseData *dto.ParseData, token string, is
 		return err
 	}
 
-	if parseData != nil && parseData.Serial != "" {
-		// 解密成功，重置计数器
-		atomic.StoreInt32(&decryptFailCount, 0)
-
-		// merge 解密内容
-		parseData.Serial = pd.Serial
-		parseData.Model = pd.Model
-		parseData.DroneGPS = pd.DroneGPS
-		parseData.HomeGPS = pd.HomeGPS
-		parseData.PilotGPS = pd.PilotGPS
-		parseData.Height = pd.Height
-		parseData.Altitude = pd.Altitude
-		parseData.EastV = pd.EastV
-		parseData.NorthV = pd.NorthV
-		parseData.UpV = pd.UpV
-		parseData.TargetId = parseData.Serial
-		*isHasSerial = true
-		parseData.Expires = time.Now().Unix()
-		parseData.MType = dto.MTypeSHL
-		parseData.Sign = dto.SignTypeO2O3
-		parseData.Freq = freq
-		parseData.RSSI = rssi
-		if parseData.DroneGPS.Longitude == 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = dto.DroneTypeRC
-		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude == 0 {
-			parseData.DroneType = dto.DroneTypeUAV
-		} else if parseData.DroneGPS.Longitude != 0 && parseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = dto.DroneTypeBoth
-		}
-		parseData.Speed = calculateFlightSpeed(parseData.EastV, parseData.NorthV, parseData.UpV)
+	if parseData == nil || parseData.Serial == "" {
+		return fmt.Errorf("parseData 结构体为空或 Serial 字段为空")
 	}
+
+	// 解密成功，重置计数器
+	atomic.StoreInt32(&decryptFailCount, 0)
+
+	// merge 解密内容
+	parseData.Serial = pd.Serial
+	parseData.Model = pd.Model
+	parseData.DroneGPS = pd.DroneGPS
+	parseData.HomeGPS = pd.HomeGPS
+	parseData.PilotGPS = pd.PilotGPS
+	parseData.Height = pd.Height
+	parseData.Altitude = pd.Altitude
+	parseData.EastV = pd.EastV
+	parseData.NorthV = pd.NorthV
+	parseData.UpV = pd.UpV
+	parseData.TargetId = parseData.Serial
+	// *isHasSerial = true
+	// parseData.Expires = now
+	parseData.MType = dto.MTypeSHL
+	parseData.Sign = dto.SignTypeO2O3
+	parseData.Freq = freq
+	parseData.RSSI = rssi
+
+	parseData.Speed = CalculateFlightSpeed(parseData.EastV, parseData.NorthV, parseData.UpV)
+
 	return nil
 }
 
@@ -497,80 +470,46 @@ func decryptWithAPI(hexStr, token string) (*dto.ParseData, error) {
 	return parseData, nil
 }
 
-// calculateFlightSpeed 计算飞行速度
-func calculateFlightSpeed(eastV, northV, upV float64) float64 {
-	horizontalSpeed := math.Sqrt(eastV*eastV + northV*northV)
-	return math.Sqrt(horizontalSpeed*horizontalSpeed + upV*upV)
-}
-
 // MergeParseData 合并解析数据
-func MergeParseData(oldData, newData dto.ParseData) (dto.ParseData, error) {
-	// 更新其他字段
-	oldData.DroneGPS = newData.DroneGPS
-	oldData.HomeGPS = newData.HomeGPS
-	oldData.PilotGPS = newData.PilotGPS
-	oldData.Height = newData.Height
-	oldData.Speed = newData.Speed
-	oldData.Altitude = newData.Altitude
-	oldData.EastV = newData.EastV
-	oldData.NorthV = newData.NorthV
-	oldData.UpV = newData.UpV
-	oldData.Freq = newData.Freq
-	oldData.RSSI = newData.RSSI
-	oldData.Distance = newData.Distance
-	oldData.Png = newData.Png
-	oldData.TrajectoryList = newData.TrajectoryList
-	oldData.InWhiteList = newData.InWhiteList
+// func MergeParseData(oldData, newData dto.ParseData) (dto.ParseData, error) {
+// 	// 更新其他字段
+// 	oldData.DroneGPS = newData.DroneGPS
+// 	oldData.HomeGPS = newData.HomeGPS
+// 	oldData.PilotGPS = newData.PilotGPS
+// 	oldData.Height = newData.Height
+// 	oldData.Speed = newData.Speed
+// 	oldData.Altitude = newData.Altitude
+// 	oldData.EastV = newData.EastV
+// 	oldData.NorthV = newData.NorthV
+// 	oldData.UpV = newData.UpV
+// 	oldData.Freq = newData.Freq
+// 	oldData.RSSI = newData.RSSI
+// 	oldData.Distance = newData.Distance
+// 	oldData.Png = newData.Png
+// 	oldData.TrajectoryList = newData.TrajectoryList
+// 	oldData.InWhiteList = newData.InWhiteList
 
-	// 更新过期时间
-	oldData.Expires = time.Now().Unix()
+// 	// 更新过期时间
+// 	oldData.Expires = models.CustomTime(time.Now())
 
-	if newData.Model != "" {
-		oldData.Model = newData.Model
-	}
+// 	if newData.Model != "" {
+// 		oldData.Model = newData.Model
+// 	}
 
-	if newData.DroneGPS.Longitude == 0 && newData.PilotGPS.Longitude != 0 {
-		oldData.DroneType = dto.DroneTypeRC
-	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude == 0 {
-		oldData.DroneType = dto.DroneTypeUAV
-	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude != 0 {
-		oldData.DroneType = dto.DroneTypeBoth
-	}
+// 	if newData.DroneGPS.Longitude == 0 && newData.PilotGPS.Longitude != 0 {
+// 		oldData.DroneType = dto.DroneTypeRC
+// 	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude == 0 {
+// 		oldData.DroneType = dto.DroneTypeUAV
+// 	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude != 0 {
+// 		oldData.DroneType = dto.DroneTypeBoth
+// 	}
 
-	// // 1. 通过设备编号获取设备注册信息
-	// atoi, err := strconv.Atoi(oldData.Device) // 直接转换，不需要循环
-	// if err != nil {
-	// 	global.Logger.Infof("未找到定位设备")
-	// 	return err
-	// }
+// 	// // 1. 通过设备编号获取设备注册信息
+// 	// atoi, err := strconv.Atoi(oldData.Device) // 直接转换，不需要循环
+// 	// if err != nil {
+// 	// 	global.Logger.Infof("未找到定位设备")
+// 	// 	return err
+// 	// }
 
-	return oldData, nil
-}
-
-// Haversine 计算两点之间的距离，单位：米
-func Haversine(lat1, lon1, lat2, lon2 float64) float64 {
-	if lat2 == 0 || lon2 == 0 {
-		return 0
-	}
-	const R = 6371000.0
-	dLat := (lat2 - lat1) * math.Pi / 180
-	dLon := (lon2 - lon1) * math.Pi / 180
-	φ1 := lat1 * math.Pi / 180
-	φ2 := lat2 * math.Pi / 180
-
-	a := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(φ1)*math.Cos(φ2)*math.Sin(dLon/2)*math.Sin(dLon/2)
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-	return math.Round(R * c)
-}
-
-// CalculateBearing 计算两点之间的方位角，单位：度
-func CalculateBearing(lat1, lon1, lat2, lon2 float64) float64 {
-	φ1 := lat1 * math.Pi / 180
-	φ2 := lat2 * math.Pi / 180
-	Δλ := (lon2 - lon1) * math.Pi / 180
-
-	y := math.Sin(Δλ) * math.Cos(φ2)
-	x := math.Cos(φ1)*math.Sin(φ2) - math.Sin(φ1)*math.Cos(φ2)*math.Cos(Δλ)
-	θ := math.Atan2(y, x)
-	return math.Mod(θ*180/math.Pi+360, 360)
-}
+// 	return oldData, nil
+// }

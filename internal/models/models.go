@@ -52,6 +52,10 @@ func (s Status) String() string {
 // 自定义时间类型
 type CustomTime time.Time
 
+func (ct CustomTime) Time() time.Time {
+	return time.Time(ct)
+}
+
 // MarshalJSON 自定义时间的 JSON 序列化
 func (ct CustomTime) MarshalJSON() ([]byte, error) {
 	formatted := time.Time(ct).Format(time.DateTime)

@@ -8,12 +8,12 @@ package main
 
 import (
 	"context"
+	"gorm.io/gorm"
 	"uav_defender/internal/app"
 	"uav_defender/internal/app/devices"
 	"uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/pkg/config"
-	"uav_defender/internal/pkg/database"
 	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/routes"
 	"uav_defender/internal/services"
@@ -22,8 +22,7 @@ import (
 
 // Injectors from injector.go:
 
-func wireServer(ctx context.Context, cfg *config.Config, validator *utils.ValidationMiddleware) *app.GinServer {
-	db := database.NewDB(cfg)
+func wireServer(ctx context.Context, cfg *config.Config, db *gorm.DB, validator *utils.ValidationMiddleware) *app.GinServer {
 	commonService := services.NewCommonService(db, validator)
 	roleService := services.NewRoleService(db, commonService)
 	userService := services.NewUserService(db, commonService, roleService)
@@ -55,7 +54,7 @@ func wireServer(ctx context.Context, cfg *config.Config, validator *utils.Valida
 		DroneTargetService: droneTargetService,
 	}
 	fpvWarningDataCache := cache.NewFPVWarningDataCache()
-	parseCache := cache.NewParseCache()
+	parseCache := cache.NewParseCache(droneTargetService)
 	sseHandler := &routes.SSEHandler{
 		Ctx:                 ctx,
 		DevicesCache:        devicesCache,
@@ -70,16 +69,14 @@ func wireServer(ctx context.Context, cfg *config.Config, validator *utils.Valida
 	decryptTokenCache := cache.NewDecryptTokenCache()
 	decryptTokenTask := tasks.NewDecryptTokenTask(ctx, decryptTokenCache)
 	devicesTask := tasks.NewDevicesTask(ctx, devicesCache)
-	droneTargetCache := cache.NewDroneTargetCache()
-	droneTargetTask := tasks.NewDroneTargetTask(ctx, droneTargetCache, droneTargetService)
 	commonCache := cache.NewCommonCache(cfg)
 	parseTask := tasks.NewParseTask(ctx, commonCache, parseCache)
 	fpvTask := tasks.NewFPVTask(ctx, commonCache, fpvWarningDataCache)
-	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, droneTargetTask, parseTask, fpvTask)
+	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, parseTask, fpvTask)
 	fpvConnection := conn.NewFPVConnection()
 	fpvDevice := devices.NewFPVDevice(ctx, cfg, fpvWarningDataCache, devicesCache, fpvConnection)
 	parseConnection := conn.NewParseConnection()
-	parseDevice := devices.NewParseDevice(ctx, cfg, decryptTokenCache, parseCache, devicesCache, droneTargetCache, parseConnection)
+	parseDevice := devices.NewParseDevice(ctx, cfg, decryptTokenCache, parseCache, devicesCache, parseConnection)
 	devicesDevices := devices.NewDevices(fpvDevice, parseDevice)
 	ginServer := app.NewGinServer(router, tasksTasks, devicesDevices)
 	return ginServer

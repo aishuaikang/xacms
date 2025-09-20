@@ -48,7 +48,7 @@ type ParseData struct {
 	Model          string              `json:"model"`              // 设备型号
 	Freq           float64             `json:"freq"`               // 频率
 	RSSI           float64             `json:"rssi"`               // 信号强度
-	Expires        int64               `json:"expires"`            // 过期时间
+	Expires        models.CustomTime   `json:"expires"`            // 过期时间
 	Height         float64             `json:"height"`             // 高度
 	Altitude       float64             `json:"altitude"`           // 海拔
 	EastV          float64             `json:"eastv"`              // 东向速度
@@ -68,6 +68,6 @@ type ParseData struct {
 	Png            string              `json:"png"`                // base64 编码的图片 二维码
 	Sign           SignType            `json:"sign"`               // 1 O2，O3 飞机的报文格式；O3+, O4飞机的报文格式 2.RID
 	Mac            string              `json:"mac"`                // MAC 地址
-	UpdateTime     int64               `json:"update_time"`        // 更新时间
+	IntrusionTime  models.CustomTime   `json:"intrusion_time"`     // 入侵时间
 	Speed          float64             `json:"speed"`              // 速度
 }

@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 	conn_ "uav_defender/internal/app/devices/conn"
+	parse_fsm "uav_defender/internal/app/devices/fms/parse"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
@@ -25,19 +27,17 @@ type ParseDevice struct {
 	decryptTokenCache cache.DecryptTokenCache
 	parseCache        cache.ParseCache
 	devicesCache      cache.DevicesCache
-	droneTargetCache  cache.DroneTargetCache
 
 	parseConnection *conn_.ParseConnection
 }
 
-func NewParseDevice(ctx context.Context, config *config.Config, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseCache, devicesCache cache.DevicesCache, droneTargetCache cache.DroneTargetCache, parseConnection *conn_.ParseConnection) *ParseDevice {
+func NewParseDevice(ctx context.Context, config *config.Config, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseCache, devicesCache cache.DevicesCache, parseConnection *conn_.ParseConnection) *ParseDevice {
 	parseDevice := &ParseDevice{
 		ctx:               ctx,
 		config:            config,
 		decryptTokenCache: decryptTokenCache,
 		devicesCache:      devicesCache,
 		parseCache:        parseDataCache,
-		droneTargetCache:  droneTargetCache,
 		parseConnection:   parseConnection,
 	}
 
@@ -50,8 +50,8 @@ func (s *ParseDevice) Start() {
 
 // handleConnection 处理每个连接
 func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
+	defer conn.Close()
 	addr := conn.RemoteAddr().String()
-	// log.Infof("[%s] 新的解析连接来自: %s", module, addr)
 	global.Logger.Info("新的解析连接来自", zap.String("module", module), zap.String("address", addr))
 
 	// 根据连接的IP地址查找对应的设备
@@ -59,9 +59,22 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 	device, ok := s.devicesCache.GetDeviceByParseIP(parseIP)
 	if !ok {
 		global.Logger.Warn("未找到匹配的设备，关闭连接", zap.String("module", module), zap.String("address", addr))
-		conn.Close()
 		return
 	}
+
+	// 如果状态机在离线状态，尝试切换到在线状态
+	if device.ParseFsm.FSM.Is(string(parse_fsm.StateOffline)) {
+		if err := device.ParseFsm.FSM.Event(s.ctx, string(parse_fsm.EventToOnline)); err != nil {
+			global.Logger.Error("状态机切换到在线状态失败，关闭连接", zap.String("module", module), zap.String("address", addr), zap.Error(err))
+			return
+		}
+	}
+	defer func() {
+		// 连接关闭时，切换状态机到离线状态
+		if !device.ParseFsm.FSM.Is(string(parse_fsm.StateOffline)) {
+			device.ParseFsm.FSM.Event(s.ctx, string(parse_fsm.EventToOffline))
+		}
+	}()
 
 	c := conn_.NewConn(conn)
 	s.parseConnection.AddConnection(c)
@@ -85,6 +98,12 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 			break
 		}
 
+		// 判断 buffer 是否超过 10kB，防止内存耗尽攻击
+		if buffer.Len() > 10*1024 {
+			global.Logger.Warn("缓冲区数据过大，关闭连接", zap.String("module", module), zap.String("address", addr))
+			break
+		}
+
 		buffer.Write(line)
 
 		for {
@@ -99,56 +118,65 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 
 			var parseData dto.ParseData
 
-			isHasSerial := false
+			// isHasSerial := false
 
 			if utils.IsRID(fullLine) {
-				if err := utils.ParseRID(fullLine, &parseData); err != nil {
-					global.Logger.Error("解析 RID 数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
-					continue
-				}
+				utils.ParseRID(fullLine, &parseData)
 
-				parseData.Device = device.ParseID
+				// parseData.Device = device.ParseID
+				parseData.TargetId = parseData.Serial
+				// parseData.Expires = models.CustomTime(time.Now())
+				parseData.Sign = dto.SignTypeO3Plus
 
-				isHasSerial = true
+				// isHasSerial = true
 			} else if utils.IsEncryption(fullLine) {
-
 				decryptToken := s.decryptTokenCache.GetDecryptToken()
-
-				if err := utils.ParseEncryption(fullLine, &parseData, decryptToken, &isHasSerial); err != nil {
-					global.Logger.Error("解析 Encryption 数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
+				if err := utils.ParseEncryption(fullLine, &parseData, decryptToken); err != nil {
+					global.Logger.Warn("解析加密报文失败，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine), zap.Error(err))
 					continue
 				}
 
 			} else if utils.IsDID(fullLine) {
-				if err := utils.ParseDID(fullLine, &parseData); err != nil {
-					global.Logger.Error("解析 DID 数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
-					continue
-				}
-
-				if parseData.Serial != "" {
-					isHasSerial = true
-				}
-
+				utils.ParseDID(fullLine, &parseData)
 			}
 
 			// 这里进行报文内容校验，确保数据 hasSerial 是否存在Serial字段
-			if !isHasSerial {
-				global.Logger.Warn("报文内容无效，缺少 Serial 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
-				continue
-			}
+			// if !isHasSerial {
+			// 	global.Logger.Warn("报文内容无效，缺少 Serial 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
+			// 	continue
+			// }
 
 			if parseData.Model == "" {
+				global.Logger.Warn("报文内容无效，缺少 Model 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
 				continue
 			}
 
 			// gps 与解析出来的提供的都是 wgs84
 			// 验证了这条告警是不是完整的
-			if parseData.Serial != "" {
-				s.droneTargetCache.HandleParseDataToDroneTarget(parseData)
+			if parseData.Serial == "" {
+				global.Logger.Warn("报文内容无效，缺少 Serial 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
+				continue
 			}
 
-			// TODO: 1、根据设置的map类型设置进行坐标转换
-			// TODO: 2、去白名单查询是否在白名单内
+			// 解析无人机类型
+			utils.ParseDroneType(&parseData)
+
+			now := models.CustomTime(time.Now())
+
+			// 更新过期时间
+			parseData.Expires = now
+			// 记录入侵时间
+			parseData.IntrusionTime = now
+			// TODO: 需要去白名单查询是否在白名单内
+			parseData.InWhiteList = false
+
+			// 判断飞手经纬度是否有效
+			if utils.IsValidCoord(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude) {
+				parseData.Png, err = utils.GenerateQRCodeBase64(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
+				if err != nil {
+					global.Logger.Error("生成飞手位置二维码失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
+				}
+			}
 
 			s.updateParseDataList(parseData, device)
 		}
@@ -162,7 +190,7 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dt
 	var parseData dto.ParseData
 	parseDataLists := s.parseCache.GetParseDataList()
 	for i, item := range parseDataLists {
-		if item.Serial == newParseData.Serial && item.Device == newParseData.Device {
+		if item.Serial == newParseData.Serial {
 			parseDataIndex = i
 			parseData = item
 			break
@@ -170,6 +198,13 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dt
 	}
 
 	if parseDataIndex != -1 {
+
+		if parseData.Device == 0 {
+			if newParseData.Device != 0 {
+				parseData.Device = newParseData.Device
+			}
+		}
+
 		parseData.DroneGPS = newParseData.DroneGPS
 		parseData.HomeGPS = newParseData.HomeGPS
 		parseData.PilotGPS = newParseData.PilotGPS
@@ -183,63 +218,89 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dt
 		parseData.RSSI = newParseData.RSSI
 		parseData.Distance = newParseData.Distance
 		parseData.Png = newParseData.Png
-		parseData.TrajectoryList = newParseData.TrajectoryList
 		parseData.InWhiteList = newParseData.InWhiteList
 
+		// 这是新增的更新字段
+		parseData.Mac = newParseData.Mac
+		parseData.Sign = newParseData.Sign
+		parseData.TargetId = newParseData.TargetId
+		parseData.MType = newParseData.MType
+		parseData.Serial = newParseData.Serial
+
+		now := models.CustomTime(time.Now())
+
 		// 更新过期时间
-		parseData.Expires = time.Now().Unix()
-		if newParseData.Model != "" {
-			parseData.Model = newParseData.Model
-		}
+		parseData.Expires = now
 
-		if newParseData.DroneGPS.Longitude == 0 && newParseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = dto.DroneTypeRC
-		} else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude == 0 {
-			parseData.DroneType = dto.DroneTypeUAV
-		} else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude != 0 {
-			parseData.DroneType = dto.DroneTypeBoth
-		}
+		parseData.Model = newParseData.Model
+		parseData.DroneType = newParseData.DroneType
 
-		targetLat := device.Latitude
-		targetLon := device.Longitude
+		// if newParseData.DroneGPS.Longitude == 0 && newParseData.PilotGPS.Longitude != 0 {
+		// 	parseData.DroneType = dto.DroneTypeRC
+		// } else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude == 0 {
+		// 	parseData.DroneType = dto.DroneTypeUAV
+		// } else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude != 0 {
+		// 	parseData.DroneType = dto.DroneTypeBoth
+		// }
 
-		if targetLat != 0 && targetLon != 0 {
-			distance := utils.Haversine(
-				targetLat,                    // 设备纬度
-				targetLon,                    // 设备经度
-				parseData.DroneGPS.Latitude,  // 无人机纬度
-				parseData.DroneGPS.Longitude, // 无人机经度
-			)
-			if parseData.DroneGPS.Longitude > 0.1 {
-				azimuth := utils.CalculateBearing(
-					targetLat,                    // 设备纬度
-					targetLon,                    // 设备经度
-					parseData.DroneGPS.Latitude,  // 无人机纬度
-					parseData.DroneGPS.Longitude, // 无人机经度
-				)
+		isValidDroneGPS := utils.IsValidCoord(parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude)
 
-				// 4. 更新 LdResult（无需方位角）
-				parseData.LdResult = dto.LdResult{
-					SensorId:  device.DetectionID, // 直接使用字符串类型ID
-					Distance:  distance,
-					Azimuth:   azimuth,
-					DeviceLon: targetLon,
-					DeviceLat: targetLat,
-				}
-
+		if isValidDroneGPS {
+			// 检查是否需要添加新轨迹点
+			newPoint := models.Trajectory{
+				Latitude:  newParseData.DroneGPS.Latitude,
+				Longitude: newParseData.DroneGPS.Longitude,
+				Height:    newParseData.Height,
+			}
+			if len(parseData.TrajectoryList) == 0 {
+				parseData.TrajectoryList = models.Trajectories{newPoint}
 			} else {
-				// 如果未计算出有效的方位角
-				parseData.LdResult = dto.LdResult{
-					SensorId: device.DetectionID, // 直接使用字符串类型ID
-					Distance: 0,
-					Azimuth:  500, // 明确标注未计算方位角
+				lastTrajectory := parseData.TrajectoryList[len(parseData.TrajectoryList)-1]
+				// 只有当新点与最后一个点不同才添加，避免重复点
+				if newPoint.Latitude != lastTrajectory.Latitude || newPoint.Longitude != lastTrajectory.Longitude {
+					parseData.TrajectoryList = append(parseData.TrajectoryList, newPoint)
 				}
 			}
-		} else {
+
+		}
+
+		isValidDeviceGPS := device.Longitude != nil && device.Latitude != nil && utils.IsValidCoord(*device.Longitude, *device.Latitude)
+
+		// 判断设备是否配置了经纬度并且设备经纬度和无人机经纬度是否有效
+		if isValidDeviceGPS && isValidDroneGPS {
+			targetGPS := dto.GPS{
+				Latitude:  *device.Latitude,
+				Longitude: *device.Longitude,
+			}
+
+			// 计算距离
+			distance := utils.Distance(targetGPS, parseData.DroneGPS)
+
+			// 计算方位角
+			bearing := utils.Bearing(targetGPS, parseData.DroneGPS)
+
+			// 4. 更新 LdResult（无需方位角）
 			parseData.LdResult = dto.LdResult{
-				SensorId: device.DetectionID, // 直接使用字符串类型ID
-				Distance: 0,
-				Azimuth:  500, // 明确标注未计算方位角
+				Azimuth:     bearing, // 明确标注未计算方位角
+				Distance:    distance,
+				SensorId:    device.DetectionID,
+				Orientation: bearing,
+				DeviceLon:   targetGPS.Longitude,
+				DeviceLat:   targetGPS.Latitude,
+				Height:      parseData.Height,
+			}
+
+		} else {
+			// 设备未配置经纬度或设备和无人机经纬度无效，LdResult 字段置为默认值
+			global.Logger.Warn("设备或无人机经纬度无效，无法计算距离和方位角", zap.Int("device_id", device.DetectionID), zap.String("device_model", device.Name), zap.Float64("device_longitude", *device.Longitude), zap.Float64("device_latitude", *device.Latitude), zap.Float64("drone_longitude", parseData.DroneGPS.Longitude), zap.Float64("drone_latitude", parseData.DroneGPS.Latitude))
+			parseData.LdResult = dto.LdResult{
+				Azimuth:     500, // 明确标注未计算方位角
+				Distance:    0,
+				SensorId:    device.DetectionID,
+				Orientation: 500,
+				DeviceLat:   0,
+				DeviceLon:   0,
+				Height:      0,
 			}
 		}
 
@@ -252,8 +313,7 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dt
 
 	// 只对非DJI-Drone模型排序
 	parseDataListLength := s.parseCache.GetParseDataListLength()
-	if newParseData.Model != "DJI-Drone" && parseDataListLength >= 2 {
+	if parseDataListLength > 1 && newParseData.Model != "DJI-Drone" {
 		s.parseCache.SortParseDataListByExpires()
-
 	}
 }

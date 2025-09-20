@@ -76,11 +76,11 @@ func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceReque
 	}
 
 	if req.Longitude != nil {
-		user.Longitude = *req.Longitude
+		user.Longitude = req.Longitude
 	}
 
 	if req.Latitude != nil {
-		user.Latitude = *req.Latitude
+		user.Latitude = req.Latitude
 	}
 
 	if req.DetectionID != nil {

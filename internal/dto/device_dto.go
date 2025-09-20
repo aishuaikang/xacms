@@ -1,12 +1,16 @@
 package dto
 
-import "uav_defender/internal/models"
+import (
+	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
+	parse_fsm "uav_defender/internal/app/devices/fms/parse"
+	"uav_defender/internal/models"
+)
 
 // CreateDeviceRequest 创建设备请求结构
 type CreateDeviceRequest struct {
-	Name      string  `json:"name" validate:"required,min=2,max=64"`
-	Longitude float64 `json:"longitude" validate:"required,longitude"`
-	Latitude  float64 `json:"latitude" validate:"required,latitude"`
+	Name      string   `json:"name" validate:"required,min=2,max=64"`
+	Longitude *float64 `json:"longitude" validate:"omitempty,longitude"`
+	Latitude  *float64 `json:"latitude" validate:"omitempty,latitude"`
 
 	// 侦测模块
 	DetectionID   int    `json:"detection_id" validate:"required"`   // 侦测模块ID
@@ -49,42 +53,16 @@ type UpdateDeviceRequest struct {
 	StrikeIP *string `json:"strike_ip" validate:"omitempty"` // 打击模块IP
 }
 
-type StrikeMode int
-
-const (
-	StrikeModeIdle       StrikeMode = iota // 空闲
-	StrikeModeBroadband                    // 宽频打击
-	StrikeModeUnattended                   // 无人值守
-)
-
-type StrikeStatus string
-
-const (
-	StrikeStatusNotStriked StrikeStatus = "NotStriked" // 未打击
-	StrikeStatusStriking   StrikeStatus = "Striking"   // 打击中
-	StrikeStatusOffline    StrikeStatus = "Offline"    // 离线
-)
-
-// StrikeInfo 打击状态
-type StrikeInfo struct {
-	Mode      StrikeMode   `json:"mode"`      // 0 空闲 1-宽频打击 2-无人值守
-	Status    StrikeStatus `json:"status"`    // 打击状态，0-未打击，1-打击中，2-离线 "NotStriked", "Striking", "Offline"
-	Frequency []string     `json:"frequency"` // 频段
-}
-
-// DeviceInfoStatus 设备状态枚举
-type DeviceInfoStatus int
-
-const (
-	DeviceInfoStatusOffline DeviceInfoStatus = 0 // 离线
-	DeviceInfoStatusOnline  DeviceInfoStatus = 1 // 在线
-)
-
 // DeviceInfo 设备信息
 type DeviceInfo struct {
 	models.DeviceModel
-	HeartbeatCount int              `json:"heartbeat_count"` // 心跳计数
-	Expires        int64            `json:"expires"`         // 过期时间戳
-	Status         DeviceInfoStatus `json:"status"`          // 设备状态，0-离线，1-在线
-	StrikeInfo     StrikeInfo       `json:"strike_info"`     // 打击状态信息
+	FPVFsm   *fpv_fsm.FPVFsm
+	ParseFsm *parse_fsm.ParseFsm
+}
+
+// DeviceDisplayInfo 设备展示信息
+type DeviceDisplayInfo struct {
+	models.DeviceModel
+	FPVState   fpv_fsm.FPVState     `json:"fpv_state"`   // FPV状态
+	ParseState parse_fsm.ParseState `json:"parse_state"` // 解析状态
 }

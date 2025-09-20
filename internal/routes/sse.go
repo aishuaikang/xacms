@@ -45,7 +45,7 @@ func (h *SSEHandler) DeviceInfoListSSE(c *gin.Context) {
 			global.Logger.Info("客户端断开连接，停止发送SSE")
 			return
 		case <-ticker.C:
-			devices := h.DevicesCache.GetDevices()
+			devices := h.DevicesCache.GetDisplayDevices()
 			data, err := sonic.Marshal(devices)
 			if err != nil {
 				fmt.Fprintf(c.Writer, "data: {\"error\":\"marshal failed\"}\n\n")

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	conn_ "uav_defender/internal/app/devices/conn"
+	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
@@ -41,6 +42,7 @@ func (s *FPVDevice) Start() {
 
 // handleConnection 处理每个连接
 func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
+	defer conn.Close()
 	addr := conn.RemoteAddr().String()
 	global.Logger.Info("新的FPV连接来自", zap.String("module", module), zap.String("address", addr))
 
@@ -49,9 +51,22 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 	device, ok := s.devicesCache.GetDeviceByFPVIP(fpvIP)
 	if !ok {
 		global.Logger.Warn("未找到匹配的设备，关闭连接", zap.String("module", module), zap.String("address", addr))
-		conn.Close()
 		return
 	}
+
+	// 如果状态机在离线状态，尝试切换到扫描状态
+	if device.FPVFsm.FSM.Is(string(fpv_fsm.StateOffline)) {
+		if err := device.FPVFsm.FSM.Event(s.ctx, string(fpv_fsm.EventToScanning)); err != nil {
+			global.Logger.Error("状态机切换到扫描状态失败，关闭连接", zap.String("module", module), zap.String("address", addr), zap.Error(err))
+			return
+		}
+	}
+	defer func() {
+		// 连接关闭时，切换状态机到离线状态
+		if !device.FPVFsm.FSM.Is(string(fpv_fsm.StateOffline)) {
+			device.FPVFsm.FSM.Event(s.ctx, string(fpv_fsm.EventToOffline))
+		}
+	}()
 
 	c := conn_.NewConn(conn)
 	s.fpvConnection.AddConnection(c)
@@ -114,16 +129,14 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 
 				warningData, err := utils.ParseFPVWarningData(fullLine, ip, time.Unix(), device.DetectionID)
 				if err != nil {
-					// log.Errorf("[%s] 解析 FPV 警告数据失败: %v", module, err)
 					global.Logger.Error("解析 FPV 警告数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 					continue
 				}
 
-				// log.Infof("[%s] 接收到FPV警告数据: %+v", module, warningData)
-
 				// 将新的警告数据添加到列表中
 				s.fpvWarningDataCache.PushFPVWarning(warningData)
 
+				// 设置最后更新时间
 				s.fpvWarningDataCache.SetLastUpdated(time)
 			}
 

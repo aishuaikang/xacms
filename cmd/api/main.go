@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 	"uav_defender/internal/pkg/config"
+	"uav_defender/internal/pkg/database"
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
@@ -50,7 +51,23 @@ func main() {
 	logger := global.NewZapLogger(cfg.Log.Level, cfg.Log.Enabled)
 	defer logger.Sync() // 确保日志被刷新
 
-	server := wireServer(ctx, cfg, utils.NewValidationMiddleware())
+	db, err := database.NewDB(cfg)
+	if err != nil {
+		logger.Fatal("数据库连接失败", zap.Error(err))
+		return
+	}
+	defer func() {
+		sqlDB, err := db.DB()
+		if err != nil {
+			logger.Error("获取数据库实例时出错", zap.Error(err))
+			return
+		}
+		if err := sqlDB.Close(); err != nil {
+			logger.Error("关闭数据库连接时出错", zap.Error(err))
+		}
+	}()
+
+	server := wireServer(ctx, cfg, db, utils.NewValidationMiddleware())
 
 	httpServer := &http.Server{
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),

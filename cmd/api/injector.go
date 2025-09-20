@@ -9,7 +9,6 @@ import (
 	"uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/pkg/config"
-	"uav_defender/internal/pkg/database"
 	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/routes"
 
@@ -17,12 +16,12 @@ import (
 	"uav_defender/internal/tasks"
 
 	"github.com/google/wire"
+	"gorm.io/gorm"
 )
 
-func wireServer(ctx context.Context, cfg *config.Config, validator *utils.ValidationMiddleware) *app.GinServer {
+func wireServer(ctx context.Context, cfg *config.Config, db *gorm.DB, validator *utils.ValidationMiddleware) *app.GinServer {
 	wire.Build(
 		app.NewGinServer,
-		database.NewDB,
 		services.ServicesSet,
 		routes.RoutesSet,
 		devices.DevicesSet,

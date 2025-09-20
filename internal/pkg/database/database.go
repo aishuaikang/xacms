@@ -1,7 +1,6 @@
 package database
 
 import (
-	"log"
 	"time"
 	"uav_defender/internal/models"
 	"uav_defender/internal/pkg/config"
@@ -14,20 +13,21 @@ import (
 )
 
 // getDB 获取数据库连接实例（单例模式）
-func NewDB(config *config.Config) *gorm.DB {
+func NewDB(config *config.Config) (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(config.Database.Name), &gorm.Config{
 		// 打印日志
 		Logger: NewGormLogger(global.Logger, config.Log.DatabaseLevel, config.Log.Enabled),
 	})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		return nil, err
 	}
 
 	// 启用 WAL 模式
-	// _ = db.Exec("PRAGMA journal_mode=WAL;")
+	_ = db.Exec("PRAGMA journal_mode=WAL;")
+
 	sqlDB, dbError := db.DB()
 	if dbError != nil {
-		log.Fatal("Failed to get database instance:", dbError)
+		return nil, dbError
 	}
 	sqlDB.SetMaxIdleConns(1)
 	sqlDB.SetMaxOpenConns(10)
@@ -40,10 +40,9 @@ func NewDB(config *config.Config) *gorm.DB {
 		&models.DeviceModel{},
 		&models.DroneTargetModel{},
 	); err != nil {
-		log.Fatal("Failed to migrate database:", err)
+		return nil, err
 	}
-	log.Println("Database connected and migrated successfully")
-	return db
+	return db, nil
 }
 
 // // CloseDB 关闭数据库连接

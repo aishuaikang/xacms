@@ -5,6 +5,10 @@ import (
 	"sync"
 	"time"
 	"uav_defender/internal/dto"
+	"uav_defender/internal/pkg/global"
+	"uav_defender/internal/services"
+
+	"go.uber.org/zap"
 )
 
 type ParseCache interface {
@@ -20,12 +24,14 @@ type ParseCache interface {
 type parseCache struct {
 	parseDataList      []dto.ParseData
 	parseDataListMutex sync.RWMutex
+	droneTargetService services.DroneTargetService
 }
 
-func NewParseCache() ParseCache {
+func NewParseCache(droneTargetService services.DroneTargetService) ParseCache {
 	return &parseCache{
 		parseDataList:      make([]dto.ParseData, 0),
 		parseDataListMutex: sync.RWMutex{},
+		droneTargetService: droneTargetService,
 	}
 }
 
@@ -64,7 +70,7 @@ func (c *parseCache) SortParseDataListByExpires() {
 	c.parseDataListMutex.Lock()
 	defer c.parseDataListMutex.Unlock()
 	sort.Slice(c.parseDataList, func(i, j int) bool {
-		return c.parseDataList[i].Expires < c.parseDataList[j].Expires
+		return c.parseDataList[i].Expires.Time().Unix() < c.parseDataList[j].Expires.Time().Unix()
 	})
 }
 
@@ -81,12 +87,26 @@ func (c *parseCache) CleanupExpiredParseData(ttl int64) {
 	defer c.parseDataListMutex.Unlock()
 
 	validData := make([]dto.ParseData, 0)
+	invalidData := make([]dto.ParseData, 0)
 	now := time.Now().Unix()
 	for _, data := range c.parseDataList {
-		expireTime := data.Expires + ttl
+		expireTime := data.Expires.Time().Unix() + ttl
 		if expireTime > now {
 			validData = append(validData, data)
+		} else {
+			invalidData = append(invalidData, data)
 		}
 	}
 	c.parseDataList = validData
+
+	if len(invalidData) == 0 {
+		return
+	}
+
+	// 将过期的数据同步到数据库
+	if err := c.droneTargetService.SyncParseDataListToDroneTargetDB(invalidData); err != nil {
+		global.Logger.Error("同步解析数据列表到无人机目标数据库失败", zap.Error(err))
+		return
+	}
+	global.Logger.Info("清理过期解析数据", zap.Int("清理前数量", len(validData)+len(invalidData)), zap.Int("清理后数量", len(validData)), zap.Int("清理数量", len(invalidData)))
 }
