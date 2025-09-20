@@ -123,7 +123,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 			if utils.IsRID(fullLine) {
 				utils.ParseRID(fullLine, &parseData)
 
-				// parseData.Device = device.ParseID
+				parseData.Device = device.ParseID
 				parseData.TargetId = parseData.Serial
 				// parseData.Expires = models.CustomTime(time.Now())
 				parseData.Sign = dto.SignTypeO3Plus

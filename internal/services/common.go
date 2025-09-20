@@ -21,6 +21,7 @@ type CommonService interface {
 	GetItemByID(id uuid.UUID, model any) error
 	IsExistByID(id uuid.UUID, model any) (bool, error)
 	DeleteItemByID(model any, id uuid.UUID) error
+	DeleteItemsByIDs(model any, req dto.DeleteMultipleRequest) error
 	ValidateBody(c *gin.Context, model any) error
 	ValidateQuery(c *gin.Context, model any) error
 	GetAPIs() []dto.APIInfo
@@ -72,6 +73,14 @@ func (s *commonService) IsExistByID(id uuid.UUID, model any) (bool, error) {
 // DeleteItemByID 根据ID删除单个数据
 func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
 	if err := s.db.Delete(model, "id = ?", id).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteItemsByIDs 根据IDs批量删除数据
+func (s *commonService) DeleteItemsByIDs(model any, req dto.DeleteMultipleRequest) error {
+	if err := s.db.Where("id IN ?", req.IDs).Delete(model).Error; err != nil {
 		return err
 	}
 	return nil

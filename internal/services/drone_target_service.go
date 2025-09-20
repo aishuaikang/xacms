@@ -7,12 +7,12 @@ import (
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // DroneTargetService 无人机目标 服务接口
 type DroneTargetService interface {
 	GetDroneTargets(req dto.DroneTargetQueryRequest) (*dto.PaginatedResponse[models.DroneTargetModel], error)
+	GetAllDroneTargets(req dto.DroneTargetExportRequest) ([]models.DroneTargetModel, error)
 	CreateDroneTarget(droneTarget *models.DroneTargetModel) (*models.DroneTargetModel, error)
 	SyncParseDataListToDroneTargetDB(parseDataList []dto.ParseData) error
 }
@@ -32,7 +32,7 @@ func NewDronTargetService(db *gorm.DB, commonService CommonService) DroneTargetS
 
 // GetDroneTargets 获取无人机目标列表
 func (s *droneTargetService) GetDroneTargets(req dto.DroneTargetQueryRequest) (*dto.PaginatedResponse[models.DroneTargetModel], error) {
-	query := s.db.Model(&models.DroneTargetModel{}).Preload(clause.Associations)
+	query := s.db.Model(&models.DroneTargetModel{})
 
 	if req.Model != nil {
 		query = query.Where("model LIKE ?", "%"+*req.Model+"%")
@@ -62,6 +62,37 @@ func (s *droneTargetService) GetDroneTargets(req dto.DroneTargetQueryRequest) (*
 		Total: total,
 		Items: droneTargets,
 	}, nil
+}
+
+// GetAllDroneTargets 获取所有无人机目标列表（不分页）
+func (s *droneTargetService) GetAllDroneTargets(req dto.DroneTargetExportRequest) ([]models.DroneTargetModel, error) {
+	query := s.db.Model(&models.DroneTargetModel{})
+
+	if req.Model != nil {
+		query = query.Where("model LIKE ?", "%"+*req.Model+"%")
+	}
+	if req.DetectionType != nil {
+		query = query.Where("detection_type = ?", *req.DetectionType)
+	}
+	if req.StartTime != nil {
+		query = query.Where("created_at >= ?", req.StartTime)
+	}
+
+	if req.EndTime != nil {
+		query = query.Where("created_at <= ?", req.EndTime)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var droneTargets []models.DroneTargetModel
+	if err := query.Order("created_at DESC").Find(&droneTargets).Error; err != nil {
+		return nil, err
+	}
+
+	return droneTargets, nil
 }
 
 // CreateDroneTarget 创建无人机目标
