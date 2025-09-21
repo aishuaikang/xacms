@@ -1,11 +1,5 @@
 package dto
 
-import (
-	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
-	parse_fsm "uav_defender/internal/app/devices/fms/parse"
-	"uav_defender/internal/models"
-)
-
 // CreateDeviceRequest 创建设备请求结构
 type CreateDeviceRequest struct {
 	Name      string   `json:"name" validate:"required,min=2,max=64"`
@@ -51,18 +45,4 @@ type UpdateDeviceRequest struct {
 
 	// 打击模块
 	StrikeIP *string `json:"strike_ip" validate:"omitempty"` // 打击模块IP
-}
-
-// DeviceInfo 设备信息
-type DeviceInfo struct {
-	models.DeviceModel
-	FPVFsm   *fpv_fsm.FPVFsm
-	ParseFsm *parse_fsm.ParseFsm
-}
-
-// DeviceDisplayInfo 设备展示信息
-type DeviceDisplayInfo struct {
-	models.DeviceModel
-	FPVState   fpv_fsm.FPVState     `json:"fpv_state"`   // FPV状态
-	ParseState parse_fsm.ParseState `json:"parse_state"` // 解析状态
 }

@@ -4,13 +4,19 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
+	"sync"
+	"time"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
 
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"go.uber.org/zap"
 )
 
@@ -160,3 +166,206 @@ func UpdateMediaMtxConfigPaths(devices []models.DeviceModel) {
 // 		global.Logger.Error("写回 MediaMtx 配置文件失败", zap.Error(err))
 // 	}
 // }
+
+// ffmpegPath := "ffmpeg"
+// // 启动录制
+// // 构建FFmpeg命令
+// RtspCmd = exec.Command(
+// 	ffmpegPath,
+// 	"-y",
+// 	"-rtsp_transport", "tcp",
+// 	"-i", rtspURL,
+
+// 	// 视频处理参数
+
+// 	"-c:v", "libx264",
+// 	"-profile:v", "main", // 强制Main Profile
+// 	"-level:v", "4.0", // 兼容性Level
+// 	"-pix_fmt", "yuv420p", // 修正色彩格式（原流为yuvj420p）
+// 	"-vsync", "1", // 防止帧率波动
+// 	"-x264-params", "colorprim=bt709:transfer=bt709:colormatrix=bt709", // 明确色彩标准
+
+// 	// 音频处理参数
+// 	"-c:a", "aac",
+// 	"-ar", "44100", // 重采样到标准频率（原流16000Hz非常规）
+// 	"-ac", "2", // 强制双声道（原流为单声道）
+
+//	// 封装参数
+//	"-f", "mp4", // 不使用 -movflags +faststart
+//	outputFile,
+//
+// )
+// BuildFPVCommand 构建FPV设备命令
+func BuildFPVCommand(frequency int, command int) (fpvCommand string, expectedResponse string) {
+	switch command {
+	// case 1, 2, 3, 4, 5:
+	// 	if fpv.StartFreq <= 0 || fpv.StopFreq <= 0 {
+	// 		return "", "", fmt.Errorf("invalid frequency range: start/stop must > 0")
+	// 	}
+	// 	comm = fmt.Sprintf("AT+FREQ_GROUP_%d=%d,%d\r\n", command, fpv.StartFreq, fpv.StopFreq)
+	// 	expected = fmt.Sprintf("OK\nFREQ_GROUP_%d = %d--%d", command, fpv.StartFreq, fpv.StopFreq)
+	// case 6:
+	// 	if fpv.StartStep < 1 || fpv.StartStep > 100 {
+	// 		return "", "", fmt.Errorf("invalid step value: 1 <= start_step <= 100")
+	// 	}
+	// 	comm = fmt.Sprintf("AT+FREQ_STEP=%d\r\n", fpv.StartStep)
+	// 	expected = fmt.Sprintf("SET+OK\nFREQ_STEP=%d", fpv.StartStep)
+	// case 7:
+	// 	if fpv.DeteTime < 1 || fpv.DeteTime > 100 {
+	// 		return "", "", fmt.Errorf("invalid detection time: 1 <= dete_time <= 100")
+	// 	}
+	// 	comm = fmt.Sprintf("AT+DETE_TIME=%d\r\n", fpv.DeteTime)
+	// 	expected = fmt.Sprintf("SET+OK\nDETE_STEP=%d", fpv.DeteTime)
+	// case 8:
+	// 	comm = "AT+GET_FREQ?\r\n"
+	case 9:
+		fpvCommand = fmt.Sprintf("AT+POINT_FREQ=%d\r\n", frequency)
+		expectedResponse = "SET+OK\n"
+	case 10:
+		fpvCommand = "AT+DEFAULT\r\n"
+		expectedResponse = "SET+OK\n"
+	default:
+		return
+	}
+	return fpvCommand, strings.TrimSpace(expectedResponse)
+}
+
+// IsExpectedResponse 验证设备响应是否符合预期
+func IsExpectedResponse(response, expected string) bool {
+	// 验证响应
+	if expected != "" && !strings.Contains(response, expected) {
+		return false
+	}
+	return true
+}
+
+type RtspRecorder struct {
+	cmd       *exec.Cmd
+	lock      sync.Mutex
+	stdinPipe io.WriteCloser
+
+	videosDir string
+	filename  *string
+}
+
+func NewRtspRecorder() (*RtspRecorder, error) {
+	// 在工作目录下videos文件夹中保存录像
+	// 如果不存在则创建
+	wd, err := os.Getwd()
+	if err != nil {
+		global.Logger.Error("获取工作目录失败", zap.Error(err))
+		return nil, fmt.Errorf("获取当前工作目录失败: %v", err)
+	}
+
+	global.Logger.Info("当前工作目录", zap.String("wd", wd))
+
+	videosDir := path.Join(wd, "videos")
+	if err := os.MkdirAll(videosDir, 0777); err != nil {
+		global.Logger.Error("创建videos文件夹失败", zap.Error(err))
+		return nil, fmt.Errorf("创建videos文件夹失败: %v", err)
+	}
+
+	global.Logger.Info("录像保存目录", zap.String("videosDir", videosDir))
+
+	return &RtspRecorder{videosDir: videosDir, filename: nil}, nil
+}
+
+func (r *RtspRecorder) Start(streamKey, filename string) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if r.cmd != nil {
+		return fmt.Errorf("录像已在进行")
+	}
+
+	global.Logger.Info("开始录像", zap.String("streamKey", streamKey), zap.String("filename", filename))
+
+	r.filename = &filename
+
+	outputFile := path.Join(r.videosDir, filename)
+
+	global.Logger.Info("录像保存路径", zap.String("outputFile", outputFile))
+
+	outArgs := ffmpeg.KwArgs{
+		"y":           "",
+		"c:v":         "libx264",
+		"profile:v":   "main",
+		"level:v":     "4.0",
+		"pix_fmt":     "yuv420p",
+		"vsync":       "1",
+		"x264-params": "colorprim=bt709:transfer=bt709:colormatrix=bt709",
+		"c:a":         "aac",
+		"ar":          "44100",
+		"ac":          "2",
+		"f":           "mp4",
+	}
+
+	rtspURL, exists := config.MediaMtxAppConfig.Paths[streamKey]
+	if !exists {
+		return fmt.Errorf("streamKey 不存在于配置中")
+	}
+
+	global.Logger.Info("使用RTSP地址", zap.String("rtspURL", rtspURL.Source))
+
+	ffCmd := ffmpeg.Input(rtspURL.Source, ffmpeg.KwArgs{"rtsp_transport": "tcp"}).
+		Output(outputFile, outArgs).OverWriteOutput().Compile()
+	r.cmd = ffCmd
+
+	stdinPipe, err := ffCmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("获取进程输入管道失败: %v", err)
+	}
+	r.stdinPipe = stdinPipe
+
+	return ffCmd.Start()
+}
+
+func (r *RtspRecorder) Stop() error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	if r.cmd == nil || r.cmd.Process == nil {
+		return fmt.Errorf("没有正在运行的录像进程")
+	}
+
+	// 优雅停止
+	if r.stdinPipe != nil {
+		_, _ = r.stdinPipe.Write([]byte("q\n"))
+		r.stdinPipe.Close()
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- r.cmd.Wait()
+	}()
+
+	timeout := time.After(2 * time.Second)
+	var err error
+	select {
+	case err = <-done:
+	case <-timeout:
+		if r.cmd.Process != nil {
+			_ = r.cmd.Process.Kill()
+			global.Logger.Warn("录像进程超时未退出，已强制kill")
+		}
+		err = fmt.Errorf("录像进程超时未优雅退出，已强制kill")
+	}
+
+	// 清理资源
+	r.cmd = nil
+	r.stdinPipe = nil
+
+	if err != nil && r.filename != nil {
+		outputFile := path.Join(r.videosDir, *r.filename)
+		if removeErr := os.Remove(outputFile); removeErr != nil {
+			global.Logger.Error("删除录像文件失败", zap.Error(removeErr))
+		}
+		r.filename = nil
+	}
+
+	if err != nil && err.Error() != "signal: killed" {
+		global.Logger.Error("录像进程退出异常", zap.Error(err))
+		return fmt.Errorf("录像进程退出异常: %v", err)
+	}
+
+	return nil
+}

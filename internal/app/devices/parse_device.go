@@ -195,7 +195,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 }
 
 // updateParseDataList 更新解析数据列表
-func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *dto.DeviceInfo) {
+func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *cache.DeviceInfo) {
 	// 查找符合条件的定位数据
 	var parseDataIndex int = -1
 	var parseData dto.ParseData

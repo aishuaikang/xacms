@@ -5,25 +5,39 @@ import (
 	"uav_defender/internal/app/devices/conn"
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
 	parse_fsm "uav_defender/internal/app/devices/fms/parse"
-	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
 	"uav_defender/internal/services"
 )
 
+// DeviceInfo 设备信息
+type DeviceInfo struct {
+	models.DeviceModel
+	FPVFsm   *fpv_fsm.FPVFsm
+	ParseFsm *parse_fsm.ParseFsm
+}
+
+// DeviceDisplayInfo 设备展示信息
+type DeviceDisplayInfo struct {
+	models.DeviceModel
+	FPVState   fpv_fsm.FPVState     `json:"fpv_state"`   // FPV状态
+	ParseState parse_fsm.ParseState `json:"parse_state"` // 解析状态
+}
+
 type DevicesCache interface {
-	SetDevices(deviceList []dto.DeviceInfo)
-	GetDevices() []dto.DeviceInfo
-	GetDisplayDevices() []dto.DeviceDisplayInfo
+	SetDevices(deviceList []DeviceInfo)
+	GetDevices() []DeviceInfo
+	GetDisplayDevices() []DeviceDisplayInfo
 	NotifyRefresh()
 	GetRefreshChan() <-chan struct{}
-	GetDeviceByParseIP(parseIP string) (*dto.DeviceInfo, bool)
-	GetDeviceByParseID(parseID int) (*dto.DeviceInfo, bool)
-	GetDeviceByDetectionID(detectionID int) (*dto.DeviceInfo, bool)
-	GetDeviceByFPVIP(fpvIP string) (*dto.DeviceInfo, bool)
+	GetDeviceByParseIP(parseIP string) (*DeviceInfo, bool)
+	GetDeviceByParseID(parseID int) (*DeviceInfo, bool)
+	GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool)
+	GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool)
 	RefreshDevices() error
 }
 
 type devicesCache struct {
-	devices              []dto.DeviceInfo       // 设备列表
+	devices              []DeviceInfo           // 设备列表
 	devicesMutex         sync.RWMutex           // 保护设备列表的读写锁
 	devicesRefreshSignal chan struct{}          // 设备列表刷新信号通道
 	deviceService        services.DeviceService // 设备服务
@@ -32,7 +46,7 @@ type devicesCache struct {
 
 func NewDevicesCache(deviceService services.DeviceService, fpvConnection *conn.FpvConnection) DevicesCache {
 	return &devicesCache{
-		devices:              []dto.DeviceInfo{},
+		devices:              []DeviceInfo{},
 		devicesMutex:         sync.RWMutex{},
 		devicesRefreshSignal: make(chan struct{}, 1),
 		deviceService:        deviceService,
@@ -41,26 +55,26 @@ func NewDevicesCache(deviceService services.DeviceService, fpvConnection *conn.F
 }
 
 // SetDevices 设置设备列表
-func (c *devicesCache) SetDevices(devices []dto.DeviceInfo) {
+func (c *devicesCache) SetDevices(devices []DeviceInfo) {
 	c.devicesMutex.Lock()
 	defer c.devicesMutex.Unlock()
 	c.devices = devices
 }
 
 // GetDevices 获取设备列表
-func (c *devicesCache) GetDevices() []dto.DeviceInfo {
+func (c *devicesCache) GetDevices() []DeviceInfo {
 	c.devicesMutex.RLock()
 	defer c.devicesMutex.RUnlock()
 	return c.devices
 }
 
 // 获取用于展示的设备列表
-func (c *devicesCache) GetDisplayDevices() []dto.DeviceDisplayInfo {
+func (c *devicesCache) GetDisplayDevices() []DeviceDisplayInfo {
 	device := c.GetDevices()
 
-	var displayDevices []dto.DeviceDisplayInfo
+	var displayDevices []DeviceDisplayInfo
 	for _, device := range device {
-		displayDevices = append(displayDevices, dto.DeviceDisplayInfo{
+		displayDevices = append(displayDevices, DeviceDisplayInfo{
 			DeviceModel: device.DeviceModel,
 			FPVState:    fpv_fsm.FPVState(device.FPVFsm.Current()),
 			ParseState:  parse_fsm.ParseState(device.ParseFsm.Current()),
@@ -80,7 +94,7 @@ func (c *devicesCache) GetRefreshChan() <-chan struct{} {
 }
 
 // GetDeviceByParseIP 根据解析IP获取设备
-func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*dto.DeviceInfo, bool) {
+func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*DeviceInfo, bool) {
 	devices := c.GetDevices()
 	for _, device := range devices {
 		if device.ParseIP == parseIP {
@@ -91,7 +105,7 @@ func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*dto.DeviceInfo, bool
 }
 
 // GetDeviceByParseID 根据解析ID获取设备信息
-func (c *devicesCache) GetDeviceByParseID(parseID int) (*dto.DeviceInfo, bool) {
+func (c *devicesCache) GetDeviceByParseID(parseID int) (*DeviceInfo, bool) {
 	devices := c.GetDevices()
 
 	for _, device := range devices {
@@ -103,7 +117,7 @@ func (c *devicesCache) GetDeviceByParseID(parseID int) (*dto.DeviceInfo, bool) {
 }
 
 // GetDeviceByDetectionID 根据侦测ID获取设备信息
-func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*dto.DeviceInfo, bool) {
+func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool) {
 	devices := c.GetDevices()
 
 	for _, device := range devices {
@@ -115,7 +129,7 @@ func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*dto.DeviceInfo,
 }
 
 // GetDeviceByFPVIP 根据FPVIP获取设备信息
-func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*dto.DeviceInfo, bool) {
+func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool) {
 	devices := c.GetDevices()
 	for _, device := range devices {
 		if device.FPVIP == fpvIP {
@@ -132,9 +146,9 @@ func (c *devicesCache) RefreshDevices() error {
 		return err
 	}
 
-	var deviceInfos []dto.DeviceInfo
+	var deviceInfos []DeviceInfo
 	for _, device := range devices {
-		deviceInfos = append(deviceInfos, dto.DeviceInfo{
+		deviceInfos = append(deviceInfos, DeviceInfo{
 			DeviceModel: device,
 			FPVFsm:      fpv_fsm.NewFPVFsm(c.fpvConnection),
 			ParseFsm:    parse_fsm.NewParseFsm(),

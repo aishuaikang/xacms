@@ -9,6 +9,7 @@ import (
 
 type FPVService interface {
 	GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[models.FPVModel], error)
+	AddFPV(req dto.AddFPVRequest) error
 }
 
 // fpvService FPV服务实现
@@ -53,4 +54,14 @@ func (s *fpvService) GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[mo
 		Total: total,
 		Items: fpvs,
 	}, nil
+}
+
+// AddFPV 添加FPV记录
+func (s *fpvService) AddFPV(req dto.AddFPVRequest) error {
+	fpv := &models.FPVModel{
+		DetectionID: req.DetectionID,
+		Frequency:   req.Frequency,
+		FileName:    req.FileName,
+	}
+	return s.db.Create(fpv).Error
 }

@@ -17,9 +17,23 @@ type FPVQueryRequest struct {
 	EndTime   *int64 `form:"end_time" validate:"omitempty,min=0"`   // 入侵时间结束 (时间戳/秒)
 }
 
-// 进入和退出凝视模式请求
+// FPVSSERequest 进入和退出凝视模式请求
 type FPVSSERequest struct {
 	DetectionID int    `form:"detection_id" validate:"required,min=1"` // 设备ID
-	Addr        string `form:"addr" validate:"required"`               // 凝视地址
 	Frequency   int    `form:"frequency" validate:"required,min=1"`    // 频点，不能为0
+	Addr        string `form:"addr" validate:"required"`               // 凝视地址
+}
+
+// AddFPVRequest 添加FPV请求
+type AddFPVRequest struct {
+	DetectionID int    `json:"detection_id" validate:"required,min=1"` // 设备ID
+	Frequency   int    `json:"frequency" validate:"required,min=1"`    // 频点，不能为0
+	FileName    string `json:"file_name" validate:"required"`          // 文件名
+}
+
+// SetFrequencyRequest 设置频点请求
+type SetFrequencyRequest struct {
+	DetectionID int    `json:"detection_id" validate:"required,min=1"` // 设备ID
+	Frequency   int    `json:"frequency" validate:"required,min=1"`    // 频点，不能为0
+	Addr        string `json:"addr" validate:"required,min=1"`         // 地址
 }

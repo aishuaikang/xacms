@@ -75,6 +75,7 @@ func wireServer(ctx context.Context, db *gorm.DB, validator *utils.ValidationMid
 		CommonService: commonService,
 		FPVService:    fpvService,
 		DevicesCache:  devicesCache,
+		FpvConnection: fpvConnection,
 	}
 	router := routes.NewRouter(userRouter, menuRouter, roleRouter, deviceRouter, droneTargetRouter, sseRouter, userPublicRouter, whitelistRouter, fpvRouter)
 	decryptTokenCache := cache.NewDecryptTokenCache()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	conn_ "uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/pkg/global"
+	"uav_defender/internal/pkg/utils"
 
 	"github.com/looplab/fsm"
 	"go.uber.org/zap"
@@ -22,23 +23,35 @@ func (h *OfflineHandler) Enter(ctx context.Context, e *fsm.Event) {
 
 type GazingHandler struct {
 	fpvConnection *conn_.FpvConnection
+	recorder      *utils.RtspRecorder
 }
 
 // Before 凝视状态前回调
 func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 
-	if len(e.Args) < 2 {
+	if len(e.Args) < 4 {
 		e.Cancel(fmt.Errorf("缺少参数"))
 		return
 	}
 	addr, ok := e.Args[0].(string)
 	if !ok {
-		e.Cancel(fmt.Errorf("类型断言失败"))
+		e.Cancel(fmt.Errorf("addr 类型断言失败"))
 		return
 	}
 	frequency, ok := e.Args[1].(int)
 	if !ok {
-		e.Cancel(fmt.Errorf("类型断言失败"))
+		e.Cancel(fmt.Errorf("frequency 类型断言失败"))
+		return
+	}
+
+	detectionID, ok := e.Args[2].(int)
+	if !ok {
+		e.Cancel(fmt.Errorf("detectionID 类型断言失败"))
+		return
+	}
+	filename, ok := e.Args[3].(string)
+	if !ok {
+		e.Cancel(fmt.Errorf("filename 类型断言失败"))
 		return
 	}
 
@@ -48,7 +61,7 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 		return
 	}
 
-	fpvCommand, expectedResponse := BuildFPVCommand(frequency, 9)
+	fpvCommand, expectedResponse := utils.BuildFPVCommand(frequency, 9)
 
 	// 发送命令
 	if err := conn.SendCommand(fpvCommand); err != nil {
@@ -66,22 +79,20 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 	global.Logger.Info("收到响应", zap.String("address", addr), zap.String("response", response))
 
 	// 验证响应
-	if !IsExpectedResponse(response, expectedResponse) {
+	if !utils.IsExpectedResponse(response, expectedResponse) {
 		e.Cancel(fmt.Errorf("设备响应不符合预期: %q != %q", response, expectedResponse))
 		return
 	}
 
 	global.Logger.Info("FPV 设备响应符合预期", zap.String("address", addr), zap.String("response", response))
 
-	// reflectVal := reflect.ValueOf(result)
-	// if reflectVal.Kind() != reflect.Ptr || reflectVal.IsNil() {
-	// 	e.Cancel(fmt.Errorf("result 必须是非空指针"))
-	// 	return
-	// }
+	streamKey := fmt.Sprintf("stream_%d", detectionID)
+	if err := h.recorder.Start(streamKey, filename); err != nil {
+		e.Cancel(fmt.Errorf("启动录像失败: %v", err))
+		return
+	}
 
-	// // 设置结果
-	// reflectVal.Elem().Set(reflect.ValueOf(&frequency))
-
+	global.Logger.Info("开始录像")
 }
 
 // Enter 凝视状态进入回调
@@ -89,11 +100,20 @@ func (h *GazingHandler) Enter(ctx context.Context, e *fsm.Event) {
 
 }
 
-type ScanningHandler struct{}
+type ScanningHandler struct {
+	recorder *utils.RtspRecorder
+}
 
 // Before 扫频状态前回调
 func (h *ScanningHandler) Before(ctx context.Context, e *fsm.Event) {
-
+	if e.Src == string(StateGazing) {
+		// 停止录像
+		if err := h.recorder.Stop(); err != nil {
+			global.Logger.Error("停止录像失败", zap.Error(err))
+			return
+		}
+		global.Logger.Info("停止录像")
+	}
 }
 
 // Enter 扫频状态进入回调

@@ -30,7 +30,7 @@ func GenerateDroneTargetTableCSVByLang(droneTargets []models.DroneTargetModel, l
 		row := []string{
 			target.Model,
 			ConvertDetectionType(target.DetectionType, lang),
-			fmt.Sprintf("%.0f", target.Frequency), // 不保留小数，例如：2400
+			fmt.Sprintf("%.0f", target.Frequency), // 不保留小数，例如：
 			target.Serial,
 			target.CreatedAt.Time().Format(time.DateTime),
 			fmt.Sprintf("%d", target.Device),

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"uav_defender/internal/app/devices/conn"
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
+	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +22,7 @@ type FPVRouter struct {
 	CommonService services.CommonService
 	FPVService    services.FPVService
 	DevicesCache  cache.DevicesCache
+	FpvConnection *conn.FpvConnection
 }
 
 // RegisterRoutes 注册白名单相关路由
@@ -30,6 +33,8 @@ func (h *FPVRouter) RegisterRoutes(router *gin.RouterGroup) {
 	whitelistGroup.GET("", h.GetFPVs)
 	// 进入和退出凝视模式使用sse
 	whitelistGroup.GET("/sse", h.SSE)
+	// 设置频点
+	whitelistGroup.POST("/frequency", h.SetFrequency)
 
 }
 
@@ -72,28 +77,55 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		return
 	}
 
-	if err := device.FPVFsm.Event(c, string(fpv_fsm.EventToGazing), req.Addr, req.Frequency); err != nil {
+	filename := fmt.Sprintf("%d_%d.mp4", req.Frequency, time.Now().Unix())
+
+	if err := device.FPVFsm.Event(c, string(fpv_fsm.EventToGazing), req.Addr, req.Frequency, req.DetectionID, filename); err != nil {
 		global.Logger.Error("进入凝视模式失败", zap.Error(err))
 		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", fmt.Sprintf("进入凝视模式失败: %v", err))
 		c.Writer.Flush()
 		return
 	}
 
-	global.Logger.Info("设备进入凝视模式", zap.Int("detection_id", req.DetectionID), zap.Int("freq", req.Frequency), zap.String("addr", req.Addr))
-
 	defer func() {
+		// 切换回扫频模式
 		if err := device.FPVFsm.Event(c, string(fpv_fsm.EventToScanning)); err != nil {
 			global.Logger.Error("进入扫频模式失败", zap.Error(err))
-			fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", fmt.Sprintf("进入扫频模式失败: %v", err))
+			fmt.Fprintf(c.Writer, "event: error\ndata: 进入扫频模式失败: %v\n\n", err)
 			c.Writer.Flush()
 			return
 		}
-		global.Logger.Info("设备退出凝视模式，进入扫频模式", zap.Int("detection_id", req.DetectionID), zap.Int("freq", req.Frequency), zap.String("addr", req.Addr))
+		global.Logger.Info("设备退出凝视模式，进入扫频模式",
+			zap.Int("detection_id", req.DetectionID),
+			zap.Int("freq", req.Frequency),
+			zap.String("addr", req.Addr),
+		)
+
+		// 保存FPV记录到数据库
+		addReq := dto.AddFPVRequest{
+			DetectionID: req.DetectionID,
+			Frequency:   req.Frequency,
+			FileName:    filename,
+		}
+		if err := h.FPVService.AddFPV(addReq); err != nil {
+			global.Logger.Error("保存FPV记录失败", zap.Error(err))
+			fmt.Fprintf(c.Writer, "event: error\ndata: 保存FPV记录失败\n\n")
+			c.Writer.Flush()
+			return
+		}
+		global.Logger.Info("保存FPV记录成功",
+			zap.Int("detection_id", req.DetectionID),
+			zap.Int("freq", req.Frequency),
+			zap.String("filename", filename),
+		)
 	}()
 
-	url := fmt.Sprintf("%s/stream_%d", config.AppConfig.Configuration.StreamMediaUrl, req.DetectionID)
+	global.Logger.Info("设备进入凝视模式", zap.Int("detection_id", req.DetectionID), zap.Int("freq", req.Frequency), zap.String("addr", req.Addr))
 
 	// 成功连接后，立即发送一次数据
+
+	streamKey := fmt.Sprintf("stream_%d", req.DetectionID)
+	url := fmt.Sprintf("%s/%s", config.AppConfig.Configuration.StreamMediaUrl, streamKey)
+
 	fmt.Fprintf(c.Writer, "data: %s\n\n", url)
 	c.Writer.Flush()
 
@@ -107,8 +139,62 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		case <-c.Request.Context().Done():
 			return
 		case <-ticker.C:
+			global.Logger.Info("发送心跳", zap.Int("detection_id", req.DetectionID))
 			fmt.Fprintf(c.Writer, "data: %s\n\n", url)
 			c.Writer.Flush()
 		}
 	}
+}
+
+func (h *FPVRouter) SetFrequency(c *gin.Context) {
+	var req dto.SetFrequencyRequest
+	if err := h.CommonService.ValidateBody(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	device, exists := h.DevicesCache.GetDeviceByDetectionID(req.DetectionID)
+	if !exists {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "设备不存在"))
+		return
+	}
+
+	// 必须是凝视状态才能设置点频
+	if !device.FPVFsm.FSM.Is(string(fpv_fsm.StateGazing)) {
+		global.Logger.Warn("设备不在凝视状态，不能设置频点", zap.Int("detection_id", req.DetectionID))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备不在凝视状态，不能设置频点"))
+		return
+	}
+
+	conn, exists := h.FpvConnection.GetConnection(req.Addr)
+	if !exists {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "FPV连接不存在"))
+		return
+	}
+
+	command := 9
+	fpvCommand, expectedResponse := utils.BuildFPVCommand(req.Frequency, command)
+
+	// 发送命令
+	if err := conn.SendCommand(fpvCommand); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, fmt.Sprintf("发送命令失败: %v", err)))
+		return
+	}
+
+	// 等待响应
+	response, err := conn.WaitResponse()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, fmt.Sprintf("等待响应失败: %v", err)))
+		return
+	}
+
+	global.Logger.Info("收到响应", zap.String("address", req.Addr), zap.String("response", response))
+
+	// 验证响应
+	if !utils.IsExpectedResponse(response, expectedResponse) {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, fmt.Sprintf("设备响应不符合预期: %q != %q", response, expectedResponse)))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("设置频点成功"))
 }
