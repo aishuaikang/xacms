@@ -59,9 +59,9 @@ func (s *fpvService) GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[mo
 // AddFPV 添加FPV记录
 func (s *fpvService) AddFPV(req dto.AddFPVRequest) error {
 	fpv := &models.FPVModel{
-		DetectionID: req.DetectionID,
-		Frequency:   req.Frequency,
-		FileName:    req.FileName,
+		DeviceID:  req.DeviceID,
+		Frequency: req.Frequency,
+		FileName:  req.FileName,
 	}
 	return s.db.Create(fpv).Error
 }

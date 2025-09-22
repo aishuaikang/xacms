@@ -68,7 +68,7 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 		}
 	}()
 
-	c := conn_.NewConn(conn)
+	c := conn_.NewConn(device.ID, conn)
 	s.fpvConnection.AddConnection(c)
 	defer s.fpvConnection.RemoveConnection(c)
 
@@ -136,7 +136,7 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 
 				time := time.Now()
 
-				warningData, err := utils.ParseFPVWarningData(fullLine, ip, time.Unix(), device.DetectionID)
+				warningData, err := utils.ParseFPVWarningData(fullLine, ip, time.Unix(), device.ID)
 				if err != nil {
 					global.Logger.Error("解析 FPV 警告数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 					continue

@@ -1,11 +1,14 @@
 package dto
 
+import "github.com/google/uuid"
+
 type FPVWarningData struct {
-	DetectionID int    `json:"device"`
-	Freq        string `json:"freq"`
-	RSSI        string `json:"rssi"`
-	IP          string `json:"ip"`
-	Time        int64  `json:"time"`
+	// DetectionID int    `json:"device"`
+	DeviceID uuid.UUID `json:"device_id"`
+	Freq     string    `json:"freq"`
+	RSSI     string    `json:"rssi"`
+	// IP          string `json:"ip"`
+	Time int64 `json:"time"`
 }
 
 // FPVQueryRequest 查询FPV请求
@@ -19,21 +22,21 @@ type FPVQueryRequest struct {
 
 // FPVSSERequest 进入和退出凝视模式请求
 type FPVSSERequest struct {
-	DetectionID int    `form:"detection_id" validate:"required,min=1"` // 设备ID
-	Frequency   int    `form:"frequency" validate:"required,min=1"`    // 频点，不能为0
-	Addr        string `form:"addr" validate:"required"`               // 凝视地址
+	DeviceID  string `form:"device_id" validate:"required,min=1,uuid"` // 设备ID
+	Frequency int    `form:"frequency" validate:"required,min=1"`      // 频点，不能为0
+	// Addr        string `form:"addr" validate:"required"`               // 凝视地址
 }
 
 // AddFPVRequest 添加FPV请求
 type AddFPVRequest struct {
-	DetectionID int    `json:"detection_id" validate:"required,min=1"` // 设备ID
-	Frequency   int    `json:"frequency" validate:"required,min=1"`    // 频点，不能为0
-	FileName    string `json:"file_name" validate:"required"`          // 文件名
+	DeviceID  uuid.UUID `json:"device_id" validate:"required,min=1"` // 设备ID
+	Frequency int       `json:"frequency" validate:"required,min=1"` // 频点，不能为0
+	FileName  string    `json:"file_name" validate:"required"`       // 文件名
 }
 
 // SetFrequencyRequest 设置频点请求
 type SetFrequencyRequest struct {
-	DetectionID int    `json:"detection_id" validate:"required,min=1"` // 设备ID
-	Frequency   int    `json:"frequency" validate:"required,min=1"`    // 频点，不能为0
-	Addr        string `json:"addr" validate:"required,min=1"`         // 地址
+	DeviceID  uuid.UUID `json:"device_id" validate:"required,min=1"` // 设备ID
+	Frequency int       `json:"frequency" validate:"required,min=1"` // 频点，不能为0
+	// Addr        string `json:"addr" validate:"required,min=1"`         // 地址
 }

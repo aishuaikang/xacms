@@ -6,7 +6,10 @@ import (
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
 	parse_fsm "uav_defender/internal/app/devices/fms/parse"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/services"
+
+	"github.com/google/uuid"
 )
 
 // DeviceInfo 设备信息
@@ -30,9 +33,10 @@ type DevicesCache interface {
 	NotifyRefresh()
 	GetRefreshChan() <-chan struct{}
 	GetDeviceByParseIP(parseIP string) (*DeviceInfo, bool)
-	GetDeviceByParseID(parseID int) (*DeviceInfo, bool)
-	GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool)
+	// GetDeviceByParseID(parseID int) (*DeviceInfo, bool)
+	// GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool)
 	GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool)
+	GetDeviceByID(id uuid.UUID) (*DeviceInfo, bool)
 	RefreshDevices() error
 }
 
@@ -104,29 +108,29 @@ func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*DeviceInfo, bool) {
 	return nil, false
 }
 
-// GetDeviceByParseID 根据解析ID获取设备信息
-func (c *devicesCache) GetDeviceByParseID(parseID int) (*DeviceInfo, bool) {
-	devices := c.GetDevices()
+// // GetDeviceByParseID 根据解析ID获取设备信息
+// func (c *devicesCache) GetDeviceByParseID(parseID int) (*DeviceInfo, bool) {
+// 	devices := c.GetDevices()
 
-	for _, device := range devices {
-		if device.ParseID == parseID {
-			return &device, true
-		}
-	}
-	return nil, false
-}
+// 	for _, device := range devices {
+// 		if device.ParseID == parseID {
+// 			return &device, true
+// 		}
+// 	}
+// 	return nil, false
+// }
 
-// GetDeviceByDetectionID 根据侦测ID获取设备信息
-func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool) {
-	devices := c.GetDevices()
+// // GetDeviceByDetectionID 根据侦测ID获取设备信息
+// func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool) {
+// 	devices := c.GetDevices()
 
-	for _, device := range devices {
-		if device.DetectionID == detectionID {
-			return &device, true
-		}
-	}
-	return nil, false
-}
+// 	for _, device := range devices {
+// 		if device.DetectionID == detectionID {
+// 			return &device, true
+// 		}
+// 	}
+// 	return nil, false
+// }
 
 // GetDeviceByFPVIP 根据FPVIP获取设备信息
 func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool) {
@@ -157,4 +161,16 @@ func (c *devicesCache) RefreshDevices() error {
 
 	c.SetDevices(deviceInfos)
 	return nil
+}
+
+// GetDeviceByID 根据设备ID获取设备信息
+func (c *devicesCache) GetDeviceByID(id uuid.UUID) (*DeviceInfo, bool) {
+	devices := c.GetDevices()
+	for _, device := range devices {
+		if utils.EqualUUID(&device.ID, &id) {
+			return &device, true
+		}
+
+	}
+	return nil, false
 }

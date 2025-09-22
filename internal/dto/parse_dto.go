@@ -1,6 +1,10 @@
 package dto
 
-import "uav_defender/internal/models"
+import (
+	"uav_defender/internal/models"
+
+	"github.com/google/uuid"
+)
 
 // GPS 结构体表示 GPS 坐标
 type GPS struct {
@@ -44,7 +48,8 @@ const (
 )
 
 type ParseData struct {
-	Device         int                 `json:"device"`             // 设备编号
+	DeviceID       uuid.UUID           `json:"device_id"`          // 设备ID
+	ParseID        int                 `json:"parse_id"`           // 解析ID
 	Model          string              `json:"model"`              // 设备型号
 	Freq           float64             `json:"freq"`               // 频率
 	RSSI           float64             `json:"rssi"`               // 信号强度

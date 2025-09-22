@@ -16,6 +16,7 @@ import (
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
 
+	"github.com/google/uuid"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"go.uber.org/zap"
 )
@@ -34,7 +35,7 @@ func IsFPVWaringData(fullLine []byte) bool {
 }
 
 // ParseFPVWarningData 解析 FPV 警告数据
-func ParseFPVWarningData(fullLine []byte, ip string, time int64, DetectionID int) (*dto.FPVWarningData, error) {
+func ParseFPVWarningData(fullLine []byte, ip string, time int64, deviceId uuid.UUID) (*dto.FPVWarningData, error) {
 	// 解析格式: "Waring,Freq 5025,RSSI 0.60"
 	parts := bytes.Split(fullLine, []byte(","))
 	if len(parts) != 3 {
@@ -56,11 +57,10 @@ func ParseFPVWarningData(fullLine []byte, ip string, time int64, DetectionID int
 	rssi := string(bytes.TrimSpace(rssiPart[5:])) // 跳过 "RSSI "
 
 	return &dto.FPVWarningData{
-		DetectionID: DetectionID,
-		Freq:        freq,
-		RSSI:        rssi,
-		IP:          ip,
-		Time:        time,
+		DeviceID: deviceId,
+		Freq:     freq,
+		RSSI:     rssi,
+		Time:     time,
 	}, nil
 }
 
@@ -109,7 +109,7 @@ func UpdateMediaMtxConfigPaths(devices []models.DeviceModel) {
 	var streamLines []string
 	for _, device := range devices {
 		streamIndex++
-		newStream := fmt.Sprintf("%sstream_%02d:", strings.Repeat(" ", 4), device.DetectionID)
+		newStream := fmt.Sprintf("%sstream_%s:", strings.Repeat(" ", 4), device.ID)
 		newSource := fmt.Sprintf("%ssource: rtsp://%s:554/live/1_1", strings.Repeat(" ", 6), device.RTSPIP)
 		streamLines = append(streamLines, newStream, newSource)
 	}

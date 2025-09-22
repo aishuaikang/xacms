@@ -78,7 +78,7 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 		}
 	}()
 
-	c := conn_.NewConn(conn)
+	c := conn_.NewConn(device.ID, conn)
 	s.parseConnection.AddConnection(c)
 	defer s.parseConnection.RemoveConnection(c)
 
@@ -119,13 +119,14 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 			fullLine := bytes.TrimSpace(buffer.Next(index + 2)) // 包括 \r\n
 
 			var parseData dto.ParseData
+			parseData.DeviceID = device.ID
 
 			// isHasSerial := false
 
 			if utils.IsRID(fullLine) {
 				utils.ParseRID(fullLine, &parseData)
 
-				parseData.Device = device.ParseID
+				parseData.ParseID = device.ParseID
 
 				parseData.Sign = dto.SignTypeO3Plus
 
@@ -210,9 +211,9 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 
 	if parseDataIndex != -1 {
 
-		if parseData.Device == 0 {
-			if newParseData.Device != 0 {
-				parseData.Device = newParseData.Device
+		if parseData.ParseID == 0 {
+			if newParseData.ParseID != 0 {
+				parseData.ParseID = newParseData.ParseID
 			}
 		}
 

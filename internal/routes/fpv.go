@@ -14,6 +14,7 @@ import (
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -70,7 +71,7 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		return
 	}
 
-	device, exists := h.DevicesCache.GetDeviceByDetectionID(req.DetectionID)
+	device, exists := h.DevicesCache.GetDeviceByID(uuid.MustParse(req.DeviceID))
 	if !exists {
 		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备不存在")
 		c.Writer.Flush()
@@ -79,7 +80,7 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 
 	filename := fmt.Sprintf("%d_%d.mp4", req.Frequency, time.Now().Unix())
 
-	if err := device.FPVFsm.Event(c, string(fpv_fsm.EventToGazing), req.Addr, req.Frequency, req.DetectionID, filename); err != nil {
+	if err := device.FPVFsm.Event(c, string(fpv_fsm.EventToGazing), req.DeviceID, req.Frequency, filename); err != nil {
 		global.Logger.Error("进入凝视模式失败", zap.Error(err))
 		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", fmt.Sprintf("进入凝视模式失败: %v", err))
 		c.Writer.Flush()
@@ -95,16 +96,16 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 			return
 		}
 		global.Logger.Info("设备退出凝视模式，进入扫频模式",
-			zap.Int("detection_id", req.DetectionID),
+			zap.String("device_id", req.DeviceID),
 			zap.Int("freq", req.Frequency),
-			zap.String("addr", req.Addr),
+			zap.String("filename", filename),
 		)
 
 		// 保存FPV记录到数据库
 		addReq := dto.AddFPVRequest{
-			DetectionID: req.DetectionID,
-			Frequency:   req.Frequency,
-			FileName:    filename,
+			DeviceID:  uuid.MustParse(req.DeviceID),
+			Frequency: req.Frequency,
+			FileName:  filename,
 		}
 		if err := h.FPVService.AddFPV(addReq); err != nil {
 			global.Logger.Error("保存FPV记录失败", zap.Error(err))
@@ -113,17 +114,17 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 			return
 		}
 		global.Logger.Info("保存FPV记录成功",
-			zap.Int("detection_id", req.DetectionID),
+			zap.String("device_id", req.DeviceID),
 			zap.Int("freq", req.Frequency),
 			zap.String("filename", filename),
 		)
 	}()
 
-	global.Logger.Info("设备进入凝视模式", zap.Int("detection_id", req.DetectionID), zap.Int("freq", req.Frequency), zap.String("addr", req.Addr))
+	global.Logger.Info("设备进入凝视模式", zap.String("device_id", req.DeviceID), zap.Int("freq", req.Frequency), zap.String("filename", filename))
 
 	// 成功连接后，立即发送一次数据
 
-	streamKey := fmt.Sprintf("stream_%d", req.DetectionID)
+	streamKey := fmt.Sprintf("stream_%s", req.DeviceID)
 	url := fmt.Sprintf("%s/%s", config.AppConfig.Configuration.StreamMediaUrl, streamKey)
 
 	fmt.Fprintf(c.Writer, "data: %s\n\n", url)
@@ -139,7 +140,7 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		case <-c.Request.Context().Done():
 			return
 		case <-ticker.C:
-			global.Logger.Info("发送心跳", zap.Int("detection_id", req.DetectionID))
+			global.Logger.Info("发送心跳", zap.String("device_id", req.DeviceID))
 			fmt.Fprintf(c.Writer, "data: %s\n\n", url)
 			c.Writer.Flush()
 		}
@@ -153,7 +154,7 @@ func (h *FPVRouter) SetFrequency(c *gin.Context) {
 		return
 	}
 
-	device, exists := h.DevicesCache.GetDeviceByDetectionID(req.DetectionID)
+	device, exists := h.DevicesCache.GetDeviceByID(req.DeviceID)
 	if !exists {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "设备不存在"))
 		return
@@ -161,12 +162,12 @@ func (h *FPVRouter) SetFrequency(c *gin.Context) {
 
 	// 必须是凝视状态才能设置点频
 	if !device.FPVFsm.FSM.Is(string(fpv_fsm.StateGazing)) {
-		global.Logger.Warn("设备不在凝视状态，不能设置频点", zap.Int("detection_id", req.DetectionID))
+		global.Logger.Warn("设备不在凝视状态，不能设置频点", zap.String("device_id", req.DeviceID.String()))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备不在凝视状态，不能设置频点"))
 		return
 	}
 
-	conn, exists := h.FpvConnection.GetConnection(req.Addr)
+	conn, exists := h.FpvConnection.GetConnection(req.DeviceID)
 	if !exists {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "FPV连接不存在"))
 		return
@@ -188,7 +189,7 @@ func (h *FPVRouter) SetFrequency(c *gin.Context) {
 		return
 	}
 
-	global.Logger.Info("收到响应", zap.String("address", req.Addr), zap.String("response", response))
+	global.Logger.Info("收到响应", zap.String("address", req.DeviceID.String()), zap.String("response", response))
 
 	// 验证响应
 	if !utils.IsExpectedResponse(response, expectedResponse) {

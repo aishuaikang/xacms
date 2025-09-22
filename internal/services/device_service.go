@@ -15,7 +15,7 @@ import (
 // DeviceService 设备 服务接口
 type DeviceService interface {
 	CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error)
-	UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error)
+	UpdateDevice(deviceID uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error)
 	GetAllDevices() ([]models.DeviceModel, error)
 	RefreshMediaMtxConfig()
 }
@@ -66,9 +66,9 @@ func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.Devic
 }
 
 // UpdateDevice 修改设备
-func (s *deviceService) UpdateDevice(userId uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error) {
+func (s *deviceService) UpdateDevice(deviceID uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error) {
 	var user models.DeviceModel
-	if err := s.commonService.GetItemByID(userId, &user); err != nil {
+	if err := s.commonService.GetItemByID(deviceID, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("设备不存在")
 		}

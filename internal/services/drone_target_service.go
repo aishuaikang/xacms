@@ -109,12 +109,13 @@ func (s *droneTargetService) SyncParseDataListToDroneTargetDB(palert []dto.Parse
 
 		droneTarget := &models.DroneTargetModel{
 			Serial:        pa.Serial,
+			DeviceID:      pa.DeviceID,
+			ParseID:       pa.ParseID,
 			Model:         pa.Model,
 			Distance:      pa.Distance,
 			DroneLng:      pa.DroneGPS.Longitude,
 			DroneLat:      pa.DroneGPS.Latitude,
 			Height:        pa.Height,
-			Device:        pa.Device,
 			Frequency:     pa.Freq,
 			DetectionType: models.DetectionTypeParse,
 			Trajectories:  pa.TrajectoryList,

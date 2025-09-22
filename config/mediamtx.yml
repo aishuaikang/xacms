@@ -690,5 +690,5 @@ pathDefaults:
 paths:
     stream:
         source: publisher
-    stream_2006:
+    stream_b0815246-2573-43d4-9ded-77a403996d99:
         source: rtsp://127.0.0.1:8554/stream

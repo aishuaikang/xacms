@@ -214,11 +214,11 @@ func GenerateQRCodeBase64(lon, lat float64) (string, error) {
 func parseDIDFieldValue(key string, value string, parseData *dto.ParseData) {
 	switch key {
 	case "device":
-		device, err := strconv.Atoi(value)
+		parseID, err := strconv.Atoi(value)
 		if err != nil {
 			global.Logger.Warn("无法解析设备ID", zap.String("value", value), zap.Error(err))
 		}
-		parseData.Device = device
+		parseData.ParseID = parseID
 	case "serial":
 		parseData.Serial = value
 	case "model":

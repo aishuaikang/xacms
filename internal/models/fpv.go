@@ -6,10 +6,10 @@ import (
 )
 
 type FPVModel struct {
-	ID          uuid.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"`  // 唯一ID
-	DetectionID int       `json:"detection_id" gorm:"type:char(36);comment:侦测模块ID"` // 侦测模块ID
-	Frequency   int       `json:"frequency" gorm:"not null;comment:频点"`             // 频点
-	FileName    string    `json:"file_name" gorm:"size:255;not null;comment:文件名"`   // 文件名
+	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"` // 唯一ID
+	DeviceID  uuid.UUID `json:"device_id" gorm:"type:char(36);comment:设备ID"`     // 设备ID
+	Frequency int       `json:"frequency" gorm:"not null;comment:频点"`            // 频点
+	FileName  string    `json:"file_name" gorm:"size:255;not null;comment:文件名"`  // 文件名
 
 	CommonModel
 }

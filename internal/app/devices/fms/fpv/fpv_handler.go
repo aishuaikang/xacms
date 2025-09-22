@@ -7,6 +7,7 @@ import (
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
+	"github.com/google/uuid"
 	"github.com/looplab/fsm"
 	"go.uber.org/zap"
 )
@@ -29,13 +30,18 @@ type GazingHandler struct {
 // Before 凝视状态前回调
 func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 
-	if len(e.Args) < 4 {
+	if len(e.Args) < 3 {
 		e.Cancel(fmt.Errorf("缺少参数"))
 		return
 	}
-	addr, ok := e.Args[0].(string)
+	// addr, ok := e.Args[0].(string)
+	// if !ok {
+	// 	e.Cancel(fmt.Errorf("addr 类型断言失败"))
+	// 	return
+	// }
+	deviceID, ok := e.Args[0].(string)
 	if !ok {
-		e.Cancel(fmt.Errorf("addr 类型断言失败"))
+		e.Cancel(fmt.Errorf("detectionID 类型断言失败"))
 		return
 	}
 	frequency, ok := e.Args[1].(int)
@@ -44,18 +50,13 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 		return
 	}
 
-	detectionID, ok := e.Args[2].(int)
-	if !ok {
-		e.Cancel(fmt.Errorf("detectionID 类型断言失败"))
-		return
-	}
-	filename, ok := e.Args[3].(string)
+	filename, ok := e.Args[2].(string)
 	if !ok {
 		e.Cancel(fmt.Errorf("filename 类型断言失败"))
 		return
 	}
 
-	conn, exists := h.fpvConnection.GetConnection(addr)
+	conn, exists := h.fpvConnection.GetConnection(uuid.MustParse(deviceID))
 	if !exists {
 		e.Cancel(fmt.Errorf("FPV 连接不存在"))
 		return
@@ -76,7 +77,7 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 		return
 	}
 
-	global.Logger.Info("收到响应", zap.String("address", addr), zap.String("response", response))
+	global.Logger.Info("收到响应", zap.String("address", conn.GetConn().RemoteAddr().String()), zap.String("response", response))
 
 	// 验证响应
 	if !utils.IsExpectedResponse(response, expectedResponse) {
@@ -84,9 +85,9 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 		return
 	}
 
-	global.Logger.Info("FPV 设备响应符合预期", zap.String("address", addr), zap.String("response", response))
+	global.Logger.Info("FPV 设备响应符合预期", zap.String("address", conn.GetConn().RemoteAddr().String()), zap.String("response", response))
 
-	streamKey := fmt.Sprintf("stream_%d", detectionID)
+	streamKey := fmt.Sprintf("stream_%s", deviceID)
 	if err := h.recorder.Start(streamKey, filename); err != nil {
 		e.Cancel(fmt.Errorf("启动录像失败: %v", err))
 		return

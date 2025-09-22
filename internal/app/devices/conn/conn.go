@@ -7,6 +7,7 @@ import (
 	"time"
 	"uav_defender/internal/pkg/global"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -16,6 +17,7 @@ var (
 )
 
 type Conn interface {
+	GetDeviceID() uuid.UUID
 	SendCommand(command string) error
 	WaitResponse() (string, error)
 	IsAlive() bool
@@ -28,18 +30,25 @@ type Conn interface {
 
 // Conn 对于 conn 的抽象封装
 type conn struct {
+	deviceID uuid.UUID
 	conn     net.Conn
 	isAlive  bool
 	response chan string
 }
 
-func NewConn(c net.Conn) Conn {
+func NewConn(deviceID uuid.UUID, c net.Conn) Conn {
 	return &conn{
+		deviceID: deviceID,
 		conn:     c,
 		isAlive:  true,
 		response: make(chan string, 1),
 	}
 
+}
+
+// GetDeviceID 获取设备ID
+func (f *conn) GetDeviceID() uuid.UUID {
+	return f.deviceID
 }
 
 // SendCommand 发送命令到 FPV 设备
@@ -93,19 +102,19 @@ func (f *conn) SendMessage(message string) error {
 }
 
 type Connection struct {
-	Connections      []Conn
+	Connections      map[uuid.UUID]Conn
 	ConnectionsMutex sync.RWMutex
 }
 
 // GetAllConnections 获取所有连接
-func (f *Connection) GetAllConnections() []Conn {
+func (f *Connection) GetAllConnections() map[uuid.UUID]Conn {
 	f.ConnectionsMutex.RLock()
 	defer f.ConnectionsMutex.RUnlock()
 	return f.Connections
 }
 
 // SetConnections 设置所有连接
-func (f *Connection) SetConnections(conns []Conn) {
+func (f *Connection) SetConnections(conns map[uuid.UUID]Conn) {
 	f.ConnectionsMutex.Lock()
 	defer f.ConnectionsMutex.Unlock()
 	f.Connections = conns
@@ -115,31 +124,33 @@ func (f *Connection) SetConnections(conns []Conn) {
 func (f *Connection) AddConnection(conn Conn) {
 	f.ConnectionsMutex.Lock()
 	defer f.ConnectionsMutex.Unlock()
-	f.Connections = append(f.Connections, conn)
+	if f.Connections == nil {
+		f.Connections = make(map[uuid.UUID]Conn)
+	}
+	deviceID := conn.GetDeviceID()
+	if oldConn, ok := f.Connections[deviceID]; ok {
+		oldConn.Close()
+		oldConn.CloseResponseChannel()
+	}
+	f.Connections[deviceID] = conn
 }
 
 // RemoveConnection 移除连接
 func (f *Connection) RemoveConnection(removeConn Conn) {
-	filteredConnections := make([]Conn, 0)
-	allConnections := f.GetAllConnections()
-	for _, conn := range allConnections {
-		if conn.GetConn().RemoteAddr().String() != removeConn.GetConn().RemoteAddr().String() {
-			filteredConnections = append(filteredConnections, conn)
-		} else {
-			conn.Close()
-			conn.CloseResponseChannel()
-		}
+	f.ConnectionsMutex.Lock()
+	defer f.ConnectionsMutex.Unlock()
+	deviceID := removeConn.GetDeviceID()
+	if conn, ok := f.Connections[deviceID]; ok {
+		conn.Close()
+		conn.CloseResponseChannel()
+		delete(f.Connections, deviceID)
 	}
-	f.SetConnections(filteredConnections)
 }
 
 // GetConnection 获取连接
-func (f *Connection) GetConnection(addr string) (Conn, bool) {
-	allConnections := f.GetAllConnections()
-	for _, conn := range allConnections {
-		if conn.GetConn().RemoteAddr().String() == addr {
-			return conn, true
-		}
-	}
-	return nil, false
+func (f *Connection) GetConnection(deviceID uuid.UUID) (Conn, bool) {
+	f.ConnectionsMutex.RLock()
+	defer f.ConnectionsMutex.RUnlock()
+	conn, ok := f.Connections[deviceID]
+	return conn, ok
 }
