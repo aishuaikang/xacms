@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
@@ -12,8 +13,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-
-	"github.com/google/uuid"
 )
 
 // DroneTargetRouter 无人机目标处理器
@@ -60,17 +59,17 @@ func (h *DroneTargetRouter) GetDroneTargets(c *gin.Context) {
 func (h *DroneTargetRouter) DeleteDroneTarget(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	userUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	droneTargetID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "无人机目标ID格式无效"))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "无效的无人机目标ID"))
 		return
 	}
 
-	global.Logger.Info("删除无人机目标", zap.String("id", userUUID.String()))
+	global.Logger.Info("删除无人机目标", zap.Uint64("id", droneTargetID))
 
 	// 删除无人机目标
-	if err := h.CommonService.DeleteItemByID(&models.DroneTargetModel{}, userUUID); err != nil {
+	if err := h.CommonService.DeleteItemByID(&models.DroneTarget{}, uint(droneTargetID)); err != nil {
 		global.Logger.Error("删除无人机目标失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除无人机目标失败"))
 		return
@@ -90,7 +89,7 @@ func (h *DroneTargetRouter) DeleteMultipleDroneTargets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "请提供至少一个无人机目标ID"))
 		return
 	}
-	if err := h.CommonService.DeleteItemsByIDs(&models.DroneTargetModel{}, req); err != nil {
+	if err := h.CommonService.DeleteItemsByIDs(&models.DroneTarget{}, req); err != nil {
 		global.Logger.Error("批量删除无人机目标失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "批量删除无人机目标失败"))
 		return

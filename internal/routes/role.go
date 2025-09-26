@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"strconv"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
 	"uav_defender/internal/pkg/global"
@@ -10,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +35,7 @@ func (h *RoleRouter) RegisterRoutes(router *gin.RouterGroup) {
 
 // GetRoles 获取角色列表
 func (h *RoleRouter) GetRoles(c *gin.Context) {
-	var roles []models.RoleModel
+	var roles []models.Role
 	if err := h.CommonService.GetItems(&roles); err != nil {
 		global.Logger.Error("获取角色列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取角色列表失败"))
@@ -68,16 +68,16 @@ func (h *RoleRouter) CreateRole(c *gin.Context) {
 func (h *RoleRouter) GetRole(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	roleID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "角色ID格式无效"))
 		return
 	}
 
 	// 获取角色
-	var role models.RoleModel
-	if err := h.CommonService.GetItemByID(roleUUID, &role); err != nil {
+	var role models.Role
+	if err := h.CommonService.GetItemByID(uint(roleID), &role); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "角色不存在"))
 			return
@@ -94,8 +94,8 @@ func (h *RoleRouter) GetRole(c *gin.Context) {
 func (h *RoleRouter) UpdateRole(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	roleID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "角色ID格式无效"))
 		return
@@ -109,7 +109,7 @@ func (h *RoleRouter) UpdateRole(c *gin.Context) {
 	}
 
 	// 更新角色
-	role, err := h.RoleService.UpdateRole(roleUUID, req)
+	role, err := h.RoleService.UpdateRole(uint(roleID), req)
 	if err != nil {
 		global.Logger.Error("更新角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新角色失败"))
@@ -123,15 +123,15 @@ func (h *RoleRouter) UpdateRole(c *gin.Context) {
 func (h *RoleRouter) DeleteRole(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	roleID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "角色ID格式无效"))
 		return
 	}
 
 	// 删除角色
-	if err := h.CommonService.DeleteItemByID(&models.RoleModel{}, roleUUID); err != nil {
+	if err := h.CommonService.DeleteItemByID(&models.Role{}, uint(roleID)); err != nil {
 		global.Logger.Error("删除角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除角色失败"))
 		return
@@ -144,16 +144,15 @@ func (h *RoleRouter) DeleteRole(c *gin.Context) {
 func (h *RoleRouter) GetRoleMenus(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	roleID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		// return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse(fiber.StatusBadRequest, "角色ID格式无效"))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "角色ID格式无效"))
 		return
 	}
 
 	// 获取角色菜单
-	menus, err := h.RoleService.GetRoleMenus(roleUUID)
+	menus, err := h.RoleService.GetRoleMenus(uint(roleID))
 	if err != nil {
 		global.Logger.Error("获取角色菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取角色菜单失败"))
@@ -167,8 +166,8 @@ func (h *RoleRouter) GetRoleMenus(c *gin.Context) {
 func (h *RoleRouter) AssignMenus(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	roleUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	roleID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "角色ID格式无效"))
 		return
@@ -181,7 +180,7 @@ func (h *RoleRouter) AssignMenus(c *gin.Context) {
 	}
 
 	// 分配菜单
-	role, err := h.RoleService.AssignMenus(roleUUID, req)
+	role, err := h.RoleService.AssignMenus(uint(roleID), req)
 	if err != nil {
 		global.Logger.Error("分配菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "分配菜单失败"))

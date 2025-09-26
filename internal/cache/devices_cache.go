@@ -8,20 +8,18 @@ import (
 	"uav_defender/internal/models"
 	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/services"
-
-	"github.com/google/uuid"
 )
 
 // DeviceInfo 设备信息
 type DeviceInfo struct {
-	models.DeviceModel
+	models.Device
 	FPVFsm   *fpv_fsm.FPVFsm
 	ParseFsm *parse_fsm.ParseFsm
 }
 
 // DeviceDisplayInfo 设备展示信息
 type DeviceDisplayInfo struct {
-	models.DeviceModel
+	models.Device
 	FPVState   fpv_fsm.FPVState     `json:"fpv_state"`   // FPV状态
 	ParseState parse_fsm.ParseState `json:"parse_state"` // 解析状态
 }
@@ -36,7 +34,7 @@ type DevicesCache interface {
 	// GetDeviceByParseID(parseID int) (*DeviceInfo, bool)
 	// GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool)
 	GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool)
-	GetDeviceByID(id uuid.UUID) (*DeviceInfo, bool)
+	GetDeviceByID(id uint) (*DeviceInfo, bool)
 	RefreshDevices() error
 }
 
@@ -76,12 +74,12 @@ func (c *devicesCache) GetDevices() []DeviceInfo {
 func (c *devicesCache) GetDisplayDevices() []DeviceDisplayInfo {
 	device := c.GetDevices()
 
-	var displayDevices []DeviceDisplayInfo
+	displayDevices := make([]DeviceDisplayInfo, 0, len(device))
 	for _, device := range device {
 		displayDevices = append(displayDevices, DeviceDisplayInfo{
-			DeviceModel: device.DeviceModel,
-			FPVState:    fpv_fsm.FPVState(device.FPVFsm.Current()),
-			ParseState:  parse_fsm.ParseState(device.ParseFsm.Current()),
+			Device:     device.Device,
+			FPVState:   fpv_fsm.FPVState(device.FPVFsm.Current()),
+			ParseState: parse_fsm.ParseState(device.ParseFsm.Current()),
 		})
 	}
 	return displayDevices
@@ -153,9 +151,9 @@ func (c *devicesCache) RefreshDevices() error {
 	var deviceInfos []DeviceInfo
 	for _, device := range devices {
 		deviceInfos = append(deviceInfos, DeviceInfo{
-			DeviceModel: device,
-			FPVFsm:      fpv_fsm.NewFPVFsm(c.fpvConnection),
-			ParseFsm:    parse_fsm.NewParseFsm(),
+			Device:   device,
+			FPVFsm:   fpv_fsm.NewFPVFsm(c.fpvConnection),
+			ParseFsm: parse_fsm.NewParseFsm(),
 		})
 	}
 
@@ -164,7 +162,7 @@ func (c *devicesCache) RefreshDevices() error {
 }
 
 // GetDeviceByID 根据设备ID获取设备信息
-func (c *devicesCache) GetDeviceByID(id uuid.UUID) (*DeviceInfo, bool) {
+func (c *devicesCache) GetDeviceByID(id uint) (*DeviceInfo, bool) {
 	devices := c.GetDevices()
 	for _, device := range devices {
 		if utils.EqualUUID(&device.ID, &id) {

@@ -7,7 +7,6 @@ import (
 	"time"
 	"uav_defender/internal/pkg/global"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +16,7 @@ var (
 )
 
 type Conn interface {
-	GetDeviceID() uuid.UUID
+	GetDeviceID() uint
 	SendCommand(command string) error
 	WaitResponse() (string, error)
 	IsAlive() bool
@@ -30,13 +29,13 @@ type Conn interface {
 
 // Conn 对于 conn 的抽象封装
 type conn struct {
-	deviceID uuid.UUID
+	deviceID uint
 	conn     net.Conn
 	isAlive  bool
 	response chan string
 }
 
-func NewConn(deviceID uuid.UUID, c net.Conn) Conn {
+func NewConn(deviceID uint, c net.Conn) Conn {
 	return &conn{
 		deviceID: deviceID,
 		conn:     c,
@@ -47,7 +46,7 @@ func NewConn(deviceID uuid.UUID, c net.Conn) Conn {
 }
 
 // GetDeviceID 获取设备ID
-func (f *conn) GetDeviceID() uuid.UUID {
+func (f *conn) GetDeviceID() uint {
 	return f.deviceID
 }
 
@@ -102,19 +101,19 @@ func (f *conn) SendMessage(message string) error {
 }
 
 type Connection struct {
-	Connections      map[uuid.UUID]Conn
+	Connections      map[uint]Conn
 	ConnectionsMutex sync.RWMutex
 }
 
 // GetAllConnections 获取所有连接
-func (f *Connection) GetAllConnections() map[uuid.UUID]Conn {
+func (f *Connection) GetAllConnections() map[uint]Conn {
 	f.ConnectionsMutex.RLock()
 	defer f.ConnectionsMutex.RUnlock()
 	return f.Connections
 }
 
 // SetConnections 设置所有连接
-func (f *Connection) SetConnections(conns map[uuid.UUID]Conn) {
+func (f *Connection) SetConnections(conns map[uint]Conn) {
 	f.ConnectionsMutex.Lock()
 	defer f.ConnectionsMutex.Unlock()
 	f.Connections = conns
@@ -125,7 +124,7 @@ func (f *Connection) AddConnection(conn Conn) {
 	f.ConnectionsMutex.Lock()
 	defer f.ConnectionsMutex.Unlock()
 	if f.Connections == nil {
-		f.Connections = make(map[uuid.UUID]Conn)
+		f.Connections = make(map[uint]Conn)
 	}
 	deviceID := conn.GetDeviceID()
 	if oldConn, ok := f.Connections[deviceID]; ok {
@@ -148,7 +147,7 @@ func (f *Connection) RemoveConnection(removeConn Conn) {
 }
 
 // GetConnection 获取连接
-func (f *Connection) GetConnection(deviceID uuid.UUID) (Conn, bool) {
+func (f *Connection) GetConnection(deviceID uint) (Conn, bool) {
 	f.ConnectionsMutex.RLock()
 	defer f.ConnectionsMutex.RUnlock()
 	conn, ok := f.Connections[deviceID]

@@ -5,17 +5,16 @@ import (
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // RoleService 角色服务接口
 type RoleService interface {
-	CreateRole(req dto.CreateRoleRequest) (*models.RoleModel, error)
-	UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error)
-	GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error)
-	AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error)
-	IsRoleExist(roleId uuid.UUID) (bool, error)
+	CreateRole(req dto.CreateRoleRequest) (*models.Role, error)
+	UpdateRole(roleId uint, req dto.UpdateRoleRequest) (*models.Role, error)
+	GetRoleMenus(roleId uint) ([]models.Menu, error)
+	AssignMenus(roleId uint, req dto.AssignMenusRequest) (*models.Role, error)
+	IsRoleExist(roleId uint) (bool, error)
 }
 
 // roleService 角色服务实现
@@ -33,8 +32,8 @@ func NewRoleService(db *gorm.DB, commonService CommonService) RoleService {
 }
 
 // CreateRole 创建角色
-func (s *roleService) CreateRole(req dto.CreateRoleRequest) (*models.RoleModel, error) {
-	role := &models.RoleModel{
+func (s *roleService) CreateRole(req dto.CreateRoleRequest) (*models.Role, error) {
+	role := &models.Role{
 		Name:        req.Name,
 		Description: req.Description,
 		Order:       req.Order,
@@ -46,8 +45,8 @@ func (s *roleService) CreateRole(req dto.CreateRoleRequest) (*models.RoleModel, 
 }
 
 // UpdateRole 更新角色
-func (s *roleService) UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*models.RoleModel, error) {
-	var role models.RoleModel
+func (s *roleService) UpdateRole(roleId uint, req dto.UpdateRoleRequest) (*models.Role, error) {
+	var role models.Role
 	if err := s.commonService.GetItemByID(roleId, &role); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("角色不存在")
@@ -74,17 +73,17 @@ func (s *roleService) UpdateRole(roleId uuid.UUID, req dto.UpdateRoleRequest) (*
 }
 
 // GetRoleMenus 获取角色菜单列表
-func (s *roleService) GetRoleMenus(roleId uuid.UUID) ([]models.MenuModel, error) {
-	var menus []models.MenuModel
-	if err := s.db.Model(&models.RoleModel{ID: roleId}).Association("Menus").Find(&menus); err != nil {
+func (s *roleService) GetRoleMenus(roleId uint) ([]models.Menu, error) {
+	var menus []models.Menu
+	if err := s.db.Model(&models.Role{ID: roleId}).Association("Menus").Find(&menus); err != nil {
 		return nil, err
 	}
 	return menus, nil
 }
 
 // AssignMenus 分配菜单给角色
-func (s *roleService) AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) (*models.RoleModel, error) {
-	var role models.RoleModel
+func (s *roleService) AssignMenus(roleId uint, req dto.AssignMenusRequest) (*models.Role, error) {
+	var role models.Role
 	if err := s.commonService.GetItemByID(roleId, &role); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("角色不存在")
@@ -93,7 +92,7 @@ func (s *roleService) AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) 
 	}
 
 	// 获取菜单实例
-	var menus []models.MenuModel
+	var menus []models.Menu
 	if err := s.db.Where("id IN ?", req.MenuIDs).Find(&menus).Error; err != nil {
 		return nil, err
 	}
@@ -107,9 +106,9 @@ func (s *roleService) AssignMenus(roleId uuid.UUID, req dto.AssignMenusRequest) 
 }
 
 // IsRoleExist 检查角色是否存在
-func (s *roleService) IsRoleExist(roleId uuid.UUID) (bool, error) {
+func (s *roleService) IsRoleExist(roleId uint) (bool, error) {
 	var count int64
-	if err := s.db.Model(&models.RoleModel{}).Where("id = ?", roleId).Count(&count).Error; err != nil {
+	if err := s.db.Model(&models.Role{}).Where("id = ?", roleId).Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil

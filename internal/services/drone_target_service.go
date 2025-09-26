@@ -11,9 +11,9 @@ import (
 
 // DroneTargetService 无人机目标 服务接口
 type DroneTargetService interface {
-	GetDroneTargets(req dto.DroneTargetQueryRequest) (*dto.PaginatedResponse[models.DroneTargetModel], error)
-	GetAllDroneTargets(req dto.DroneTargetExportRequest) ([]models.DroneTargetModel, error)
-	CreateDroneTarget(droneTarget *models.DroneTargetModel) (*models.DroneTargetModel, error)
+	GetDroneTargets(req dto.DroneTargetQueryRequest) (*dto.PaginatedResponse[models.DroneTarget], error)
+	GetAllDroneTargets(req dto.DroneTargetExportRequest) ([]models.DroneTarget, error)
+	CreateDroneTarget(droneTarget *models.DroneTarget) (*models.DroneTarget, error)
 	SyncParseDataListToDroneTargetDB(parseDataList []dto.ParseData) error
 }
 
@@ -31,8 +31,8 @@ func NewDronTargetService(db *gorm.DB, commonService CommonService) DroneTargetS
 }
 
 // GetDroneTargets 获取无人机目标列表
-func (s *droneTargetService) GetDroneTargets(req dto.DroneTargetQueryRequest) (*dto.PaginatedResponse[models.DroneTargetModel], error) {
-	query := s.db.Model(&models.DroneTargetModel{})
+func (s *droneTargetService) GetDroneTargets(req dto.DroneTargetQueryRequest) (*dto.PaginatedResponse[models.DroneTarget], error) {
+	query := s.db.Model(&models.DroneTarget{})
 
 	if req.Model != nil {
 		query = query.Where("model LIKE ?", "%"+*req.Model+"%")
@@ -53,20 +53,20 @@ func (s *droneTargetService) GetDroneTargets(req dto.DroneTargetQueryRequest) (*
 		return nil, err
 	}
 
-	var droneTargets []models.DroneTargetModel
+	var droneTargets []models.DroneTarget
 	if err := paginate(query, req.Page, req.PageSize).Order("created_at DESC").Find(&droneTargets).Error; err != nil {
 		return nil, err
 	}
 
-	return &dto.PaginatedResponse[models.DroneTargetModel]{
+	return &dto.PaginatedResponse[models.DroneTarget]{
 		Total: total,
 		Items: droneTargets,
 	}, nil
 }
 
 // GetAllDroneTargets 获取所有无人机目标列表（不分页）
-func (s *droneTargetService) GetAllDroneTargets(req dto.DroneTargetExportRequest) ([]models.DroneTargetModel, error) {
-	query := s.db.Model(&models.DroneTargetModel{})
+func (s *droneTargetService) GetAllDroneTargets(req dto.DroneTargetExportRequest) ([]models.DroneTarget, error) {
+	query := s.db.Model(&models.DroneTarget{})
 
 	if req.Model != nil {
 		query = query.Where("model LIKE ?", "%"+*req.Model+"%")
@@ -87,7 +87,7 @@ func (s *droneTargetService) GetAllDroneTargets(req dto.DroneTargetExportRequest
 		return nil, err
 	}
 
-	var droneTargets []models.DroneTargetModel
+	var droneTargets []models.DroneTarget
 	if err := query.Order("created_at DESC").Find(&droneTargets).Error; err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (s *droneTargetService) GetAllDroneTargets(req dto.DroneTargetExportRequest
 }
 
 // CreateDroneTarget 创建无人机目标
-func (s *droneTargetService) CreateDroneTarget(droneTarget *models.DroneTargetModel) (*models.DroneTargetModel, error) {
+func (s *droneTargetService) CreateDroneTarget(droneTarget *models.DroneTarget) (*models.DroneTarget, error) {
 	if err := s.db.Create(droneTarget).Error; err != nil {
 		return nil, err
 	}
@@ -107,28 +107,29 @@ func (s *droneTargetService) CreateDroneTarget(droneTarget *models.DroneTargetMo
 func (s *droneTargetService) SyncParseDataListToDroneTargetDB(palert []dto.ParseData) error {
 	for _, pa := range palert {
 
-		droneTarget := &models.DroneTargetModel{
-			Serial:        pa.Serial,
-			DeviceID:      pa.DeviceID,
-			ParseID:       pa.ParseID,
-			Model:         pa.Model,
-			Distance:      pa.Distance,
-			DroneLng:      pa.DroneGPS.Longitude,
-			DroneLat:      pa.DroneGPS.Latitude,
-			Height:        pa.Height,
-			Frequency:     pa.Freq,
-			DetectionType: models.DetectionTypeParse,
-			Trajectories:  pa.TrajectoryList,
-			PilotLat:      pa.PilotGPS.Latitude,
-			PilotLng:      pa.PilotGPS.Longitude,
-			VanishTime:    pa.Expires,
+		droneTarget := &models.DroneTarget{
+			Serial:         pa.Serial,
+			Model:          pa.Model, // TODO: 需要映射
+			ModelSource:    pa.Model,
+			DeviceID:       pa.DeviceID,
+			SensorID:       pa.ParseID,
+			Distance:       pa.Distance,
+			Longitude:      pa.DroneGPS.Longitude,
+			Latitude:       pa.DroneGPS.Latitude,
+			Height:         pa.Height,
+			Frequency:      pa.Freq,
+			Trajectories:   pa.Trajectories,
+			PilotLongitude: pa.PilotGPS.Longitude,
+			PilotLatitude:  pa.PilotGPS.Latitude,
+			DetectionType:  models.DetectionTypeParse,
+			VanishTime:     pa.Expires,
 			CommonModel: models.CommonModel{
 				CreatedAt: pa.IntrusionTime,
 				UpdatedAt: pa.Expires,
 			},
 		}
 
-		if err := s.db.Model(models.DroneTargetModel{}).Create(droneTarget).Error; err != nil {
+		if err := s.db.Model(models.DroneTarget{}).Create(droneTarget).Error; err != nil {
 			global.Logger.Error("同步解析告警到数据库失败", zap.Error(err), zap.String("serial", pa.Serial))
 		}
 	}

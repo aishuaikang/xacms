@@ -3,11 +3,9 @@ package fpv_fsm
 import (
 	"context"
 	"uav_defender/internal/app/devices/conn"
-	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
 	"github.com/looplab/fsm"
-	"go.uber.org/zap"
 )
 
 type FPVFsm struct {
@@ -20,14 +18,12 @@ type FPVFsm struct {
 // NewFPVFsm 创建新的FPV状态机实例
 func NewFPVFsm(fpvConnection *conn.FpvConnection) *FPVFsm {
 
-	recorder, err := utils.NewRtspRecorder()
-	if err != nil {
-		global.Logger.Error("创建RtspRecorder失败", zap.Error(err))
-		panic(err)
-	}
+	recorder := utils.NewRtspRecorder()
 
 	d := &FPVFsm{
-		offlineHandler: &OfflineHandler{},
+		offlineHandler: &OfflineHandler{
+			recorder: recorder,
+		},
 		gazingHandler: &GazingHandler{
 			fpvConnection: fpvConnection,
 			recorder:      recorder,

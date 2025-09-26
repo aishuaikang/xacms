@@ -264,13 +264,13 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 				Longitude: newParseData.DroneGPS.Longitude,
 				Height:    newParseData.Height,
 			}
-			if len(parseData.TrajectoryList) == 0 {
-				parseData.TrajectoryList = models.Trajectories{newPoint}
+			if len(parseData.Trajectories) == 0 {
+				parseData.Trajectories = models.Trajectories{newPoint}
 			} else {
-				lastTrajectory := parseData.TrajectoryList[len(parseData.TrajectoryList)-1]
+				lastTrajectory := parseData.Trajectories[len(parseData.Trajectories)-1]
 				// 只有当新点与最后一个点不同才添加，避免重复点
 				if newPoint.Latitude != lastTrajectory.Latitude || newPoint.Longitude != lastTrajectory.Longitude {
-					parseData.TrajectoryList = append(parseData.TrajectoryList, newPoint)
+					parseData.Trajectories = append(parseData.Trajectories, newPoint)
 				}
 			}
 
@@ -304,7 +304,7 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 
 		} else {
 			// 设备未配置经纬度或设备和无人机经纬度无效，LdResult 字段置为默认值
-			global.Logger.Warn("设备或无人机经纬度无效，无法计算距离和方位角", zap.Int("device_id", device.DetectionID), zap.String("device_model", device.Name), zap.Float64("device_longitude", *device.Longitude), zap.Float64("device_latitude", *device.Latitude), zap.Float64("drone_longitude", parseData.DroneGPS.Longitude), zap.Float64("drone_latitude", parseData.DroneGPS.Latitude))
+			global.Logger.Warn("设备或无人机经纬度无效，无法计算距离和方位角", zap.Uint("device_id", device.DetectionID), zap.String("device_model", device.Name), zap.Float64("device_longitude", *device.Longitude), zap.Float64("device_latitude", *device.Latitude), zap.Float64("drone_longitude", parseData.DroneGPS.Longitude), zap.Float64("drone_latitude", parseData.DroneGPS.Latitude))
 			parseData.LdResult = dto.LdResult{
 				Azimuth:     500, // 明确标注未计算方位角
 				Distance:    0,

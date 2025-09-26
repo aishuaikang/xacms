@@ -1,7 +1,5 @@
 package dto
 
-import "github.com/google/uuid"
-
 // CreateRoleRequest 创建角色请求结构
 type CreateRoleRequest struct {
 	Name        string `json:"name" validate:"required,min=2,max=64"`
@@ -18,5 +16,5 @@ type UpdateRoleRequest struct {
 
 // AssignMenusRequest 分配菜单请求结构
 type AssignMenusRequest struct {
-	MenuIDs []uuid.UUID `json:"menu_ids" validate:"required,min=1,dive,uuid"`
+	MenuIDs []uint `json:"menu_ids" validate:"required,dive"`
 }

@@ -2,8 +2,6 @@ package conn
 
 import (
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 type FpvConnection struct {
@@ -13,7 +11,7 @@ type FpvConnection struct {
 func NewFPVConnection() *FpvConnection {
 	return &FpvConnection{
 		Connection: Connection{
-			Connections:      make(map[uuid.UUID]Conn),
+			Connections:      make(map[uint]Conn),
 			ConnectionsMutex: sync.RWMutex{},
 		},
 	}

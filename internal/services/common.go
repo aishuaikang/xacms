@@ -11,16 +11,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // CommonService 公共服务接口
 type CommonService interface {
 	GetItems(model any) error
-	GetItemByID(id uuid.UUID, model any) error
-	IsExistByID(id uuid.UUID, model any) (bool, error)
-	DeleteItemByID(model any, id uuid.UUID) error
+	GetItemByID(id uint, model any) error
+	IsExistByID(id uint, model any) (bool, error)
+	DeleteItemByID(model any, id uint) error
 	DeleteItemsByIDs(model any, req dto.DeleteMultipleRequest) error
 	ValidateBody(c *gin.Context, model any) error
 	ValidateQuery(c *gin.Context, model any) error
@@ -54,7 +53,7 @@ func (s *commonService) GetItems(model any) error {
 }
 
 // GetItemByID 根据ID获取单个数据
-func (s *commonService) GetItemByID(id uuid.UUID, model any) error {
+func (s *commonService) GetItemByID(id uint, model any) error {
 	if err := s.db.First(model, "id = ?", id).Error; err != nil {
 		return err
 	}
@@ -62,7 +61,7 @@ func (s *commonService) GetItemByID(id uuid.UUID, model any) error {
 }
 
 // IsExistByID 检查ID是否存在
-func (s *commonService) IsExistByID(id uuid.UUID, model any) (bool, error) {
+func (s *commonService) IsExistByID(id uint, model any) (bool, error) {
 	var count int64
 	if err := s.db.Model(model).Where("id = ?", id).Count(&count).Error; err != nil {
 		return false, err
@@ -71,7 +70,7 @@ func (s *commonService) IsExistByID(id uuid.UUID, model any) (bool, error) {
 }
 
 // DeleteItemByID 根据ID删除单个数据
-func (s *commonService) DeleteItemByID(model any, id uuid.UUID) error {
+func (s *commonService) DeleteItemByID(model any, id uint) error {
 	if err := s.db.Delete(model, "id = ?", id).Error; err != nil {
 		return err
 	}

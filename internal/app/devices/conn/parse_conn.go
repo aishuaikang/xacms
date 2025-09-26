@@ -2,8 +2,6 @@ package conn
 
 import (
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 type ParseConnection struct {
@@ -13,7 +11,7 @@ type ParseConnection struct {
 func NewParseConnection() *ParseConnection {
 	return &ParseConnection{
 		Connection: Connection{
-			Connections:      make(map[uuid.UUID]Conn),
+			Connections:      make(map[uint]Conn),
 			ConnectionsMutex: sync.RWMutex{},
 		},
 	}

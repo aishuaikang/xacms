@@ -1,32 +1,19 @@
 package models
 
-import (
-	"github.com/google/uuid"
-	"gorm.io/gorm"
-)
+type Role struct {
+	ID          uint   `json:"id" gorm:"primaryKey;autoIncrement;comment:唯一ID"`                     // 唯一ID
+	Name        string `json:"name" gorm:"uniqueIndex:idx_role_name;size:64;not null;comment:角色名称"` // 角色名称
+	Description string `json:"description" gorm:"size:255;comment:角色描述"`                            // 角色描述
+	Order       uint   `json:"order" gorm:"not null;default:0;comment:角色排序，越小越靠前"`                  // 角色排序，越小越靠前
 
-type RoleModel struct {
-	ID          uuid.UUID `json:"id" gorm:"primaryKey;type:char(36);comment:唯一ID"`                     // 唯一ID
-	Name        string    `json:"name" gorm:"uniqueIndex:idx_role_name;size:64;not null;comment:角色名称"` // 角色名称
-	Description string    `json:"description" gorm:"size:255;comment:角色描述"`                            // 角色描述
-	Order       uint      `json:"order" gorm:"type:int;not null;default:0;comment:排序"`                 // 排序
+	Menus []*Menu `json:"menus" gorm:"many2many:role_menus;comment:角色菜单"` // 角色菜单
 
-	Menus []*MenuModel `json:"menus" gorm:"many2many:role_menus;comment:角色菜单"` // 角色菜单
-
-	// Users []*UserModel `json:"users" gorm:"foreignKey:RoleID;comment:角色用户"` // 角色用户
+	// Users []*User `json:"users" gorm:"foreignKey:RoleID;comment:角色用户"` // 角色用户
 
 	CommonModel
 }
 
 // TableName 设置表名
-func (RoleModel) TableName() string {
+func (Role) TableName() string {
 	return "roles"
-}
-
-// BeforeCreate GORM钩子，在创建记录之前调用
-func (r *RoleModel) BeforeCreate(tx *gorm.DB) (err error) {
-	if r.ID == uuid.Nil {
-		r.ID = uuid.New()
-	}
-	return
 }

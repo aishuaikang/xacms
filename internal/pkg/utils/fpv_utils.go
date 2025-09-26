@@ -16,7 +16,6 @@ import (
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
 
-	"github.com/google/uuid"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"go.uber.org/zap"
 )
@@ -35,7 +34,7 @@ func IsFPVWaringData(fullLine []byte) bool {
 }
 
 // ParseFPVWarningData 解析 FPV 警告数据
-func ParseFPVWarningData(fullLine []byte, ip string, time int64, deviceId uuid.UUID) (*dto.FPVWarningData, error) {
+func ParseFPVWarningData(fullLine []byte, ip string, time int64, deviceId uint) (*dto.FPVWarningData, error) {
 	// 解析格式: "Waring,Freq 5025,RSSI 0.60"
 	parts := bytes.Split(fullLine, []byte(","))
 	if len(parts) != 3 {
@@ -65,7 +64,7 @@ func ParseFPVWarningData(fullLine []byte, ip string, time int64, deviceId uuid.U
 }
 
 // UpdateMediaMtxConfigPaths 以文本流方式插入 stream_X 配置
-func UpdateMediaMtxConfigPaths(devices []models.DeviceModel) {
+func UpdateMediaMtxConfigPaths(devices []models.Device) {
 	wd, _ := os.Getwd()
 	filePath := path.Join(wd, "config", "mediamtx.yml")
 
@@ -109,7 +108,7 @@ func UpdateMediaMtxConfigPaths(devices []models.DeviceModel) {
 	var streamLines []string
 	for _, device := range devices {
 		streamIndex++
-		newStream := fmt.Sprintf("%sstream_%s:", strings.Repeat(" ", 4), device.ID)
+		newStream := fmt.Sprintf("%sstream_%d:", strings.Repeat(" ", 4), device.ID)
 		newSource := fmt.Sprintf("%ssource: rtsp://%s:554/live/1_1", strings.Repeat(" ", 6), device.RTSPIP)
 		streamLines = append(streamLines, newStream, newSource)
 	}
@@ -147,54 +146,6 @@ func UpdateMediaMtxConfigPaths(devices []models.DeviceModel) {
 	writer.Flush()
 }
 
-// // RemoveMediaMtxConfigPath 删除 MediaMtx 配置中的路径
-// func RemoveMediaMtxConfigPath(detectionID int) {
-// 	viper.SetConfigName("mediamtx")
-// 	paths := viper.GetStringMap("paths")
-// 	key := fmt.Sprintf("stream_%d", detectionID)
-// 	if _, exists := paths[key]; exists {
-// 		delete(paths, key)
-// 		global.Logger.Info("已删除 MediaMtx 配置中的路径:", zap.Int("detectionID", detectionID))
-// 	} else {
-// 		global.Logger.Warn("MediaMtx 配置中不存在该路径, 无需删除:", zap.Int("detectionID", detectionID))
-// 	}
-// 	viper.Set("paths", paths)
-
-// 	global.Logger.Info("当前 MediaMtx 路径配置:", zap.Any("paths", paths))
-// 	// 写回文件
-// 	if err := viper.WriteConfig(); err != nil {
-// 		global.Logger.Error("写回 MediaMtx 配置文件失败", zap.Error(err))
-// 	}
-// }
-
-// ffmpegPath := "ffmpeg"
-// // 启动录制
-// // 构建FFmpeg命令
-// RtspCmd = exec.Command(
-// 	ffmpegPath,
-// 	"-y",
-// 	"-rtsp_transport", "tcp",
-// 	"-i", rtspURL,
-
-// 	// 视频处理参数
-
-// 	"-c:v", "libx264",
-// 	"-profile:v", "main", // 强制Main Profile
-// 	"-level:v", "4.0", // 兼容性Level
-// 	"-pix_fmt", "yuv420p", // 修正色彩格式（原流为yuvj420p）
-// 	"-vsync", "1", // 防止帧率波动
-// 	"-x264-params", "colorprim=bt709:transfer=bt709:colormatrix=bt709", // 明确色彩标准
-
-// 	// 音频处理参数
-// 	"-c:a", "aac",
-// 	"-ar", "44100", // 重采样到标准频率（原流16000Hz非常规）
-// 	"-ac", "2", // 强制双声道（原流为单声道）
-
-//	// 封装参数
-//	"-f", "mp4", // 不使用 -movflags +faststart
-//	outputFile,
-//
-// )
 // BuildFPVCommand 构建FPV设备命令
 func BuildFPVCommand(frequency int, command int) (fpvCommand string, expectedResponse string) {
 	switch command {
@@ -248,26 +199,8 @@ type RtspRecorder struct {
 	filename  *string
 }
 
-func NewRtspRecorder() (*RtspRecorder, error) {
-	// 在工作目录下videos文件夹中保存录像
-	// 如果不存在则创建
-	wd, err := os.Getwd()
-	if err != nil {
-		global.Logger.Error("获取工作目录失败", zap.Error(err))
-		return nil, fmt.Errorf("获取当前工作目录失败: %v", err)
-	}
-
-	global.Logger.Info("当前工作目录", zap.String("wd", wd))
-
-	videosDir := path.Join(wd, "videos")
-	if err := os.MkdirAll(videosDir, 0777); err != nil {
-		global.Logger.Error("创建videos文件夹失败", zap.Error(err))
-		return nil, fmt.Errorf("创建videos文件夹失败: %v", err)
-	}
-
-	global.Logger.Info("录像保存目录", zap.String("videosDir", videosDir))
-
-	return &RtspRecorder{videosDir: videosDir, filename: nil}, nil
+func NewRtspRecorder() *RtspRecorder {
+	return &RtspRecorder{videosDir: GetVideosDir(), filename: nil}
 }
 
 func (r *RtspRecorder) Start(streamKey, filename string) error {
@@ -368,4 +301,19 @@ func (r *RtspRecorder) Stop() error {
 	}
 
 	return nil
+}
+
+// GetVideosDir 获取 videos 目录的绝对路径，确保目录存在
+func GetVideosDir() string {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		panic("无法获取当前工作目录: " + err.Error())
+	}
+
+	// 确保 videos 目录存在
+	videosDir := path.Join(workingDir, "static", "videos")
+	if err := os.MkdirAll(videosDir, os.ModePerm); err != nil {
+		panic("创建 videos 目录失败: " + err.Error())
+	}
+	return videosDir
 }

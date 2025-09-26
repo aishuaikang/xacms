@@ -3,6 +3,7 @@ package routes
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 	"uav_defender/internal/app/devices/conn"
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
@@ -14,7 +15,6 @@ import (
 	"uav_defender/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -71,7 +71,15 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		return
 	}
 
-	device, exists := h.DevicesCache.GetDeviceByID(uuid.MustParse(req.DeviceID))
+	// 验证 ID 格式
+	deviceID, err := strconv.ParseUint(req.DeviceID, 10, 64)
+	if err != nil {
+		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备ID格式无效")
+		c.Writer.Flush()
+		return
+	}
+
+	device, exists := h.DevicesCache.GetDeviceByID(uint(deviceID))
 	if !exists {
 		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备不存在")
 		c.Writer.Flush()
@@ -95,17 +103,26 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 			c.Writer.Flush()
 			return
 		}
+
 		global.Logger.Info("设备退出凝视模式，进入扫频模式",
 			zap.String("device_id", req.DeviceID),
 			zap.Int("freq", req.Frequency),
 			zap.String("filename", filename),
 		)
 
+		// 验证 ID 格式
+		deviceID, err := strconv.ParseUint(req.DeviceID, 10, 64)
+		if err != nil {
+			fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备ID格式无效")
+			c.Writer.Flush()
+			return
+		}
+
 		// 保存FPV记录到数据库
 		addReq := dto.AddFPVRequest{
-			DeviceID:  uuid.MustParse(req.DeviceID),
+			DeviceID:  uint(deviceID),
 			Frequency: req.Frequency,
-			FileName:  filename,
+			Filename:  filename,
 		}
 		if err := h.FPVService.AddFPV(addReq); err != nil {
 			global.Logger.Error("保存FPV记录失败", zap.Error(err))
@@ -162,7 +179,7 @@ func (h *FPVRouter) SetFrequency(c *gin.Context) {
 
 	// 必须是凝视状态才能设置点频
 	if !device.FPVFsm.FSM.Is(string(fpv_fsm.StateGazing)) {
-		global.Logger.Warn("设备不在凝视状态，不能设置频点", zap.String("device_id", req.DeviceID.String()))
+		global.Logger.Warn("设备不在凝视状态，不能设置频点", zap.Uint("device_id", req.DeviceID))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备不在凝视状态，不能设置频点"))
 		return
 	}
@@ -189,7 +206,7 @@ func (h *FPVRouter) SetFrequency(c *gin.Context) {
 		return
 	}
 
-	global.Logger.Info("收到响应", zap.String("address", req.DeviceID.String()), zap.String("response", response))
+	global.Logger.Info("收到响应", zap.Uint("deviceID", req.DeviceID), zap.String("response", response))
 
 	// 验证响应
 	if !utils.IsExpectedResponse(response, expectedResponse) {

@@ -1,7 +1,5 @@
 package dto
 
-import "github.com/google/uuid"
-
 // BaseQueryRequest 基础查询请求结构
 type BaseQueryRequest struct {
 	Page     int `form:"page,string" validate:"min=1"`
@@ -11,7 +9,7 @@ type BaseQueryRequest struct {
 
 // DeleteMultipleRequest 批量删除请求结构
 type DeleteMultipleRequest struct {
-	IDs []uuid.UUID `json:"ids" validate:"required,min=1,dive,uuid"` // UUID 列表
+	IDs []uint `json:"ids" validate:"required,min=1,dive,uuid"` // UUID 列表
 }
 
 // // IDRequest 通用ID请求结构

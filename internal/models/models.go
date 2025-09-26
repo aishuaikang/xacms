@@ -3,8 +3,12 @@ package models
 import (
 	"database/sql/driver"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
+	"uav_defender/internal/pkg/global"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -17,36 +21,6 @@ type CommonModel struct {
 type CommonNotDeletedModel struct {
 	CreatedAt CustomTime `json:"created_at" gorm:"autoCreateTime;comment:创建时间"`
 	UpdatedAt CustomTime `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
-}
-
-// 状态
-type Status uint8
-
-const (
-	StatusDisabled Status = iota // 禁用
-	StatusEnabled                // 启用
-)
-
-// IsEnabled 检查状态是否为启用
-func (s Status) IsEnabled() bool {
-	return s == StatusEnabled
-}
-
-// IsDisabled 检查状态是否为禁用
-func (s Status) IsDisabled() bool {
-	return s == StatusDisabled
-}
-
-// String 返回状态的字符串表示
-func (s Status) String() string {
-	switch s {
-	case StatusEnabled:
-		return "enabled"
-	case StatusDisabled:
-		return "disabled"
-	default:
-		return "unknown"
-	}
 }
 
 // 自定义时间类型
@@ -62,12 +36,20 @@ func (ct CustomTime) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + formatted + `"`), nil
 }
 
-// UnmarshalJSON 自定义时间的 JSON 反序列化
 func (ct *CustomTime) UnmarshalJSON(data []byte) error {
-	t, err := time.Parse(time.DateTime, string(data))
+	s := string(data)
+	s = strings.Trim(s, "\"")
+	if ts, err := strconv.ParseInt(s, 10, 64); err == nil {
+		global.Logger.Info("UnmarshalJSON", zap.String("input", s), zap.Int64("parsed", ts))
+		*ct = CustomTime(time.Unix(ts, 0))
+		return nil
+	}
+	global.Logger.Info("UnmarshalJSON", zap.String("input", s), zap.String("info", "not a timestamp"))
+	t, err := time.Parse("2006-01-02 15:04:05", s)
 	if err != nil {
 		return err
 	}
+	global.Logger.Info("UnmarshalJSON", zap.String("input", s), zap.Time("parsed", t))
 	*ct = CustomTime(t)
 	return nil
 }
@@ -101,9 +83,4 @@ func (ct *CustomTime) Scan(value interface{}) error {
 		return fmt.Errorf("unsupported scan type: %T", v)
 	}
 
-}
-
-// NewCustomTimeFromInt64 从时间戳创建 CustomTime
-func NewCustomTimeFromInt64(timestamp int64) CustomTime {
-	return CustomTime(time.Unix(timestamp, 0))
 }

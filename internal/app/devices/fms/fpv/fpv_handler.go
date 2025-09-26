@@ -7,15 +7,24 @@ import (
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
-	"github.com/google/uuid"
 	"github.com/looplab/fsm"
 	"go.uber.org/zap"
 )
 
-type OfflineHandler struct{}
+type OfflineHandler struct {
+	recorder *utils.RtspRecorder
+}
 
 // Before 离线状态前回调
 func (h *OfflineHandler) Before(ctx context.Context, e *fsm.Event) {
+	if e.Src == string(StateGazing) {
+		// 停止录像
+		if err := h.recorder.Stop(); err != nil {
+			global.Logger.Error("停止录像失败", zap.Error(err))
+			return
+		}
+		global.Logger.Info("停止录像")
+	}
 }
 
 // Enter 离线状态进入回调
@@ -29,17 +38,12 @@ type GazingHandler struct {
 
 // Before 凝视状态前回调
 func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
-
 	if len(e.Args) < 3 {
 		e.Cancel(fmt.Errorf("缺少参数"))
 		return
 	}
-	// addr, ok := e.Args[0].(string)
-	// if !ok {
-	// 	e.Cancel(fmt.Errorf("addr 类型断言失败"))
-	// 	return
-	// }
-	deviceID, ok := e.Args[0].(string)
+
+	deviceID, ok := e.Args[0].(uint)
 	if !ok {
 		e.Cancel(fmt.Errorf("detectionID 类型断言失败"))
 		return
@@ -56,16 +60,16 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 		return
 	}
 
-	conn, exists := h.fpvConnection.GetConnection(uuid.MustParse(deviceID))
+	conn, exists := h.fpvConnection.GetConnection(deviceID)
 	if !exists {
 		e.Cancel(fmt.Errorf("FPV 连接不存在"))
 		return
 	}
 
-	fpvCommand, expectedResponse := utils.BuildFPVCommand(frequency, 9)
+	command, expectedResponse := utils.BuildFPVCommand(frequency, 9)
 
 	// 发送命令
-	if err := conn.SendCommand(fpvCommand); err != nil {
+	if err := conn.SendCommand(command); err != nil {
 		e.Cancel(fmt.Errorf("发送命令失败: %v", err))
 		return
 	}
@@ -87,7 +91,7 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 
 	global.Logger.Info("FPV 设备响应符合预期", zap.String("address", conn.GetConn().RemoteAddr().String()), zap.String("response", response))
 
-	streamKey := fmt.Sprintf("stream_%s", deviceID)
+	streamKey := fmt.Sprintf("stream_%d", deviceID)
 	if err := h.recorder.Start(streamKey, filename); err != nil {
 		e.Cancel(fmt.Errorf("启动录像失败: %v", err))
 		return

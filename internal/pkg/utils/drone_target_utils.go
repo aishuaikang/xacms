@@ -11,7 +11,8 @@ import (
 	"github.com/bytedance/sonic"
 )
 
-func GenerateDroneTargetTableCSVByLang(droneTargets []models.DroneTargetModel, lang dto.Lang) ([]byte, error) {
+// GenerateDroneTargetTableCSVByLang 根据语言生成无人机目标的 CSV 数据
+func GenerateDroneTargetTableCSVByLang(droneTargets []models.DroneTarget, lang dto.Lang) ([]byte, error) {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
 
@@ -33,11 +34,11 @@ func GenerateDroneTargetTableCSVByLang(droneTargets []models.DroneTargetModel, l
 			fmt.Sprintf("%.0f", target.Frequency), // 不保留小数，例如：
 			target.Serial,
 			target.CreatedAt.Time().Format(time.DateTime),
-			fmt.Sprintf("%d", target.ParseID),
+			fmt.Sprintf("%d", target.SensorID),
 			fmt.Sprintf("%.2f", target.Height),
 			fmt.Sprintf("%.2f", target.Distance),
-			fmt.Sprintf("%.2f", target.DroneLng),
-			fmt.Sprintf("%.2f", target.DroneLat),
+			fmt.Sprintf("%.2f", target.Longitude),
+			fmt.Sprintf("%.2f", target.Latitude),
 			string(trajectory),
 		}
 
@@ -50,6 +51,7 @@ func GenerateDroneTargetTableCSVByLang(droneTargets []models.DroneTargetModel, l
 	return buffer.Bytes(), nil
 }
 
+// GetDroneTargetTableHeadersByLang 根据语言获取无人机目标表头
 func GetDroneTargetTableHeadersByLang(lang dto.Lang) []string {
 	switch lang {
 	case dto.LangZH:

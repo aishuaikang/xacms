@@ -688,7 +688,5 @@ pathDefaults:
 # for example "~^(test1|test2)$" will match both "test1" and "test2",
 # for example "~^prefix" will match all paths that start with "prefix".
 paths:
-    stream:
-        source: publisher
-    stream_b0815246-2573-43d4-9ded-77a403996d99:
-        source: rtsp://127.0.0.1:8554/stream
+    stream_1:
+      source: rtsp://1312:554/live/1_1

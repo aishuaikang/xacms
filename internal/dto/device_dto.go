@@ -7,12 +7,12 @@ type CreateDeviceRequest struct {
 	Latitude  *float64 `json:"latitude" validate:"omitempty,latitude"`
 
 	// 侦测模块
-	DetectionID   int    `json:"detection_id" validate:"required"`   // 侦测模块ID
+	DetectionID   uint   `json:"detection_id" validate:"required"`   // 侦测模块ID
 	DetectionIP   string `json:"detection_ip" validate:"required"`   // 侦测模块IP
-	DetectionPort int    `json:"detection_port" validate:"required"` // 侦测模块端口
+	DetectionPort uint   `json:"detection_port" validate:"required"` // 侦测模块端口
 
 	// 解析模块
-	ParseID int    `json:"parse_id" validate:"required"` // 解析模块ID
+	ParseID uint   `json:"parse_id" validate:"required"` // 解析模块ID
 	ParseIP string `json:"parse_ip" validate:"required"` // 解析模块IP
 
 	// FPV模块
@@ -20,8 +20,7 @@ type CreateDeviceRequest struct {
 	RTSPIP string `json:"rtsp_ip" validate:"required"` // RTSPIP
 
 	// 打击模块
-	StrikeIP   string `json:"strike_ip" validate:"required"`   // 打击模块IP
-	StrikePort int    `json:"strike_port" validate:"required"` // 打击模块端口
+	StrikeIP string `json:"strike_ip" validate:"required"` // 打击模块IP
 }
 
 // UpdateDeviceRequest 更新设备请求结构
@@ -31,12 +30,12 @@ type UpdateDeviceRequest struct {
 	Latitude  *float64 `json:"latitude" validate:"omitempty,latitude"`
 
 	// 侦测模块
-	DetectionID   *int    `json:"detection_id" validate:"omitempty"`   // 侦测模块ID
+	DetectionID   *uint   `json:"detection_id" validate:"omitempty"`   // 侦测模块ID
 	DetectionIP   *string `json:"detection_ip" validate:"omitempty"`   // 侦测模块IP
-	DetectionPort *int    `json:"detection_port" validate:"omitempty"` // 侦测模块端口
+	DetectionPort *uint   `json:"detection_port" validate:"omitempty"` // 侦测模块端口
 
 	// 解析模块
-	ParseID *int    `json:"parse_id" validate:"omitempty"` // 解析模块ID
+	ParseID *uint   `json:"parse_id" validate:"omitempty"` // 解析模块ID
 	ParseIP *string `json:"parse_ip" validate:"omitempty"` // 解析模块IP
 
 	// FPV模块

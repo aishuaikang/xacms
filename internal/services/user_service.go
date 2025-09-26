@@ -5,17 +5,16 @@ import (
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 // UserService 用户服务接口
 type UserService interface {
-	GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error)
-	CreateUser(req dto.CreateUserRequest) (*models.UserModel, error)
-	UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error)
-	AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*models.UserModel, error)
+	GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.User], error)
+	CreateUser(req dto.CreateUserRequest) (*models.User, error)
+	UpdateUser(userId uint, req dto.UpdateUserRequest) (*models.User, error)
+	AssignRole(userId uint, req dto.AssignRoleRequest) (*models.User, error)
 	Login(req dto.LoginRequest) (*dto.LoginResponse, error)
 }
 
@@ -36,36 +35,34 @@ func NewUserService(db *gorm.DB, commonService CommonService, roleService RoleSe
 }
 
 // GetUsers 获取用户列表
-func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.UserModel], error) {
-	query := s.db.Model(&models.UserModel{}).Preload(clause.Associations)
+func (s *userService) GetUsers(req dto.UserQueryRequest) (*dto.PaginatedResponse[models.User], error) {
+	query := s.db.Model(&models.User{}).Preload(clause.Associations)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	var users []models.UserModel
+	var users []models.User
 	if err := paginate(query, req.Page, req.PageSize).Order("created_at DESC").Find(&users).Error; err != nil {
 		return nil, err
 	}
 
-	return &dto.PaginatedResponse[models.UserModel]{
+	return &dto.PaginatedResponse[models.User]{
 		Total: total,
 		Items: users,
 	}, nil
 }
 
 // CreateUser 创建用户
-func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, error) {
-	userData := &models.UserModel{
-		ID:       uuid.New(),
+func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.User, error) {
+	userData := &models.User{
 		Nickname: req.Nickname,
 		Username: req.Username,
 		Password: req.Password, // TODO：实际应用中应该加密密码
 		Email:    req.Email,
 		Phone:    req.Phone,
 		Avatar:   req.Avatar,
-		Status:   req.Status,
 	}
 
 	if err := s.db.Create(userData).Error; err != nil {
@@ -75,8 +72,8 @@ func (s *userService) CreateUser(req dto.CreateUserRequest) (*models.UserModel, 
 }
 
 // UpdateUser 修改用户
-func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*models.UserModel, error) {
-	var user models.UserModel
+func (s *userService) UpdateUser(userId uint, req dto.UpdateUserRequest) (*models.User, error) {
+	var user models.User
 	if err := s.commonService.GetItemByID(userId, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("用户不存在")
@@ -104,10 +101,6 @@ func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*
 		user.Avatar = req.Avatar
 	}
 
-	if req.Status != nil {
-		user.Status = req.Status
-	}
-
 	if err := s.db.Save(&user).Error; err != nil {
 		return nil, err
 	}
@@ -115,8 +108,8 @@ func (s *userService) UpdateUser(userId uuid.UUID, req dto.UpdateUserRequest) (*
 }
 
 // AssignRole 分配角色
-func (s *userService) AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*models.UserModel, error) {
-	var user models.UserModel
+func (s *userService) AssignRole(userId uint, req dto.AssignRoleRequest) (*models.User, error) {
+	var user models.User
 	if err := s.commonService.GetItemByID(userId, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("用户不存在")
@@ -143,7 +136,7 @@ func (s *userService) AssignRole(userId uuid.UUID, req dto.AssignRoleRequest) (*
 }
 
 func (s *userService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
-	var user models.UserModel
+	var user models.User
 	if err := s.db.Where("username = ? AND password = ?", req.Username, req.Password).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("用户名或密码错误")
@@ -157,7 +150,7 @@ func (s *userService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	}
 
 	return &dto.LoginResponse{
-		UserModel: user,
-		Token:     "some-jwt-token",
+		User:  user,
+		Token: "some-jwt-token",
 	}, nil
 }

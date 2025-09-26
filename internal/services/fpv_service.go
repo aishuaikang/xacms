@@ -8,7 +8,7 @@ import (
 )
 
 type FPVService interface {
-	GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[models.FPVModel], error)
+	GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[models.FPVVideo], error)
 	AddFPV(req dto.AddFPVRequest) error
 }
 
@@ -27,8 +27,8 @@ func NewFPVService(db *gorm.DB, commonService CommonService) FPVService {
 }
 
 // GetFPVs 获取FPV列表
-func (s *fpvService) GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[models.FPVModel], error) {
-	query := s.db.Model(&models.FPVModel{})
+func (s *fpvService) GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[models.FPVVideo], error) {
+	query := s.db.Model(&models.FPVVideo{})
 
 	if req.Frequency != nil {
 		query = query.Where("frequency = ?", *req.Frequency)
@@ -46,11 +46,11 @@ func (s *fpvService) GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[mo
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
-	var fpvs []models.FPVModel
+	var fpvs []models.FPVVideo
 	if err := paginate(query, req.Page, req.PageSize).Order("created_at DESC").Find(&fpvs).Error; err != nil {
 		return nil, err
 	}
-	return &dto.PaginatedResponse[models.FPVModel]{
+	return &dto.PaginatedResponse[models.FPVVideo]{
 		Total: total,
 		Items: fpvs,
 	}, nil
@@ -58,10 +58,10 @@ func (s *fpvService) GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[mo
 
 // AddFPV 添加FPV记录
 func (s *fpvService) AddFPV(req dto.AddFPVRequest) error {
-	fpv := &models.FPVModel{
+	fpv := &models.FPVVideo{
 		DeviceID:  req.DeviceID,
 		Frequency: req.Frequency,
-		FileName:  req.FileName,
+		Filename:  req.Filename,
 	}
 	return s.db.Create(fpv).Error
 }

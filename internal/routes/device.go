@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
@@ -12,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
 )
@@ -40,7 +40,7 @@ func (h *DeviceRouter) RegisterRoutes(router *gin.RouterGroup) {
 // GetDevices 获取设备列表
 func (h *DeviceRouter) GetDevices(c *gin.Context) {
 	// 获取设备列表
-	var devices []models.DeviceModel
+	var devices []models.Device
 	if err := h.CommonService.GetItems(&devices); err != nil {
 		global.Logger.Error("获取设备列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取设备列表失败"))
@@ -85,16 +85,16 @@ func (h *DeviceRouter) CreateDevice(c *gin.Context) {
 func (h *DeviceRouter) GetDevice(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	deviceUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	deviceID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备ID格式无效"))
 		return
 	}
 
 	// 获取设备
-	var device models.DeviceModel
-	if err := h.CommonService.GetItemByID(deviceUUID, &device); err != nil {
+	var device models.Device
+	if err := h.CommonService.GetItemByID(uint(deviceID), &device); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "设备不存在"))
 			return
@@ -111,8 +111,8 @@ func (h *DeviceRouter) GetDevice(c *gin.Context) {
 func (h *DeviceRouter) UpdateDevice(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	deviceUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	deviceID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备ID格式无效"))
 		return
@@ -126,7 +126,7 @@ func (h *DeviceRouter) UpdateDevice(c *gin.Context) {
 	}
 
 	// 更新设备
-	device, err := h.DeviceService.UpdateDevice(deviceUUID, req)
+	device, err := h.DeviceService.UpdateDevice(uint(deviceID), req)
 	if err != nil {
 		if sqliteErr, ok := err.(sqlite3.Error); ok {
 			if sqliteErr.Code == sqlite3.ErrConstraint {
@@ -150,15 +150,15 @@ func (h *DeviceRouter) UpdateDevice(c *gin.Context) {
 func (h *DeviceRouter) DeleteDevice(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	deviceUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	deviceID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "设备ID格式无效"))
 		return
 	}
 
 	// 删除设备
-	if err := h.CommonService.DeleteItemByID(&models.DeviceModel{}, deviceUUID); err != nil {
+	if err := h.CommonService.DeleteItemByID(&models.Device{}, uint(deviceID)); err != nil {
 		global.Logger.Error("删除设备失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除设备失败"))
 		return

@@ -34,13 +34,13 @@ func NewDB(config *config.Config) (*gorm.DB, error) {
 
 	// 自动迁移数据库
 	if err = db.AutoMigrate(
-		&models.RoleModel{},
-		&models.MenuModel{},
-		&models.UserModel{},
-		&models.DeviceModel{},
-		&models.DroneTargetModel{},
-		&models.WhitelistModel{},
-		&models.FPVModel{},
+		&models.Role{},
+		&models.Menu{},
+		&models.User{},
+		&models.Device{},
+		&models.DroneTarget{},
+		&models.Whitelist{},
+		&models.FPVVideo{},
 	); err != nil {
 		return nil, err
 	}

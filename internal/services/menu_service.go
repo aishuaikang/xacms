@@ -7,15 +7,14 @@ import (
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 // MenuService 菜单服务接口
 type MenuService interface {
-	CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel, error)
-	UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error)
+	CreateMenu(req *dto.CreateMenuRequest) (*models.Menu, error)
+	UpdateMenu(menuUUID uint, req *dto.UpdateMenuRequest) (*models.Menu, error)
 	GetMenuTree() ([]dto.MenuWithChildren, error)
 }
 
@@ -34,10 +33,10 @@ func NewMenuService(db *gorm.DB, commonService CommonService) MenuService {
 }
 
 // CreateMenu 创建菜单
-func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel, error) {
+func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) (*models.Menu, error) {
 	// 判断 ParentID 是否存在
 	if req.ParentID != nil {
-		var parentMenu models.MenuModel
+		var parentMenu models.Menu
 		if exists, err := s.commonService.IsExistByID(*req.ParentID, &parentMenu); err != nil {
 			return nil, err
 		} else if !exists {
@@ -45,7 +44,7 @@ func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel,
 		}
 	}
 
-	menu := &models.MenuModel{
+	menu := &models.Menu{
 		ParentID:     req.ParentID,
 		Name:         req.Name,
 		RouteName:    req.RouteName,
@@ -66,8 +65,8 @@ func (s *menuService) CreateMenu(req *dto.CreateMenuRequest) (*models.MenuModel,
 }
 
 // UpdateMenu 更新菜单
-func (s *menuService) UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest) (*models.MenuModel, error) {
-	var menu models.MenuModel
+func (s *menuService) UpdateMenu(menuUUID uint, req *dto.UpdateMenuRequest) (*models.Menu, error) {
+	var menu models.Menu
 	if err := s.commonService.GetItemByID(menuUUID, &menu); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("菜单不存在")
@@ -121,7 +120,7 @@ func (s *menuService) UpdateMenu(menuUUID uuid.UUID, req *dto.UpdateMenuRequest)
 
 // GetMenuTree 获取菜单树
 func (s *menuService) GetMenuTree() ([]dto.MenuWithChildren, error) {
-	var menus []models.MenuModel
+	var menus []models.Menu
 	if err := s.commonService.GetItems(&menus); err != nil {
 		global.Logger.Error("获取菜单列表失败", zap.Error(err))
 		return nil, errors.New("获取菜单列表失败")
@@ -130,15 +129,15 @@ func (s *menuService) GetMenuTree() ([]dto.MenuWithChildren, error) {
 	// global.Logger.Debugf("所有菜单: %+v", menus)
 
 	// 递归组装菜单树
-	var buildMenuTree func(parentID *uuid.UUID) []dto.MenuWithChildren
-	buildMenuTree = func(parentID *uuid.UUID) []dto.MenuWithChildren {
+	var buildMenuTree func(parentID *uint) []dto.MenuWithChildren
+	buildMenuTree = func(parentID *uint) []dto.MenuWithChildren {
 		var children []dto.MenuWithChildren
 		for _, menu := range menus {
 			global.Logger.Debug("检查菜单父ID", zap.Any("菜单ID", menu.ID), zap.Any("菜单父ID", menu.ParentID), zap.Any("当前父ID", parentID))
 			if utils.EqualUUID(menu.ParentID, parentID) {
 				children = append(children, dto.MenuWithChildren{
-					MenuModel: menu,
-					Children:  buildMenuTree(&menu.ID),
+					Menu:     menu,
+					Children: buildMenuTree(&menu.ID),
 				})
 			}
 		}

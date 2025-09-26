@@ -8,8 +8,8 @@ import (
 )
 
 type WhitelistService interface {
-	GetWhitelists(req dto.WhitelistQueryRequest) (*dto.PaginatedResponse[models.WhitelistModel], error)
-	AddWhitelist(req dto.WhitelistCreateRequest) (*models.WhitelistModel, error)
+	GetWhitelists(req dto.WhitelistQueryRequest) (*dto.PaginatedResponse[models.Whitelist], error)
+	AddWhitelist(req dto.WhitelistCreateRequest) (*models.Whitelist, error)
 	DeleteWhitelistBySerial(serial string) error
 	IsSerialWhitelisted(serial string) (bool, error)
 }
@@ -29,33 +29,31 @@ func NewWhitelistService(db *gorm.DB, commonService CommonService) WhitelistServ
 }
 
 // GetWhitelists 获取白名单列表
-func (s *whitelistService) GetWhitelists(req dto.WhitelistQueryRequest) (*dto.PaginatedResponse[models.WhitelistModel], error) {
-	query := s.db.Model(&models.WhitelistModel{})
+func (s *whitelistService) GetWhitelists(req dto.WhitelistQueryRequest) (*dto.PaginatedResponse[models.Whitelist], error) {
+	query := s.db.Model(&models.Whitelist{})
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	var whitelist []models.WhitelistModel
+	var whitelist []models.Whitelist
 	if err := paginate(query, req.Page, req.PageSize).Order("created_at DESC").Find(&whitelist).Error; err != nil {
 		return nil, err
 	}
 
-	return &dto.PaginatedResponse[models.WhitelistModel]{
+	return &dto.PaginatedResponse[models.Whitelist]{
 		Total: total,
 		Items: whitelist,
 	}, nil
 }
 
 // AddWhitelist 添加白名单
-func (s *whitelistService) AddWhitelist(req dto.WhitelistCreateRequest) (*models.WhitelistModel, error) {
-	whitelist := &models.WhitelistModel{
-		ParseID:   req.ParseID,
-		Model:     req.Model,
-		Serial:    req.Serial,
-		StartTime: models.NewCustomTimeFromInt64(req.StartTime),
-		EndTime:   models.NewCustomTimeFromInt64(req.EndTime),
+func (s *whitelistService) AddWhitelist(req dto.WhitelistCreateRequest) (*models.Whitelist, error) {
+	whitelist := &models.Whitelist{
+		DeviceID: req.DeviceID,
+		Model:    req.Model,
+		Serial:   req.Serial,
 	}
 
 	if err := s.db.Create(whitelist).Error; err != nil {
@@ -67,13 +65,13 @@ func (s *whitelistService) AddWhitelist(req dto.WhitelistCreateRequest) (*models
 
 // DeleteWhitelistBySerial 根据Serial删除白名单
 func (s *whitelistService) DeleteWhitelistBySerial(serial string) error {
-	return s.db.Unscoped().Where("serial = ?", serial).Delete(&models.WhitelistModel{}).Error
+	return s.db.Unscoped().Where("serial = ?", serial).Delete(&models.Whitelist{}).Error
 }
 
 // IsSerialWhitelisted 根据Serial查询是否存在白名单
 func (s *whitelistService) IsSerialWhitelisted(serial string) (bool, error) {
 	var count int64
-	if err := s.db.Model(&models.WhitelistModel{}).Where("serial = ?", serial).Count(&count).Error; err != nil {
+	if err := s.db.Model(&models.Whitelist{}).Where("serial = ?", serial).Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil

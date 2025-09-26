@@ -5,12 +5,11 @@ import (
 	"net"
 	"uav_defender/internal/pkg/global"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 // EqualUUID 判断两个UUID是否相等
-func EqualUUID(a, b *uuid.UUID) bool {
+func EqualUUID(a, b *uint) bool {
 	if a == b {
 		return true
 	}

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"strconv"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
 	"uav_defender/internal/pkg/global"
@@ -10,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -76,16 +76,16 @@ func (h *UserRouter) CreateUser(c *gin.Context) {
 func (h *UserRouter) GetUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	userUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
 		return
 	}
 
 	// 获取用户
-	var user models.UserModel
-	if err := h.CommonService.GetItemByID(userUUID, &user); err != nil {
+	var user models.User
+	if err := h.CommonService.GetItemByID(uint(userID), &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "用户不存在"))
 			return
@@ -102,8 +102,8 @@ func (h *UserRouter) GetUser(c *gin.Context) {
 func (h *UserRouter) UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	userUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
 		return
@@ -117,7 +117,7 @@ func (h *UserRouter) UpdateUser(c *gin.Context) {
 	}
 
 	// 更新用户
-	user, err := h.UserService.UpdateUser(userUUID, req)
+	user, err := h.UserService.UpdateUser(uint(userID), req)
 	if err != nil {
 		global.Logger.Error("更新用户失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新用户失败"))
@@ -131,15 +131,15 @@ func (h *UserRouter) UpdateUser(c *gin.Context) {
 func (h *UserRouter) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	userUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
 		return
 	}
 
 	// 删除用户
-	if err := h.CommonService.DeleteItemByID(&models.UserModel{}, userUUID); err != nil {
+	if err := h.CommonService.DeleteItemByID(&models.User{}, uint(userID)); err != nil {
 		global.Logger.Error("删除用户失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除用户失败"))
 		return
@@ -152,8 +152,8 @@ func (h *UserRouter) DeleteUser(c *gin.Context) {
 func (h *UserRouter) AssignRole(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 UUID 格式
-	userUUID, err := uuid.Parse(id)
+	// 验证 ID 格式
+	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
 		return
@@ -167,7 +167,7 @@ func (h *UserRouter) AssignRole(c *gin.Context) {
 	}
 
 	// 分配角色
-	user, err := h.UserService.AssignRole(userUUID, req)
+	user, err := h.UserService.AssignRole(uint(userID), req)
 	if err != nil {
 		global.Logger.Error("分配角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "分配角色失败"))

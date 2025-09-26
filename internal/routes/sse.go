@@ -48,9 +48,14 @@ func (h *SSERouter) DeviceInfoListSSE(c *gin.Context) {
 			devices := h.DevicesCache.GetDisplayDevices()
 			data, err := sonic.Marshal(devices)
 			if err != nil {
-				fmt.Fprintf(c.Writer, "data: {\"error\":\"marshal failed\"}\n\n")
+				if _, err := fmt.Fprintf(c.Writer, "data: {\"error\":\"marshal failed\"}\n\n"); err != nil {
+					return
+				}
 			} else {
-				fmt.Fprintf(c.Writer, "data: %s\n\n", data)
+				if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", data); err != nil {
+					return
+				}
+
 			}
 			c.Writer.Flush()
 		}

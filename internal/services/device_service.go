@@ -7,16 +7,15 @@ import (
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 // DeviceService 设备 服务接口
 type DeviceService interface {
-	CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error)
-	UpdateDevice(deviceID uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error)
-	GetAllDevices() ([]models.DeviceModel, error)
+	CreateDevice(req dto.CreateDeviceRequest) (*models.Device, error)
+	UpdateDevice(deviceID uint, req dto.UpdateDeviceRequest) (*models.Device, error)
+	GetAllDevices() ([]models.Device, error)
 	RefreshMediaMtxConfig()
 }
 
@@ -35,9 +34,8 @@ func NewDeviceService(db *gorm.DB, commonService CommonService) DeviceService {
 }
 
 // CreateDevice 创建设备
-func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.DeviceModel, error) {
-	deviceData := &models.DeviceModel{
-		ID:        uuid.New(),
+func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.Device, error) {
+	deviceData := &models.Device{
 		Name:      req.Name,
 		Longitude: req.Longitude,
 		Latitude:  req.Latitude,
@@ -66,8 +64,8 @@ func (s *deviceService) CreateDevice(req dto.CreateDeviceRequest) (*models.Devic
 }
 
 // UpdateDevice 修改设备
-func (s *deviceService) UpdateDevice(deviceID uuid.UUID, req dto.UpdateDeviceRequest) (*models.DeviceModel, error) {
-	var user models.DeviceModel
+func (s *deviceService) UpdateDevice(deviceID uint, req dto.UpdateDeviceRequest) (*models.Device, error) {
+	var user models.Device
 	if err := s.commonService.GetItemByID(deviceID, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("设备不存在")
@@ -127,8 +125,8 @@ func (s *deviceService) UpdateDevice(deviceID uuid.UUID, req dto.UpdateDeviceReq
 }
 
 // GetAllDevices 初始化设备列表
-func (s *deviceService) GetAllDevices() ([]models.DeviceModel, error) {
-	var devices []models.DeviceModel
+func (s *deviceService) GetAllDevices() ([]models.Device, error) {
+	var devices []models.Device
 	if err := s.db.Find(&devices).Error; err != nil {
 		return nil, err
 	}
@@ -137,7 +135,7 @@ func (s *deviceService) GetAllDevices() ([]models.DeviceModel, error) {
 
 // 刷新 MediaMtx 配置
 func (s *deviceService) RefreshMediaMtxConfig() {
-	var devices []models.DeviceModel
+	var devices []models.Device
 	if err := s.db.Find(&devices).Error; err != nil {
 		global.Logger.Error("获取设备列表失败, 无法刷新 MediaMtx 配置", zap.Error(err))
 		return
