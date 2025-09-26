@@ -34,14 +34,6 @@ func (s *fpvService) GetFPVs(req dto.FPVQueryRequest) (*dto.PaginatedResponse[mo
 		query = query.Where("frequency = ?", *req.Frequency)
 	}
 
-	if req.StartTime != nil {
-		query = query.Where("created_at >= ?", *req.StartTime)
-	}
-
-	if req.EndTime != nil {
-		query = query.Where("created_at <= ?", *req.EndTime)
-	}
-
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err

@@ -1,7 +1,5 @@
 package dto
 
-import "uav_defender/internal/models"
-
 type FPVWarningData struct {
 	DeviceID uint   `json:"device_id"`
 	Freq     string `json:"freq"`
@@ -13,9 +11,7 @@ type FPVWarningData struct {
 type FPVQueryRequest struct {
 	BaseQueryRequest
 
-	Frequency *int               `form:"frequency" validate:"omitempty,min=0"` // 频点
-	StartTime *models.CustomTime `form:"start_time" validate:"omitempty"`      // 入侵时间起始 (时间戳/秒)
-	EndTime   *models.CustomTime `form:"end_time" validate:"omitempty"`        // 入侵时间结束 (时间戳/秒)
+	Frequency *int `form:"frequency" validate:"omitempty,min=0"` // 频点
 }
 
 // FPVSSERequest 进入和退出凝视模式请求
