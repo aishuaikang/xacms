@@ -3,6 +3,7 @@ package cache
 import (
 	"sync"
 	"uav_defender/internal/app/devices/conn"
+	detector_fsm "uav_defender/internal/app/devices/fms/detector"
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
 	parse_fsm "uav_defender/internal/app/devices/fms/parse"
 	"uav_defender/internal/models"
@@ -13,15 +14,17 @@ import (
 // DeviceInfo 设备信息
 type DeviceInfo struct {
 	models.Device
-	FPVFsm   *fpv_fsm.FPVFsm
-	ParseFsm *parse_fsm.ParseFsm
+	FPVFsm      *fpv_fsm.FPVFsm
+	ParseFsm    *parse_fsm.ParseFsm
+	DetectorFsm *detector_fsm.DetectorFsm
 }
 
 // DeviceDisplayInfo 设备展示信息
 type DeviceDisplayInfo struct {
 	models.Device
-	FPVState   fpv_fsm.FPVState     `json:"fpv_state"`   // FPV状态
-	ParseState parse_fsm.ParseState `json:"parse_state"` // 解析状态
+	FPVState      fpv_fsm.FPVState           `json:"fpv_state"`      // FPV状态
+	ParseState    parse_fsm.ParseState       `json:"parse_state"`    // 解析状态
+	DetectorState detector_fsm.DetectorState `json:"detector_state"` // 侦测状态
 }
 
 type DevicesCache interface {
@@ -68,21 +71,6 @@ func (c *devicesCache) GetDevices() []DeviceInfo {
 	c.devicesMutex.RLock()
 	defer c.devicesMutex.RUnlock()
 	return c.devices
-}
-
-// 获取用于展示的设备列表
-func (c *devicesCache) GetDisplayDevices() []DeviceDisplayInfo {
-	device := c.GetDevices()
-
-	displayDevices := make([]DeviceDisplayInfo, 0, len(device))
-	for _, device := range device {
-		displayDevices = append(displayDevices, DeviceDisplayInfo{
-			Device:     device.Device,
-			FPVState:   fpv_fsm.FPVState(device.FPVFsm.Current()),
-			ParseState: parse_fsm.ParseState(device.ParseFsm.Current()),
-		})
-	}
-	return displayDevices
 }
 
 // NotifyRefresh 触发设备列表刷新
@@ -141,6 +129,22 @@ func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool) {
 	return nil, false
 }
 
+// 获取用于展示的设备列表
+func (c *devicesCache) GetDisplayDevices() []DeviceDisplayInfo {
+	device := c.GetDevices()
+
+	displayDevices := make([]DeviceDisplayInfo, 0, len(device))
+	for _, device := range device {
+		displayDevices = append(displayDevices, DeviceDisplayInfo{
+			Device:        device.Device,
+			FPVState:      fpv_fsm.FPVState(device.FPVFsm.Current()),
+			ParseState:    parse_fsm.ParseState(device.ParseFsm.Current()),
+			DetectorState: detector_fsm.DetectorState(device.DetectorFsm.Current()),
+		})
+	}
+	return displayDevices
+}
+
 // RefreshDevices 刷新设备信息
 func (c *devicesCache) RefreshDevices() error {
 	devices, err := c.deviceService.GetAllDevices()
@@ -151,9 +155,10 @@ func (c *devicesCache) RefreshDevices() error {
 	var deviceInfos []DeviceInfo
 	for _, device := range devices {
 		deviceInfos = append(deviceInfos, DeviceInfo{
-			Device:   device,
-			FPVFsm:   fpv_fsm.NewFPVFsm(c.fpvConnection),
-			ParseFsm: parse_fsm.NewParseFsm(),
+			Device:      device,
+			FPVFsm:      fpv_fsm.NewFPVFsm(c.fpvConnection),
+			ParseFsm:    parse_fsm.NewParseFsm(),
+			DetectorFsm: detector_fsm.NewDetectorFsm(),
 		})
 	}
 

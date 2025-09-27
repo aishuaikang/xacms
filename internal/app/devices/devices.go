@@ -8,11 +8,12 @@ type Devices struct {
 	devices []Starter
 }
 
-func NewDevices(fpvDevice *FPVDevice, parseDevice *ParseDevice) *Devices {
+func NewDevices(fpvDevice *FPVDevice, parseDevice *ParseDevice, detectorDevice *DetectorDevice) *Devices {
 	return &Devices{
 		devices: []Starter{
 			fpvDevice,
 			parseDevice,
+			detectorDevice,
 		},
 	}
 }

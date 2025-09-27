@@ -16,8 +16,8 @@ type FPVQueryRequest struct {
 
 // FPVSSERequest 进入和退出凝视模式请求
 type FPVSSERequest struct {
-	DeviceID  string `form:"device_id" validate:"required"`       // 设备ID
-	Frequency int    `form:"frequency" validate:"required,min=1"` // 频点，不能为0
+	DeviceID  uint `form:"device_id,string" validate:"required"` // 设备ID
+	Frequency int  `form:"frequency" validate:"required,min=1"`  // 频点，不能为0
 }
 
 // AddFPVRequest 添加FPV请求

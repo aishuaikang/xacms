@@ -42,11 +42,11 @@ func NewGinServer(router *routes.Router, tasks *tasks.Tasks, devices *devices.De
 	// 注冊路由
 	server.router.RegisterRoutes(apiV1)
 
-	// 启动设备处理
-	server.devices.Start()
-
 	// 执行任务
 	server.tasks.Execute()
+
+	// 启动设备处理
+	server.devices.Start()
 
 	return server
 }

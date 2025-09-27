@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -239,6 +240,13 @@ func (r *RtspRecorder) Start(streamKey, filename string) error {
 
 	global.Logger.Info("使用RTSP地址", zap.String("rtspURL", rtspURL.Source))
 
+	// 验证RTSP地址是否可以正常拉流
+	if err := validateRtspStream(rtspURL.Source); err != nil {
+		return fmt.Errorf("RTSP流验证失败: %v", err)
+	}
+
+	global.Logger.Info("RTSP流验证通过，开始录制")
+
 	ffCmd := ffmpeg.Input(rtspURL.Source, ffmpeg.KwArgs{"rtsp_transport": "tcp"}).
 		Output(outputFile, outArgs).OverWriteOutput().Compile()
 	r.cmd = ffCmd
@@ -316,4 +324,40 @@ func GetVideosDir() string {
 		panic("创建 videos 目录失败: " + err.Error())
 	}
 	return videosDir
+}
+
+// validateRtspStream 验证RTSP流是否可以正常连接和拉流
+func validateRtspStream(rtspURL string) error {
+	global.Logger.Info("验证RTSP流", zap.String("url", rtspURL))
+
+	// 使用context控制超时
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 使用ffprobe验证流是否可访问，只读取前几帧来快速验证
+	cmd := exec.CommandContext(ctx, "ffprobe",
+		"-v", "quiet",
+		"-rtsp_transport", "tcp",
+		"-analyzeduration", "3000000", // 3秒分析时间
+		"-probesize", "1000000", // 1MB探测大小
+		"-show_entries", "stream=codec_type",
+		"-of", "csv=p=0",
+		rtspURL)
+
+	output, err := cmd.Output()
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("RTSP流验证超时: %s", rtspURL)
+		}
+		return fmt.Errorf("RTSP流不可访问: %v", err)
+	}
+
+	// 检查是否包含视频流
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "video") {
+		return fmt.Errorf("RTSP流中未发现视频轨道")
+	}
+
+	global.Logger.Info("RTSP流验证成功", zap.String("url", rtspURL))
+	return nil
 }

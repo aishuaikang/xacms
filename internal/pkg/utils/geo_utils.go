@@ -36,15 +36,39 @@ func Bearing(gps1, gps2 dto.GPS) float64 {
 	return bearing
 }
 
+// 定义有效坐标阈值
+const coordThreshold = 0.001
+
 // IsValidCoord 检查经纬度是否在有效范围内，并排除无效或全0坐标（WGS84）
 func IsValidCoord(longitude, latitude float64) bool {
-	if longitude == 0 && latitude == 0 {
+	if math.Abs(longitude) < coordThreshold && math.Abs(latitude) < coordThreshold {
 		return false
 	}
-	if longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90 {
+
+	if longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90 {
+		return true
+	} else {
+		return false
+
+	}
+}
+
+// IsValidCoordPtr 检查经纬度指针是否为nil，且值在有效范围内，并排除无效或全0坐标（WGS84）
+func IsValidCoordPtr(longitude, latitude *float64) bool {
+	if longitude == nil || latitude == nil {
 		return false
 	}
-	return true
+
+	if math.Abs(*longitude) < coordThreshold && math.Abs(*latitude) < coordThreshold {
+		return false
+	}
+
+	if *longitude >= -180 && *longitude <= 180 && *latitude >= -90 && *latitude <= 90 {
+		return true
+	} else {
+		return false
+
+	}
 
 }
 

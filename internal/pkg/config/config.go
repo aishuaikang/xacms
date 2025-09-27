@@ -28,12 +28,13 @@ type ServerConfig struct {
 }
 
 type Configuration struct {
-	TTL            int64  `yaml:"ttl"`
-	StreamMediaUrl string `yaml:"streamMediaUrl"`
-	FPVPort        int    `yaml:"fpvPort"`
-	GpsPort        int    `yaml:"gpsPort"`
-	ParsePort      int    `yaml:"parsePort"`
-	StrikePort     int    `yaml:"strikePort"`
+	TTL              int64   `yaml:"ttl"`
+	StreamMediaUrl   string  `yaml:"streamMediaUrl"`
+	FPVPort          int     `yaml:"fpvPort"`
+	GpsPort          int     `yaml:"gpsPort"`
+	ParsePort        int     `yaml:"parsePort"`
+	StrikePort       int     `yaml:"strikePort"`
+	SimilarThreshold float64 `yaml:"similarThreshold"`
 }
 
 type JWT struct {

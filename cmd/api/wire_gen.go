@@ -55,11 +55,13 @@ func wireServer(ctx context.Context, db *gorm.DB, validator *utils.ValidationMid
 	}
 	fpvWarningDataCache := cache.NewFPVWarningDataCache()
 	parseCache := cache.NewParseCache(droneTargetService)
+	detectorCache := cache.NewDetectorCache(droneTargetService)
 	sseRouter := &routes.SSERouter{
 		Ctx:                 ctx,
 		DevicesCache:        devicesCache,
 		FPVWarningDataCache: fpvWarningDataCache,
 		ParseCache:          parseCache,
+		DetectorCache:       detectorCache,
 	}
 	userPublicRouter := &routes.UserPublicRouter{
 		CommonService: commonService,
@@ -84,11 +86,14 @@ func wireServer(ctx context.Context, db *gorm.DB, validator *utils.ValidationMid
 	commonCache := cache.NewCommonCache()
 	parseTask := tasks.NewParseTask(ctx, commonCache, parseCache)
 	fpvTask := tasks.NewFPVTask(ctx, commonCache, fpvWarningDataCache)
-	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, parseTask, fpvTask)
+	detectorTask := tasks.NewDetectorTask(ctx, commonCache, detectorCache)
+	tasksTasks := tasks.NewTasks(decryptTokenTask, devicesTask, parseTask, fpvTask, detectorTask)
 	fpvDevice := devices.NewFPVDevice(ctx, fpvWarningDataCache, devicesCache, fpvConnection)
 	parseConnection := conn.NewParseConnection()
 	parseDevice := devices.NewParseDevice(ctx, decryptTokenCache, parseCache, devicesCache, parseConnection, whitelistService)
-	devicesDevices := devices.NewDevices(fpvDevice, parseDevice)
+	detectorConnection := conn.NewDetectorConnection()
+	detectorDevice := devices.NewDetectorDevice(ctx, devicesCache, detectorConnection, detectorCache)
+	devicesDevices := devices.NewDevices(fpvDevice, parseDevice, detectorDevice)
 	ginServer := app.NewGinServer(router, tasksTasks, devicesDevices)
 	return ginServer
 }

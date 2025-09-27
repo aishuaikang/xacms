@@ -24,7 +24,6 @@ type Conn interface {
 	CloseResponseChannel()
 	GetConn() net.Conn
 	GetResponseChannel() chan<- string
-	SendMessage(message string) error
 }
 
 // Conn 对于 conn 的抽象封装
@@ -92,12 +91,6 @@ func (f *conn) GetConn() net.Conn {
 // GetResponseChannel 返回响应通道
 func (f *conn) GetResponseChannel() chan<- string {
 	return f.response
-}
-
-// SendMessage 发送消息到 FPV 设备
-func (f *conn) SendMessage(message string) error {
-	_, err := f.conn.Write([]byte(message))
-	return err
 }
 
 type Connection struct {

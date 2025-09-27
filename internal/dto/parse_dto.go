@@ -12,13 +12,13 @@ type GPS struct {
 
 // LdResult 距离关系
 type LdResult struct {
-	Azimuth     float64 `json:"azimuth"`     // 方位角
-	Distance    float64 `json:"distance"`    // 距离
-	SensorId    uint    `json:"sensor_id"`   // 传感器ID
-	Orientation float64 `json:"orientation"` // 方向
-	DeviceLat   float64 `json:"device_lat"`  // 设备纬度
-	DeviceLon   float64 `json:"device_lon"`  // 设备经度
-	Height      float64 `json:"height"`      // 目标出现的高度
+	DetectionID     uint    `json:"detection_id"`
+	Azimuth         float64 `json:"azimuth"`          // 方位角
+	Orientation     float64 `json:"orientation"`      // 方向
+	Distance        float64 `json:"distance"`         // 距离
+	Height          float64 `json:"height"`           // 目标出现的高度
+	DeviceLongitude float64 `json:"device_longitude"` // 设备经度
+	DeviceLatitude  float64 `json:"device_latitude"`  // 设备纬度
 }
 
 type MType uint

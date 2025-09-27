@@ -111,9 +111,10 @@ func parseRIDFieldValue(key string, value string, parseData *dto.ParseData) {
 
 	switch key {
 	case "serial":
-		if len(value) > 4 {
-			parseData.Serial = value[4:]
-		}
+		// if len(value) > 4 {
+		// 	parseData.Serial = value[4:]
+		// }
+		parseData.Serial = value
 	case "model":
 		parseData.Model = value
 	case "drone_gps":
@@ -466,46 +467,7 @@ func decryptWithAPI(hexStr, token string) (*dto.ParseData, error) {
 	return parseData, nil
 }
 
-// MergeParseData 合并解析数据
-// func MergeParseData(oldData, newData dto.ParseData) (dto.ParseData, error) {
-// 	// 更新其他字段
-// 	oldData.DroneGPS = newData.DroneGPS
-// 	oldData.HomeGPS = newData.HomeGPS
-// 	oldData.PilotGPS = newData.PilotGPS
-// 	oldData.Height = newData.Height
-// 	oldData.Speed = newData.Speed
-// 	oldData.Altitude = newData.Altitude
-// 	oldData.EastV = newData.EastV
-// 	oldData.NorthV = newData.NorthV
-// 	oldData.UpV = newData.UpV
-// 	oldData.Freq = newData.Freq
-// 	oldData.RSSI = newData.RSSI
-// 	oldData.Distance = newData.Distance
-// 	oldData.Png = newData.Png
-// 	oldData.TrajectoryList = newData.TrajectoryList
-// 	oldData.InWhiteList = newData.InWhiteList
-
-// 	// 更新过期时间
-// 	oldData.Expires = models.CustomTime(time.Now())
-
-// 	if newData.Model != "" {
-// 		oldData.Model = newData.Model
-// 	}
-
-// 	if newData.DroneGPS.Longitude == 0 && newData.PilotGPS.Longitude != 0 {
-// 		oldData.DroneType = dto.DroneTypeRC
-// 	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude == 0 {
-// 		oldData.DroneType = dto.DroneTypeUAV
-// 	} else if newData.DroneGPS.Longitude != 0 && newData.PilotGPS.Longitude != 0 {
-// 		oldData.DroneType = dto.DroneTypeBoth
-// 	}
-
-// 	// // 1. 通过设备编号获取设备注册信息
-// 	// atoi, err := strconv.Atoi(oldData.Device) // 直接转换，不需要循环
-// 	// if err != nil {
-// 	// 	global.Logger.Infof("未找到定位设备")
-// 	// 	return err
-// 	// }
-
-// 	return oldData, nil
-// }
+// 判断是不是大疆
+func IsDJIDrone(model string) bool {
+	return strings.Contains(strings.ToLower(model), "dji")
+}

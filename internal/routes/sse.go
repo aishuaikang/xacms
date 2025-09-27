@@ -16,6 +16,7 @@ type SSERouter struct {
 	DevicesCache        cache.DevicesCache
 	FPVWarningDataCache cache.FPVWarningDataCache
 	ParseCache          cache.ParseCache
+	DetectorCache       cache.DetectorCache
 }
 
 // RegisterRoutes 注册SSE相关路由
@@ -24,6 +25,8 @@ func (s *SSERouter) RegisterRoutes(router *gin.RouterGroup) {
 	sseGroup.GET("/device", s.DeviceInfoListSSE)
 	sseGroup.GET("/fpv", s.FPVWarningDataListSSE)
 	sseGroup.GET("/parse", s.ParseDataListSSE)
+	sseGroup.GET("/detector", s.DetectorDataListSSE)
+
 }
 
 // DeviceInfoListSSE 使用 SSE 实时获取设备信息
@@ -125,4 +128,35 @@ func (h *SSERouter) ParseDataListSSE(c *gin.Context) {
 		}
 	}
 
+}
+
+// DetectorDataListSSE 使用 SSE 实时获取 Detector 数据
+func (h *SSERouter) DetectorDataListSSE(c *gin.Context) {
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("Transfer-Encoding", "chunked")
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		// 客户端断开链接后退出
+		select {
+		case <-h.Ctx.Done():
+			global.Logger.Info("服务器关闭，停止发送SSE")
+			return
+		case <-c.Request.Context().Done():
+			global.Logger.Info("客户端断开连接，停止发送SSE")
+			return
+		case <-ticker.C:
+			detectorDataList := h.DetectorCache.GetDetectorDataList()
+			data, err := sonic.Marshal(detectorDataList)
+			if err != nil {
+				fmt.Fprintf(c.Writer, "data: {\"error\":\"marshal failed\"}\n\n")
+			} else {
+				fmt.Fprintf(c.Writer, "data: %s\n\n", data)
+			}
+			c.Writer.Flush()
+		}
+	}
 }

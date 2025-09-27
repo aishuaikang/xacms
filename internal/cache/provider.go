@@ -8,4 +8,5 @@ var CacheSet = wire.NewSet(
 	NewFPVWarningDataCache,
 	NewParseCache,
 	NewCommonCache,
+	NewDetectorCache,
 )

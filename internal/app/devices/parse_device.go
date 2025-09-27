@@ -118,79 +118,12 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 			// 提取完整的行
 			fullLine := bytes.TrimSpace(buffer.Next(index + 2)) // 包括 \r\n
 
-			var parseData dto.ParseData
-			parseData.DeviceID = device.ID
-
-			// isHasSerial := false
-
-			if utils.IsRID(fullLine) {
-				utils.ParseRID(fullLine, &parseData)
-
-				parseData.ParseID = device.ParseID
-
-				parseData.Sign = dto.SignTypeO3Plus
-
-				// isHasSerial = true
-			} else if utils.IsEncryption(fullLine) {
-				decryptToken := s.decryptTokenCache.GetDecryptToken()
-				if err := utils.ParseEncryption(fullLine, &parseData, decryptToken); err != nil {
-					global.Logger.Warn("解析加密报文失败，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine), zap.Error(err))
-					continue
-				}
-
-				parseData.Sign = dto.SignTypeO2O3
-
-			} else if utils.IsDID(fullLine) {
-				utils.ParseDID(fullLine, &parseData)
-				parseData.Sign = dto.SignTypeO2O3
-			}
-
-			// 这里进行报文内容校验，确保数据 hasSerial 是否存在Serial字段
-			// if !isHasSerial {
-			// 	global.Logger.Warn("报文内容无效，缺少 Serial 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
-			// 	continue
-			// }
-
-			if parseData.Model == "" {
-				global.Logger.Warn("报文内容无效，缺少 Model 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
-				continue
-			}
-
-			// gps 与解析出来的提供的都是 wgs84
-			// 验证了这条告警是不是完整的
-			if parseData.Serial == "" {
-				global.Logger.Warn("报文内容无效，缺少 Serial 字段，忽略该报文", zap.String("module", module), zap.String("address", addr), zap.ByteString("data", fullLine))
-				continue
-			}
-
-			// 目标ID
-			parseData.TargetId = parseData.Serial
-
-			// 解析无人机类型
-			utils.ParseDroneType(&parseData)
-
-			now := models.CustomTime(time.Now())
-			// 更新过期时间
-			parseData.Expires = now
-
-			// 记录入侵时间
-			parseData.IntrusionTime = now
-
-			// 去白名单查询是否在白名单内
-			parseData.HasInWhiteList, err = s.whitelistService.IsSerialWhitelisted(parseData.Serial)
+			parseData, err := s.parseParseData(fullLine, device)
 			if err != nil {
-				global.Logger.Error("查询白名单失败", zap.String("module", module), zap.String("address", addr), zap.String("serial", parseData.Serial), zap.Error(err))
+				global.Logger.Warn("解析数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
+				continue
 			}
-
-			// 判断飞手经纬度是否有效
-			if utils.IsValidCoord(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude) {
-				parseData.Png, err = utils.GenerateQRCodeBase64(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
-				if err != nil {
-					global.Logger.Error("生成飞手位置二维码失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
-				}
-			}
-
-			s.updateParseDataList(parseData, device)
+			s.updateParseDataList(*parseData, device)
 		}
 	}
 }
@@ -247,14 +180,6 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 		parseData.Model = newParseData.Model
 		parseData.DroneType = newParseData.DroneType
 
-		// if newParseData.DroneGPS.Longitude == 0 && newParseData.PilotGPS.Longitude != 0 {
-		// 	parseData.DroneType = dto.DroneTypeRC
-		// } else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude == 0 {
-		// 	parseData.DroneType = dto.DroneTypeUAV
-		// } else if newParseData.DroneGPS.Longitude != 0 && newParseData.PilotGPS.Longitude != 0 {
-		// 	parseData.DroneType = dto.DroneTypeBoth
-		// }
-
 		isValidDroneGPS := utils.IsValidCoord(parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude)
 
 		if isValidDroneGPS {
@@ -276,46 +201,6 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 
 		}
 
-		isValidDeviceGPS := device.Longitude != nil && device.Latitude != nil && utils.IsValidCoord(*device.Longitude, *device.Latitude)
-
-		// 判断设备是否配置了经纬度并且设备经纬度和无人机经纬度是否有效
-		if isValidDeviceGPS && isValidDroneGPS {
-			targetGPS := dto.GPS{
-				Latitude:  *device.Latitude,
-				Longitude: *device.Longitude,
-			}
-
-			// 计算距离
-			distance := utils.Distance(targetGPS, parseData.DroneGPS)
-
-			// 计算方位角
-			bearing := utils.Bearing(targetGPS, parseData.DroneGPS)
-
-			// 4. 更新 LdResult（无需方位角）
-			parseData.LdResult = dto.LdResult{
-				Azimuth:     bearing, // 明确标注未计算方位角
-				Distance:    distance,
-				SensorId:    device.DetectionID,
-				Orientation: bearing,
-				DeviceLon:   targetGPS.Longitude,
-				DeviceLat:   targetGPS.Latitude,
-				Height:      parseData.Height,
-			}
-
-		} else {
-			// 设备未配置经纬度或设备和无人机经纬度无效，LdResult 字段置为默认值
-			global.Logger.Warn("设备或无人机经纬度无效，无法计算距离和方位角", zap.Uint("device_id", device.DetectionID), zap.String("device_model", device.Name), zap.Float64("device_longitude", *device.Longitude), zap.Float64("device_latitude", *device.Latitude), zap.Float64("drone_longitude", parseData.DroneGPS.Longitude), zap.Float64("drone_latitude", parseData.DroneGPS.Latitude))
-			parseData.LdResult = dto.LdResult{
-				Azimuth:     500, // 明确标注未计算方位角
-				Distance:    0,
-				SensorId:    device.DetectionID,
-				Orientation: 500,
-				DeviceLat:   0,
-				DeviceLon:   0,
-				Height:      0,
-			}
-		}
-
 		// 更新已有的定位数据
 		s.parseCache.UpdateParseDataAtIndex(parseDataIndex, parseData)
 	} else {
@@ -328,4 +213,123 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 	if parseDataListLength > 1 && newParseData.Model != "DJI-Drone" {
 		s.parseCache.SortParseDataListByExpires()
 	}
+}
+
+// parseParseData
+func (s *ParseDevice) parseParseData(message []byte, device *cache.DeviceInfo) (*dto.ParseData, error) {
+
+	var parseData dto.ParseData
+	parseData.DeviceID = device.ID
+
+	if utils.IsRID(message) {
+		utils.ParseRID(message, &parseData)
+
+		parseData.ParseID = device.ParseID
+
+		parseData.Sign = dto.SignTypeO3Plus
+	} else if utils.IsEncryption(message) {
+		decryptToken := s.decryptTokenCache.GetDecryptToken()
+		if err := utils.ParseEncryption(message, &parseData, decryptToken); err != nil {
+			global.Logger.Error("解析加密报文失败", zap.Error(err))
+			return nil, err
+		}
+
+		parseData.Sign = dto.SignTypeO2O3
+
+	} else if utils.IsDID(message) {
+		utils.ParseDID(message, &parseData)
+		parseData.Sign = dto.SignTypeO2O3
+	}
+
+	if parseData.Model == "" || parseData.Serial == "" {
+		return nil, fmt.Errorf("报文内容无效，缺少 Model 或 Serial 字段")
+	}
+
+	if parseData.Sign == 1 {
+		// serial 增加前缀 1581
+		if !strings.HasPrefix(parseData.Serial, "1581") {
+			parseData.Serial = "1581" + parseData.Serial
+			parseData.TargetId = parseData.Serial
+		}
+
+		// model中没有dji字符串，在model的最前面加上DJI和一个空格
+		if !utils.IsDJIDrone(parseData.Model) {
+			parseData.Model = "DJI " + parseData.Model
+		}
+	}
+
+	// 目标ID
+	parseData.TargetId = parseData.Serial
+
+	// 解析无人机类型
+	utils.ParseDroneType(&parseData)
+
+	now := models.CustomTime(time.Now())
+	// 更新过期时间
+	parseData.Expires = now
+
+	// 记录入侵时间
+	parseData.IntrusionTime = now
+
+	// 去白名单查询是否在白名单内
+	hasInWhiteList, err := s.whitelistService.IsSerialWhitelisted(parseData.Serial)
+	if err != nil {
+		global.Logger.Error("查询白名单失败", zap.String("serial", parseData.Serial), zap.Error(err))
+	}
+
+	parseData.HasInWhiteList = hasInWhiteList
+
+	isValidPilotGPS := utils.IsValidCoord(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
+
+	// 判断飞手经纬度是否有效
+	if isValidPilotGPS {
+		parseData.Png, err = utils.GenerateQRCodeBase64(parseData.PilotGPS.Longitude, parseData.PilotGPS.Latitude)
+		if err != nil {
+			global.Logger.Error("生成飞手位置二维码失败", zap.String("serial", parseData.Serial), zap.Error(err))
+		}
+	}
+
+	isValidDeviceGPS := utils.IsValidCoordPtr(device.Longitude, device.Latitude)
+
+	isValidDroneGPS := utils.IsValidCoord(parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude)
+
+	// 判断设备是否配置了经纬度并且设备经纬度和无人机经纬度是否有效
+	if isValidDeviceGPS && isValidDroneGPS {
+		targetGPS := dto.GPS{
+			Latitude:  *device.Latitude,
+			Longitude: *device.Longitude,
+		}
+
+		// 计算距离
+		distance := utils.Distance(targetGPS, parseData.DroneGPS)
+
+		// 计算方位角
+		bearing := utils.Bearing(targetGPS, parseData.DroneGPS)
+
+		// 4. 更新 LdResult（无需方位角）
+		parseData.LdResult = dto.LdResult{
+			Azimuth:         bearing, // 明确标注未计算方位角
+			Distance:        distance,
+			DetectionID:     device.DetectionID,
+			Orientation:     bearing,
+			DeviceLongitude: targetGPS.Longitude,
+			DeviceLatitude:  targetGPS.Latitude,
+			Height:          parseData.Height,
+		}
+
+	} else {
+		// 设备未配置经纬度或设备和无人机经纬度无效，LdResult 字段置为默认值
+		global.Logger.Warn("设备或无人机经纬度无效，无法计算距离和方位角", zap.Uint("device_id", device.DetectionID), zap.String("device_model", device.Name), zap.Float64("device_longitude", *device.Longitude), zap.Float64("device_latitude", *device.Latitude), zap.Float64("drone_longitude", parseData.DroneGPS.Longitude), zap.Float64("drone_latitude", parseData.DroneGPS.Latitude))
+		parseData.LdResult = dto.LdResult{
+			Azimuth:         500, // 明确标注未计算方位角
+			Distance:        0,
+			DetectionID:     device.DetectionID,
+			Orientation:     500,
+			DeviceLongitude: 0,
+			DeviceLatitude:  0,
+			Height:          0,
+		}
+	}
+
+	return &parseData, nil
 }

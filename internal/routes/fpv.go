@@ -3,7 +3,6 @@ package routes
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 	"uav_defender/internal/app/devices/conn"
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
@@ -71,15 +70,15 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		return
 	}
 
-	// 验证 ID 格式
-	deviceID, err := strconv.ParseUint(req.DeviceID, 10, 64)
-	if err != nil {
-		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备ID格式无效")
-		c.Writer.Flush()
-		return
-	}
+	// // 验证 ID 格式
+	// deviceID, err := strconv.ParseUint(req.DeviceID, 10, 64)
+	// if err != nil {
+	// 	fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备ID格式无效")
+	// 	c.Writer.Flush()
+	// 	return
+	// }
 
-	device, exists := h.DevicesCache.GetDeviceByID(uint(deviceID))
+	device, exists := h.DevicesCache.GetDeviceByID(uint(req.DeviceID))
 	if !exists {
 		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备不存在")
 		c.Writer.Flush()
@@ -88,7 +87,7 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 
 	filename := fmt.Sprintf("%d_%d.mp4", req.Frequency, time.Now().Unix())
 
-	if err := device.FPVFsm.Event(c, string(fpv_fsm.EventToGazing), req.DeviceID, req.Frequency, filename); err != nil {
+	if err := device.FPVFsm.Event(c, string(fpv_fsm.EventToGazing), uint(req.DeviceID), req.Frequency, filename); err != nil {
 		global.Logger.Error("进入凝视模式失败", zap.Error(err))
 		fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", fmt.Sprintf("进入凝视模式失败: %v", err))
 		c.Writer.Flush()
@@ -105,22 +104,22 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		}
 
 		global.Logger.Info("设备退出凝视模式，进入扫频模式",
-			zap.String("device_id", req.DeviceID),
+			zap.Uint("device_id", req.DeviceID),
 			zap.Int("freq", req.Frequency),
 			zap.String("filename", filename),
 		)
 
-		// 验证 ID 格式
-		deviceID, err := strconv.ParseUint(req.DeviceID, 10, 64)
-		if err != nil {
-			fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备ID格式无效")
-			c.Writer.Flush()
-			return
-		}
+		// // 验证 ID 格式
+		// deviceID, err := strconv.ParseUint(req.DeviceID, 10, 64)
+		// if err != nil {
+		// 	fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", "设备ID格式无效")
+		// 	c.Writer.Flush()
+		// 	return
+		// }
 
 		// 保存FPV记录到数据库
 		addReq := dto.AddFPVRequest{
-			DeviceID:  uint(deviceID),
+			DeviceID:  req.DeviceID,
 			Frequency: req.Frequency,
 			Filename:  filename,
 		}
@@ -131,17 +130,17 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 			return
 		}
 		global.Logger.Info("保存FPV记录成功",
-			zap.String("device_id", req.DeviceID),
+			zap.Uint("device_id", req.DeviceID),
 			zap.Int("freq", req.Frequency),
 			zap.String("filename", filename),
 		)
 	}()
 
-	global.Logger.Info("设备进入凝视模式", zap.String("device_id", req.DeviceID), zap.Int("freq", req.Frequency), zap.String("filename", filename))
+	global.Logger.Info("设备进入凝视模式", zap.Uint("device_id", req.DeviceID), zap.Int("freq", req.Frequency), zap.String("filename", filename))
 
 	// 成功连接后，立即发送一次数据
 
-	streamKey := fmt.Sprintf("stream_%s", req.DeviceID)
+	streamKey := fmt.Sprintf("stream_%d", req.DeviceID)
 	url := fmt.Sprintf("%s/%s", config.AppConfig.Configuration.StreamMediaUrl, streamKey)
 
 	fmt.Fprintf(c.Writer, "data: %s\n\n", url)
@@ -157,7 +156,7 @@ func (h *FPVRouter) SSE(c *gin.Context) {
 		case <-c.Request.Context().Done():
 			return
 		case <-ticker.C:
-			global.Logger.Info("发送心跳", zap.String("device_id", req.DeviceID))
+			global.Logger.Info("发送心跳", zap.Uint("device_id", req.DeviceID))
 			fmt.Fprintf(c.Writer, "data: %s\n\n", url)
 			c.Writer.Flush()
 		}
