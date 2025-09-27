@@ -26,8 +26,7 @@ func NewDecryptTokenTask(ctx context.Context, decryptTokenCache cache.DecryptTok
 func (t *DecryptTokenTask) Execute() {
 	token, err := utils.RefreshDecryptToken()
 	if err != nil {
-		// log.Errorf("获取解密Token失败: %v", err)
-		global.Logger.Error("获取解密Token失败", zap.Error(err))
+		global.Logger.Error("首次获取解密Token失败", zap.Error(err))
 	} else {
 		t.decryptTokenCache.SetDecryptToken(token)
 	}
@@ -38,8 +37,6 @@ func (t *DecryptTokenTask) Execute() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				// log.Debug("DecryptTokenTask 上下文已取消，正在退出 goroutine")
-				global.Logger.Debug("DecryptTokenTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-ticker.C:
 				token, err := utils.RefreshDecryptToken()

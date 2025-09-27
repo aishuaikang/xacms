@@ -7,6 +7,7 @@ var TaskSet = wire.NewSet(
 	NewDevicesTask,
 	NewParseTask,
 	NewDetectorTask,
+	NewParseSyncDetectorTask,
 	NewFPVTask,
 	NewTasks,
 )

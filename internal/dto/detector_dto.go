@@ -6,15 +6,14 @@ type DetectorData struct {
 	DeviceID    uint              `json:"device_id"` // 设备ID
 	DetectionID uint              `json:"detection_id"`
 	Model       string            `json:"model"` // 设备型号
-	Freq        float64           `json:"freq"`  // 最新频率
-	RSSI        float64           `json:"rssi"`  // 最新信号强度
 	UAV         string            `json:"drone_model"`
+	Freq        float64           `json:"freq"` // 最新频率
+	RSSI        float64           `json:"rssi"` // 最新信号强度
+	Seq         int64             `json:"seq"`
+	Gpio        int64             `json:"gpio"`
 	LastTime    models.CustomTime `json:"expires"` // 过期时间戳（UnixNano）
-	// MType   uint    `json:"m_type"`  // 1 -zk ,2-上海
-	ID    string  `json:"id"`
-	Seq   int64   `json:"seq"`
-	Gpio  int64   `json:"gpio"`
-	GpioS []int64 `json:"gpio_s"`
+	ID          string            `json:"id"`
+	GpioS       []int64           `json:"gpio_s"`
 	// 方向角
 	Orientation   float64 `json:"orientation"`
 	OrientationTS int64   `json:"orientation_ts"`

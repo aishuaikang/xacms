@@ -34,15 +34,17 @@ type DetectorDevice struct {
 	connectionCh       chan struct{} // 用于通知连接
 	detectorConnection *conn.DetectorConnection
 	detectorCache      cache.DetectorCache
+	parseCache         cache.ParseCache
 }
 
-func NewDetectorDevice(ctx context.Context, devicesCache cache.DevicesCache, detectorConnection *conn.DetectorConnection, detectorCache cache.DetectorCache) *DetectorDevice {
+func NewDetectorDevice(ctx context.Context, devicesCache cache.DevicesCache, detectorConnection *conn.DetectorConnection, detectorCache cache.DetectorCache, parseCache cache.ParseCache) *DetectorDevice {
 	return &DetectorDevice{
 		ctx:                ctx,
 		devicesCache:       devicesCache,
 		connectionCh:       make(chan struct{}),
 		detectorConnection: detectorConnection,
 		detectorCache:      detectorCache,
+		parseCache:         parseCache,
 	}
 }
 
@@ -363,13 +365,24 @@ func (dd *DetectorDevice) handleDeviceReportData(handlerChan chan Packet, device
 			continue
 		}
 
-		detectorData, err := dd.ParseDetectorData(packet.Message)
+		detectorData, err := dd.ParseDetectorData(packet.Message, device)
 		if err != nil {
 			global.Logger.Warn("解析侦测器数据失败",
 				zap.Uint("deviceID", packet.Conn.GetDeviceID()),
 				zap.String("data", string(packet.Message)),
 				zap.Error(err))
 			continue
+		}
+
+		// 判断当前报文是不是大疆无人机
+		if utils.IsDJIDrone(detectorData.Model) {
+			if dd.parseCache.HasDIDData() {
+				global.Logger.Debug("当前报文为大疆无人机，且已存在DID数据，跳过本次报文处理",
+					zap.Uint("deviceID", packet.Conn.GetDeviceID()),
+					zap.String("data", string(packet.Message)),
+					zap.Any("parsedData", detectorData))
+				continue
+			}
 		}
 
 		global.Logger.Debug("解析侦测器数据成功",
@@ -386,13 +399,15 @@ func (dd *DetectorDevice) handleDeviceReportData(handlerChan chan Packet, device
 	}
 }
 
-func (dd *DetectorDevice) ParseDetectorData(data []byte) (*dto.DetectorData, error) {
+func (dd *DetectorDevice) ParseDetectorData(data []byte, device *cache.DeviceInfo) (*dto.DetectorData, error) {
 	if !utils.IsValidDetectorData(data) {
 		global.Logger.Warn("无效的侦测器数据", zap.String("data", string(data)))
 		return nil, fmt.Errorf("无效的侦测器数据")
 	}
 
 	detectorData := &dto.DetectorData{}
+
+	detectorData.DeviceID = device.ID
 
 	// 预分配map提高性能
 	fieldMap := make(map[string][]byte, 8)
@@ -408,7 +423,7 @@ func (dd *DetectorDevice) ParseDetectorData(data []byte) (*dto.DetectorData, err
 		fieldMap[key] = value
 	}
 
-	// 批量处理字段
+	// DetectionID
 	if device, ok := fieldMap["device"]; ok {
 		id, err := strconv.ParseUint(string(device), 10, 32)
 		if err != nil {
@@ -417,6 +432,7 @@ func (dd *DetectorDevice) ParseDetectorData(data []byte) (*dto.DetectorData, err
 		detectorData.DetectionID = uint(id)
 	}
 
+	// Model 和 UAV
 	if model, ok := fieldMap["model"]; ok {
 		detectorData.Model = string(model)
 		// 根据model字段映射无人机型号
@@ -427,24 +443,28 @@ func (dd *DetectorDevice) ParseDetectorData(data []byte) (*dto.DetectorData, err
 		}
 	}
 
+	// Freq
 	if freq, ok := fieldMap["freq"]; ok {
 		if f, err := strconv.ParseFloat(string(freq), 64); err == nil {
 			detectorData.Freq = f
 		}
 	}
 
+	// RSSI
 	if rssi, ok := fieldMap["rssi"]; ok {
 		if f, err := strconv.ParseFloat(string(rssi), 64); err == nil {
 			detectorData.RSSI = f
 		}
 	}
 
+	// Seq
 	if seq, ok := fieldMap["seq"]; ok {
 		if s, err := strconv.ParseInt(string(seq), 10, 64); err == nil {
 			detectorData.Seq = s
 		}
 	}
 
+	// Gpio
 	if gpio, ok := fieldMap["gpio"]; ok {
 		if g, err := strconv.ParseInt(string(gpio), 10, 64); err == nil {
 			detectorData.Gpio = g
@@ -453,8 +473,13 @@ func (dd *DetectorDevice) ParseDetectorData(data []byte) (*dto.DetectorData, err
 
 	detectorData.LastTime = models.CustomTime(time.Now())
 	detectorData.ID = utils.GenerateRandomID(8)
+	// detectorData.GpioS = []int64{}
 	detectorData.Orientation = 500
+	// detectorData.OrientationTS = ??
+	// detectorData.TS = ??
+	detectorData.IsCracked = false
 	detectorData.FirstSeen = models.CustomTime(time.Now()) // 入库时入侵时间要用
+	// detectorData.GpiosData = [8]dto.GpioData{}
 
 	return detectorData, nil
 }

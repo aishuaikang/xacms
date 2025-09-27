@@ -20,6 +20,8 @@ type DetectorCache interface {
 	AddDetectorData(data dto.DetectorData) error
 	UpdateDetectorDataList(newData dto.DetectorData) error
 	CleanupExpiredDetectorData(ttl int64)
+	GetNonDJIUncrackedData() []dto.DetectorData
+	SetDetectorDataList(dataList []dto.DetectorData)
 }
 
 type detectorCache struct {
@@ -133,4 +135,24 @@ func (c *detectorCache) CleanupExpiredDetectorData(ttl int64) {
 		return
 	}
 	global.Logger.Info("入库过期侦测器数据", zap.Int("入库前数量", len(validData)+len(invalidData)), zap.Int("入库后数量", len(validData)), zap.Int("清理数量", len(invalidData)))
+}
+
+// GetNonDJIUncrackedData 获取所有非大疆且未破解的侦测器数据
+func (c *detectorCache) GetNonDJIUncrackedData() []dto.DetectorData {
+	c.detectorDataListMutex.RLock()
+	defer c.detectorDataListMutex.RUnlock()
+	nonDJIUncrackedData := make([]dto.DetectorData, 0)
+	for _, data := range c.detectorDataList {
+		if !utils.IsDJIDrone(data.Model) && !data.IsCracked {
+			nonDJIUncrackedData = append(nonDJIUncrackedData, data)
+		}
+	}
+	return nonDJIUncrackedData
+}
+
+// SetDetectorDataList 设置侦测器数据列表
+func (c *detectorCache) SetDetectorDataList(dataList []dto.DetectorData) {
+	c.detectorDataListMutex.Lock()
+	defer c.detectorDataListMutex.Unlock()
+	c.detectorDataList = dataList
 }

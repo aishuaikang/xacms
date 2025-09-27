@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 	"uav_defender/internal/cache"
-	"uav_defender/internal/pkg/global"
 )
 
 type FPVTask struct {
@@ -28,7 +27,6 @@ func (t *FPVTask) Execute() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				global.Logger.Info("FPVTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-ticker.C:
 

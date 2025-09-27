@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 	"uav_defender/internal/cache"
-	"uav_defender/internal/pkg/global"
 )
 
 type DetectorTask struct {
@@ -28,7 +27,6 @@ func (t *DetectorTask) Execute() {
 		for {
 			select {
 			case <-t.ctx.Done():
-				global.Logger.Info("ParseTask 上下文已取消，正在退出 goroutine")
 				return
 			case <-ticker.C:
 

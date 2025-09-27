@@ -6,6 +6,7 @@ import (
 	"time"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/pkg/global"
+	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/services"
 
 	"go.uber.org/zap"
@@ -19,6 +20,8 @@ type ParseCache interface {
 	SortParseDataListByExpires()
 	GetParseDataListLength() int
 	CleanupExpiredParseData(ttl int64)
+	HasDIDData() bool
+	GetAllDIDDataAsDetectorData() []dto.DetectorData
 }
 
 type parseCache struct {
@@ -109,4 +112,54 @@ func (c *parseCache) CleanupExpiredParseData(ttl int64) {
 		return
 	}
 	global.Logger.Info("入库过期解析数据", zap.Int("入库前数量", len(validData)+len(invalidData)), zap.Int("入库后数量", len(validData)), zap.Int("清理数量", len(invalidData)))
+}
+
+// HasDIDData 检查是否存在DID数据
+func (c *parseCache) HasDIDData() bool {
+	c.parseDataListMutex.RLock()
+	defer c.parseDataListMutex.RUnlock()
+
+	for _, data := range c.parseDataList {
+		if data.Sign == 1 {
+			return true
+		}
+	}
+	return false
+}
+
+// GetAllDIDDataAsDetectorData 获取所有DID数据并转换为DetectorData格式
+func (c *parseCache) GetAllDIDDataAsDetectorData() []dto.DetectorData {
+	c.parseDataListMutex.RLock()
+	defer c.parseDataListMutex.RUnlock()
+
+	var didData []dto.DetectorData
+	for _, data := range c.parseDataList {
+		if data.Sign == 1 {
+			droneModel, exists := utils.GetDroneModelByModelSource(data.Model)
+			if !exists {
+				droneModel = data.Model
+			}
+			didData = append(didData, dto.DetectorData{
+				DeviceID:    data.DeviceID,
+				DetectionID: data.LdResult.DetectionID,
+				Model:       data.Model,
+				UAV:         droneModel,
+				Freq:        data.Freq,
+				RSSI:        data.RSSI,
+				Seq:         0,
+				Gpio:        0,
+				LastTime:    data.Expires,
+				ID:          data.Serial,
+				GpioS:       []int64{},
+				Orientation: data.LdResult.Azimuth,
+				// OrientationTS: time.Now().Unix(),
+				// TS: 	  time.Now().Unix(),
+				IsCracked: true,
+				FirstSeen: data.IntrusionTime,
+				// StartTime: time.Now().Unix(),
+				GpiosData: [8]dto.GpioData{},
+			})
+		}
+	}
+	return didData
 }
