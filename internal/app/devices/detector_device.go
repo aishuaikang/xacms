@@ -13,6 +13,7 @@ import (
 	"uav_defender/internal/cache"
 	"uav_defender/internal/dto"
 	"uav_defender/internal/models"
+	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
@@ -29,22 +30,20 @@ const (
 )
 
 type DetectorDevice struct {
-	ctx                context.Context
-	devicesCache       cache.DevicesCache
-	connectionCh       chan struct{} // 用于通知连接
-	detectorConnection *conn.DetectorConnection
-	detectorCache      cache.DetectorCache
-	parseCache         cache.ParseCache
+	ctx           context.Context
+	devicesCache  cache.DevicesCache
+	connectionCh  chan struct{} // 用于通知连接
+	detectorCache cache.DetectorCache
+	parseCache    cache.ParseCache
 }
 
-func NewDetectorDevice(ctx context.Context, devicesCache cache.DevicesCache, detectorConnection *conn.DetectorConnection, detectorCache cache.DetectorCache, parseCache cache.ParseCache) *DetectorDevice {
+func NewDetectorDevice(ctx context.Context, devicesCache cache.DevicesCache, detectorCache cache.DetectorCache, parseCache cache.ParseCache) *DetectorDevice {
 	return &DetectorDevice{
-		ctx:                ctx,
-		devicesCache:       devicesCache,
-		connectionCh:       make(chan struct{}),
-		detectorConnection: detectorConnection,
-		detectorCache:      detectorCache,
-		parseCache:         parseCache,
+		ctx:           ctx,
+		devicesCache:  devicesCache,
+		connectionCh:  make(chan struct{}),
+		detectorCache: detectorCache,
+		parseCache:    parseCache,
 	}
 }
 
@@ -117,22 +116,19 @@ func (dd *DetectorDevice) checkSingleDeviceHeartbeat(device *cache.DeviceInfo, c
 	}
 
 	elapsedTime := currentTime - lastHeartbeat
-	isOffline := device.DetectorFsm.Is(string(detector_fsm.StateOffline))
 
 	if elapsedTime > deviceHeartbeatTimeout {
-		dd.handleDeviceOffline(device, elapsedTime, isOffline)
+		dd.handleDeviceOffline(device, elapsedTime)
 	} else {
-		dd.handleDeviceOnline(device, isOffline)
+		dd.handleDeviceOnline(device)
 	}
 }
 
 // handleDeviceOffline 处理设备离线逻辑
-func (dd *DetectorDevice) handleDeviceOffline(device *cache.DeviceInfo, elapsedTime int64, isOffline bool) {
-	// 如果已经是离线状态，无需重复处理
-	if isOffline {
+func (dd *DetectorDevice) handleDeviceOffline(device *cache.DeviceInfo, elapsedTime int64) {
+	if device.DetectorFsm.Is(string(detector_fsm.StateOffline)) {
 		return
 	}
-
 	// 切换到离线状态
 	if err := device.DetectorFsm.Event(dd.ctx, string(detector_fsm.EventToOffline)); err != nil {
 		global.Logger.Error("侦测器设备状态机切换到离线状态失败",
@@ -147,22 +143,20 @@ func (dd *DetectorDevice) handleDeviceOffline(device *cache.DeviceInfo, elapsedT
 }
 
 // handleDeviceOnline 处理设备在线逻辑
-func (dd *DetectorDevice) handleDeviceOnline(device *cache.DeviceInfo, isOffline bool) {
-	// 如果不是离线状态，无需处理
-	if !isOffline {
-		return
+func (dd *DetectorDevice) handleDeviceOnline(device *cache.DeviceInfo) {
+	if device.DetectorFsm.Is(string(detector_fsm.StateOffline)) {
+		// 切换到全向侦测状态
+		if err := device.DetectorFsm.Event(dd.ctx, string(detector_fsm.EventToOmni)); err != nil {
+			global.Logger.Error("侦测器设备状态机切换到全向侦测状态失败",
+				zap.Uint("deviceID", device.ID),
+				zap.Error(err))
+			return
+		}
+
+		global.Logger.Info("侦测器设备心跳恢复，已切换至全向侦测状态",
+			zap.Uint("deviceID", device.ID))
 	}
 
-	// 切换到全向侦测状态
-	if err := device.DetectorFsm.Event(dd.ctx, string(detector_fsm.EventToOmni)); err != nil {
-		global.Logger.Error("侦测器设备状态机切换到全向侦测状态失败",
-			zap.Uint("deviceID", device.ID),
-			zap.Error(err))
-		return
-	}
-
-	global.Logger.Info("侦测器设备心跳恢复，已切换至全向侦测状态",
-		zap.Uint("deviceID", device.ID))
 }
 
 // connectAllDevices 连接所有未连接的设备
@@ -182,7 +176,7 @@ func (dd *DetectorDevice) connectAllDevices(reason string) {
 
 	for _, device := range devices {
 		// 跳过已连接的设备
-		if dd.detectorConnection.CheckDeviceConnected(device.ID) {
+		if conn.DetectorConnPool.CheckDeviceConnected(device.ID) {
 			connectedCount++
 			continue
 		}
@@ -245,16 +239,16 @@ func (dd *DetectorDevice) ConnectToDetector(device *cache.DeviceInfo, detectionI
 	detectorConn := conn.NewConn(device.ID, c)
 
 	// 添加到连接池
-	dd.detectorConnection.AddConnection(detectorConn)
+	conn.DetectorConnPool.AddConnection(detectorConn)
 
 	// 启动读取协程
 	go dd.handleConnection(detectorConn, device)
 
 	// 发送start命令
-	dd.detectorConnection.SendCommandToDevice(device.ID, "start")
+	conn.DetectorConnPool.SendCommandToDevice(device.ID, "start")
 
 	// 等待设备响应
-	if _, err = dd.detectorConnection.WaitResponseFromDevice(device.ID); err != nil {
+	if _, err = conn.DetectorConnPool.WaitResponseFromDevice(device.ID); err != nil {
 		return fmt.Errorf("等待设备响应失败: %w", err)
 	}
 
@@ -271,17 +265,24 @@ type Packet struct {
 }
 
 // handleConnection 处理连接，读取数据
-func (dd *DetectorDevice) handleConnection(conn conn.Conn, device *cache.DeviceInfo) {
+func (dd *DetectorDevice) handleConnection(c conn.Conn, device *cache.DeviceInfo) {
 	defer func() {
-		dd.detectorConnection.RemoveConnection(conn)
-		global.Logger.Info("侦测器连接处理结束", zap.Uint("deviceID", conn.GetDeviceID()))
+		conn.DetectorConnPool.RemoveConnection(c)
+		global.Logger.Info("侦测器连接处理结束", zap.Uint("deviceID", c.GetDeviceID()))
 	}()
 
-	handlerChan := make(chan Packet, 300)
-	defer close(handlerChan)
+	global.Logger.Info("处理连接，读取数据")
 
+	handlerChan := make(chan Packet, 100)
+	defer close(handlerChan)
+	// 处理侧向channel
+	handlerOrientationChan := make(chan struct{})
+	defer close(handlerOrientationChan)
+
+	// 启动侧向处理协程
+	go dd.handleOrientationTrigger(handlerOrientationChan, device)
 	// 启动数据处理协程
-	go dd.handleDeviceReportData(handlerChan, device)
+	go dd.handleDeviceReportData(handlerChan, handlerOrientationChan, device)
 
 	buffer := make([]byte, 10000)
 
@@ -291,16 +292,16 @@ func (dd *DetectorDevice) handleConnection(conn conn.Conn, device *cache.DeviceI
 			return
 		default:
 			// 设置读取超时
-			conn.GetConn().SetReadDeadline(time.Now().Add(20 * time.Second))
+			c.GetConn().SetReadDeadline(time.Now().Add(20 * time.Second))
 
-			n, err := conn.GetConn().Read(buffer)
+			n, err := c.GetConn().Read(buffer)
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					global.Logger.Warn("侦测器UDP读取超时",
-						zap.Uint("deviceID", conn.GetDeviceID()))
+						zap.Uint("deviceID", c.GetDeviceID()))
 				} else {
 					global.Logger.Error("读取侦测器UDP数据失败",
-						zap.Uint("deviceID", conn.GetDeviceID()),
+						zap.Uint("deviceID", c.GetDeviceID()),
 						zap.Error(err))
 				}
 
@@ -313,15 +314,48 @@ func (dd *DetectorDevice) handleConnection(conn conn.Conn, device *cache.DeviceI
 
 			message := buffer[:n]
 			global.Logger.Debug("收到侦测器UDP数据",
-				zap.Uint("deviceID", conn.GetDeviceID()),
+				zap.Uint("deviceID", c.GetDeviceID()),
 				zap.String("message", string(message)))
+
+			// 处理设备响应
+			if conn.DetectorConnPool.IsResponseOrReport(c.GetDeviceID(), message) {
+				global.Logger.Debug("识别为命令响应",
+					zap.Uint("deviceID", c.GetDeviceID()),
+					zap.String("command", string(message)))
+
+				// 处理命令响应
+				select {
+				case c.GetResponseChannel() <- string(message):
+					conn.DetectorConnPool.ClearCommandRecord(c.GetDeviceID())
+				default:
+					// 通道满了，丢弃消息
+					global.Logger.Warn("侦测器响应通道满，丢弃响应消息",
+						zap.Uint("deviceID", c.GetDeviceID()))
+				}
+
+				continue
+			}
+
+			// 判断是否是心跳
+			if conn.DetectorConnPool.IsHeartbeatData(message) {
+				// 更新状态机中的心跳更新时间
+				device.DetectorFsm.SetDetectorHeartbeatUpdateTime(time.Now().Unix())
+				continue
+			}
+
+			// 判断是否是频谱数据
+			if conn.DetectorConnPool.IsSpectrumAnalysisData(len(message)) && device.DetectorFsm.Current() == string(detector_fsm.StateSpectrumAnalyzer) {
+				global.Logger.Debug("收到频谱数据包", zap.Uint("deviceID", c.GetDeviceID()), zap.Int("size", len(message)))
+				// go processSpectrumData(device, buf[:n])
+				continue
+			}
 
 			// 处理设备上报数据
 			select {
-			case handlerChan <- Packet{Conn: conn, Message: message}:
+			case handlerChan <- Packet{Conn: c, Message: message}:
 			default:
 				global.Logger.Debug("侦测器数据处理通道满，丢弃数据",
-					zap.Uint("deviceID", conn.GetDeviceID()),
+					zap.Uint("deviceID", c.GetDeviceID()),
 					zap.String("message", string(message)))
 			}
 
@@ -330,40 +364,9 @@ func (dd *DetectorDevice) handleConnection(conn conn.Conn, device *cache.DeviceI
 }
 
 // handleDeviceReportData 处理设备上报的数据
-func (dd *DetectorDevice) handleDeviceReportData(handlerChan chan Packet, device *cache.DeviceInfo) {
+func (dd *DetectorDevice) handleDeviceReportData(handlerChan chan Packet, handlerOrientationChan chan struct{}, device *cache.DeviceInfo) {
+
 	for packet := range handlerChan {
-		// 处理设备响应
-		if dd.detectorConnection.IsResponseOrReport(packet.Conn.GetDeviceID(), packet.Message) {
-			global.Logger.Debug("识别为命令响应",
-				zap.Uint("deviceID", packet.Conn.GetDeviceID()),
-				zap.String("command", string(packet.Message)))
-
-			// 处理命令响应
-			select {
-			case packet.Conn.GetResponseChannel() <- string(packet.Message):
-				dd.detectorConnection.ClearCommandRecord(packet.Conn.GetDeviceID())
-			default:
-				// 通道满了，丢弃消息
-				global.Logger.Warn("侦测器响应通道满，丢弃响应消息",
-					zap.Uint("deviceID", packet.Conn.GetDeviceID()))
-			}
-
-			continue
-		}
-
-		// 判断是否是心跳
-		if dd.detectorConnection.IsHeartbeatData(packet.Message) {
-			// 更新状态机中的心跳更新时间
-			device.DetectorFsm.SetDetectorHeartbeatUpdateTime(time.Now().Unix())
-			continue
-		}
-
-		// 判断是否是频谱数据
-		if dd.detectorConnection.IsSpectrumAnalysisData(len(packet.Message)) && device.DetectorFsm.Current() == string(detector_fsm.StateSpectrumAnalyzer) {
-			global.Logger.Debug("收到频谱数据包", zap.Uint("deviceID", packet.Conn.GetDeviceID()), zap.Int("size", len(packet.Message)))
-			// go processSpectrumData(device, buf[:n])
-			continue
-		}
 
 		detectorData, err := dd.ParseDetectorData(packet.Message, device)
 		if err != nil {
@@ -396,9 +399,113 @@ func (dd *DetectorDevice) handleDeviceReportData(handlerChan chan Packet, device
 				zap.Uint("deviceID", packet.Conn.GetDeviceID()),
 				zap.Error(err))
 		}
+
+		// 判断是否已关闭，避免向已关闭的channel发送数据
+		select {
+		case handlerOrientationChan <- struct{}{}:
+			global.Logger.Debug("触发定向处理", zap.Uint("deviceID", device.ID))
+		case <-dd.ctx.Done():
+			return
+		default:
+			// channel已满或已关闭，记录日志但不阻塞
+			global.Logger.Debug("定向处理通道忙碌，跳过本次触发",
+				zap.Uint("deviceID", device.ID))
+		}
 	}
 }
 
+// handleOrientationTrigger 触发处理侧向
+func (dd *DetectorDevice) handleOrientationTrigger(handlerOrientationChan chan struct{}, device *cache.DeviceInfo) {
+	for range handlerOrientationChan {
+		if device.DetectorFsm.Is(string(detector_fsm.StateDirection)) {
+			continue
+		}
+
+		global.Logger.Info("侦测器设备状态机已切换到定向侦测状态", zap.Uint("deviceID", device.ID))
+
+		targets := dd.detectorCache.GetDirectionalDataTargets()
+
+		global.Logger.Info("获取到定向侦测目标", zap.Int("targetCount", len(targets)), zap.Uint("deviceID", device.ID))
+
+		for _, tgt := range targets {
+			// 检查当前状态是否仍然是定向侦测
+			if device.DetectorFsm.Is(string(detector_fsm.StateOffline)) {
+				global.Logger.Warn("状态已切换，停止当前定向侦测操作")
+				break
+			}
+
+			// 只有当前状态是全向侦测，才切换到定向侦测
+			if device.DetectorFsm.Is(string(detector_fsm.StateOmniDirection)) {
+				if err := device.DetectorFsm.Event(dd.ctx, string(detector_fsm.EventToDirect), device); err != nil {
+					global.Logger.Error("侦测器设备状态机切换到定向侦测状态失败",
+						zap.Uint("deviceID", device.ID),
+						zap.Error(err))
+					continue
+				}
+			}
+
+			global.Logger.Info("开始对目标频点进行定向侦测", zap.Float64("freq", tgt.Freq), zap.Uint("deviceID", device.ID))
+
+			// 	// // 清空条件成立的对应频点的GPIO数据
+			// 	// utils.ClearGpioDataForTargets(targets)
+			// TODO: 这里可以添加一些逻辑来避免频繁对同一频点进行定向侦测
+
+			// 构建定向侦测命令
+			cmd := utils.BuildDirectionDetectionCommand(tgt.Freq)
+			if err := conn.DetectorConnPool.SendCommandToDevice(device.ID, cmd); err != nil {
+				global.Logger.Warn("发送定向侦测命令失败", zap.Error(err))
+				break
+			}
+
+			// 等待设备响应
+			if _, err := conn.DetectorConnPool.WaitResponseFromDevice(device.ID); err != nil {
+				global.Logger.Warn("等待定向侦测命令响应失败", zap.Error(err))
+				break
+			}
+
+			global.Logger.Info("发送定向侦测命令成功", zap.Float64("freq", tgt.Freq), zap.Uint("deviceID", device.ID))
+
+			// 等待一段时间，确保定向侦测完成
+			time.Sleep(time.Duration(config.AppConfig.Configuration.LockFrequency) * time.Second)
+
+			if err := dd.detectorCache.UpdateOrientationByFreq(tgt.Freq); err != nil {
+				continue
+			}
+
+			global.Logger.Info("定向侦测完成，更新方向成功", zap.Float64("freq", tgt.Freq), zap.Uint("deviceID", device.ID))
+		}
+
+		// 定向侦测完成，切换回全向侦测状态
+		// 判断当前状态 不是定向侦测状态 则跳过
+		if !device.DetectorFsm.Is(string(detector_fsm.StateDirection)) {
+			global.Logger.Warn("状态已切换，跳过切换回全向侦测操作")
+			continue
+		}
+		offCmd := utils.BuildStopDirectionDetectionCommand()
+		if err := conn.DetectorConnPool.SendCommandToDevice(device.ID, offCmd); err != nil {
+			global.Logger.Warn("发送停止定向侦测命令失败", zap.Error(err))
+			continue
+		}
+
+		// 等待设备响应
+		if _, err := conn.DetectorConnPool.WaitResponseFromDevice(device.ID); err != nil {
+			global.Logger.Warn("等待停止定向侦测命令响应失败", zap.Error(err))
+			continue
+		}
+
+		if err := device.DetectorFsm.Event(dd.ctx, string(detector_fsm.EventToOmni)); err != nil {
+			global.Logger.Error("侦测器设备状态机切换到全向侦测状态失败",
+				zap.Uint("deviceID", device.ID),
+				zap.Error(err))
+			continue
+		}
+		global.Logger.Info("定向侦测完成，已切换回全向侦测状态", zap.Uint("deviceID", device.ID))
+
+		time.Sleep(10 * time.Second)
+	}
+}
+
+// ParseDetectorData 解析侦测器数据
 func (dd *DetectorDevice) ParseDetectorData(data []byte, device *cache.DeviceInfo) (*dto.DetectorData, error) {
 	if !utils.IsValidDetectorData(data) {
 		global.Logger.Warn("无效的侦测器数据", zap.String("data", string(data)))
@@ -483,3 +590,45 @@ func (dd *DetectorDevice) ParseDetectorData(data []byte, device *cache.DeviceInf
 
 	return detectorData, nil
 }
+
+// ClearGpioDataForTargets 清空条件成立的对应频点的GPIO数据
+// func ClearGpioDataForTargets(targets []*dto.Alert) {
+
+// 	// cache.DroneTargetAlertsLock.RLock()
+// 	// if cache.LateralStrategy == 1 {
+// 	// 	// cache.LateralStrategy == 1  条件成立清空对应频点的 GPIO 数据（条件成立时）
+// 	// 	for i := range cache.DroneTargetAlerts {
+// 	// 		// 将筛选出来的目标对象，与实际缓存中的目标对象进行匹配，如果Freq相同 GpiosData清空
+// 	// 		if cache.DroneTargetAlerts[i].Freq == tgt.Freq {
+// 	// 			cache.DroneTargetAlerts[i].GpiosData = [8]dto.GpioData{}
+// 	// 		}
+// 	// 	}
+// 	// }
+// 	// cache.DroneTargetAlertsLock.RUnlock()
+
+// 	// 先判断 cache.LateralStrategy 是否为1
+// 	if cache.LateralStrategy != 1 {
+// 		return
+// 	}
+
+// 	// 在无锁状态下构建需要清空的频率集合，减少持锁时间并避免在持锁时调用外部代码
+// 	freqSet := make(map[float64]struct{}, len(targets))
+// 	for _, tgt := range targets {
+// 		if tgt == nil {
+// 			continue
+// 		}
+// 		freqSet[tgt.Freq] = struct{}{}
+// 	}
+
+// 	cache.DroneTargetAlertsLock.Lock()
+// 	defer cache.DroneTargetAlertsLock.Unlock()
+
+// 	for _, alert := range cache.DroneTargetAlerts {
+// 		if alert == nil {
+// 			continue
+// 		}
+// 		if _, ok := freqSet[alert.Freq]; ok {
+// 			alert.GpiosData = [8]dto.GpioData{}
+// 		}
+// 	}
+// }

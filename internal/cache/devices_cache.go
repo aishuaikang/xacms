@@ -2,7 +2,6 @@ package cache
 
 import (
 	"sync"
-	"uav_defender/internal/app/devices/conn"
 	detector_fsm "uav_defender/internal/app/devices/fms/detector"
 	fpv_fsm "uav_defender/internal/app/devices/fms/fpv"
 	parse_fsm "uav_defender/internal/app/devices/fms/parse"
@@ -34,8 +33,6 @@ type DevicesCache interface {
 	NotifyRefresh()
 	GetRefreshChan() <-chan struct{}
 	GetDeviceByParseIP(parseIP string) (*DeviceInfo, bool)
-	// GetDeviceByParseID(parseID int) (*DeviceInfo, bool)
-	// GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool)
 	GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool)
 	GetDeviceByID(id uint) (*DeviceInfo, bool)
 	RefreshDevices() error
@@ -46,16 +43,16 @@ type devicesCache struct {
 	devicesMutex         sync.RWMutex           // 保护设备列表的读写锁
 	devicesRefreshSignal chan struct{}          // 设备列表刷新信号通道
 	deviceService        services.DeviceService // 设备服务
-	fpvConnection        *conn.FpvConnection
+	detectorCache        DetectorCache
 }
 
-func NewDevicesCache(deviceService services.DeviceService, fpvConnection *conn.FpvConnection) DevicesCache {
+func NewDevicesCache(deviceService services.DeviceService, detectorCache DetectorCache) DevicesCache {
 	return &devicesCache{
 		devices:              []DeviceInfo{},
 		devicesMutex:         sync.RWMutex{},
 		devicesRefreshSignal: make(chan struct{}, 1),
 		deviceService:        deviceService,
-		fpvConnection:        fpvConnection,
+		detectorCache:        detectorCache,
 	}
 }
 
@@ -93,30 +90,6 @@ func (c *devicesCache) GetDeviceByParseIP(parseIP string) (*DeviceInfo, bool) {
 	}
 	return nil, false
 }
-
-// // GetDeviceByParseID 根据解析ID获取设备信息
-// func (c *devicesCache) GetDeviceByParseID(parseID int) (*DeviceInfo, bool) {
-// 	devices := c.GetDevices()
-
-// 	for _, device := range devices {
-// 		if device.ParseID == parseID {
-// 			return &device, true
-// 		}
-// 	}
-// 	return nil, false
-// }
-
-// // GetDeviceByDetectionID 根据侦测ID获取设备信息
-// func (c *devicesCache) GetDeviceByDetectionID(detectionID int) (*DeviceInfo, bool) {
-// 	devices := c.GetDevices()
-
-// 	for _, device := range devices {
-// 		if device.DetectionID == detectionID {
-// 			return &device, true
-// 		}
-// 	}
-// 	return nil, false
-// }
 
 // GetDeviceByFPVIP 根据FPVIP获取设备信息
 func (c *devicesCache) GetDeviceByFPVIP(fpvIP string) (*DeviceInfo, bool) {
@@ -156,7 +129,7 @@ func (c *devicesCache) RefreshDevices() error {
 	for _, device := range devices {
 		deviceInfos = append(deviceInfos, DeviceInfo{
 			Device:      device,
-			FPVFsm:      fpv_fsm.NewFPVFsm(c.fpvConnection),
+			FPVFsm:      fpv_fsm.NewFPVFsm(),
 			ParseFsm:    parse_fsm.NewParseFsm(),
 			DetectorFsm: detector_fsm.NewDetectorFsm(),
 		})

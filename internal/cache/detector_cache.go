@@ -2,10 +2,13 @@ package cache
 
 import (
 	"fmt"
+	"math"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
 	"uav_defender/internal/dto"
+	"uav_defender/internal/models"
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
@@ -22,6 +25,8 @@ type DetectorCache interface {
 	CleanupExpiredDetectorData(ttl int64)
 	GetNonDJIUncrackedData() []dto.DetectorData
 	SetDetectorDataList(dataList []dto.DetectorData)
+	GetDirectionalDataTargets() []*dto.DetectorData
+	UpdateOrientationByFreq(freq float64) error
 }
 
 type detectorCache struct {
@@ -155,4 +160,113 @@ func (c *detectorCache) SetDetectorDataList(dataList []dto.DetectorData) {
 	c.detectorDataListMutex.Lock()
 	defer c.detectorDataListMutex.Unlock()
 	c.detectorDataList = dataList
+}
+
+// 获取需要定向的DetectorData列表
+func (c *detectorCache) GetDirectionalDataTargets() []*dto.DetectorData {
+	c.detectorDataListMutex.RLock()
+
+	alerts := make([]dto.DetectorData, len(c.detectorDataList))
+	copy(alerts, c.detectorDataList)
+	c.detectorDataListMutex.RUnlock()
+
+	var targets []*dto.DetectorData
+	for i := range alerts {
+		data := &alerts[i]
+		if c.shouldIncludeInDirectionalTargets(data) {
+			// 创建副本避免外部修改
+			dataCopy := *data
+			targets = append(targets, &dataCopy)
+		}
+	}
+	return targets
+}
+
+// shouldIncludeInDirectionalTargets 判断数据是否应该包含在定向目标中
+func (c *detectorCache) shouldIncludeInDirectionalTargets(data *dto.DetectorData) bool {
+	// if !utils.IsDJIDrone(data.Model) || data.IsCracked {
+	// 	return false
+	// }
+	// _, ok := utils.GetRemoteControllerModelByModelSource(data.Model)
+	// return !ok
+	return true
+}
+
+// GetDetectorDataByFreq 获取指定频点对应的完整detectorData记录
+func (c *detectorCache) GetDetectorDataIndexByFreq(freq float64) int {
+	c.detectorDataListMutex.RLock()
+	defer c.detectorDataListMutex.RUnlock()
+
+	similarThreshold := config.AppConfig.Configuration.SimilarThreshold
+	for i := range c.detectorDataList {
+		if math.Abs(c.detectorDataList[i].Freq-freq) < similarThreshold {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// 修改指定频点对应的 Orientation 字段
+func (c *detectorCache) UpdateOrientationByFreq(freq float64) error {
+	index := c.GetDetectorDataIndexByFreq(freq)
+	if index == -1 {
+		global.Logger.Warn("未找到指定频点的detectorData记录", zap.Float64("freq", freq))
+		return fmt.Errorf("未找到指定频点的detectorData记录: %f", freq)
+	}
+
+	c.detectorDataListMutex.Lock()
+	defer c.detectorDataListMutex.Unlock()
+	data := &c.detectorDataList[index]
+
+	// 构建天线数据
+	antennas := c.buildAntennaDataFromGpios(data.GpiosData[:])
+
+	// 计算候选方向角
+	candidateAngle := utils.CalculateOrientationAngle(antennas)
+
+	// 特殊情况：无有效数据
+	if candidateAngle == 500 {
+		data.Orientation = 500
+		data.OrientationTS = models.CustomTime(time.Now())
+		return nil
+	}
+
+	// 计算新的方向角
+	currentAngle := data.Orientation
+	newAngle := utils.CalculateNewOrientationAngle(candidateAngle, currentAngle)
+
+	// 更新方向角和时间戳
+	data.Orientation = newAngle
+	data.OrientationTS = models.CustomTime(time.Now())
+
+	// 记录两天线中间角度的日志
+	if len(antennas) == 2 {
+		sort.Slice(antennas, func(i, j int) bool {
+			return antennas[i].RssiAvg > antennas[j].RssiAvg
+		})
+		rssiDiff := antennas[0].RssiAvg - antennas[1].RssiAvg
+		if rssiDiff <= 2.0 {
+			global.Logger.Info("两天线中间角度",
+				zap.Float64("angle", candidateAngle),
+				zap.Float64("rssiDiff", rssiDiff),
+				zap.Any("antennas", antennas))
+		}
+	}
+
+	return nil
+}
+
+// buildAntennaDataFromGpios 从GpiosData构建天线数据
+func (c *detectorCache) buildAntennaDataFromGpios(gpiosData []dto.GpioData) []utils.AntennaData {
+	antennas := make([]utils.AntennaData, 0, 8)
+	for _, d := range gpiosData {
+		if d.Count > 0 && d.Gpio >= 0 { // 确保gpio有效
+			antennas = append(antennas, utils.AntennaData{
+				Gpio:    d.Gpio,
+				RssiAvg: d.RssiAverage,
+			})
+		}
+	}
+	return antennas
 }

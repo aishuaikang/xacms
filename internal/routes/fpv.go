@@ -22,7 +22,6 @@ type FPVRouter struct {
 	CommonService services.CommonService
 	FPVService    services.FPVService
 	DevicesCache  cache.DevicesCache
-	FpvConnection *conn.FpvConnection
 }
 
 // RegisterRoutes 注册白名单相关路由
@@ -183,7 +182,7 @@ func (h *FPVRouter) SetFrequency(c *gin.Context) {
 		return
 	}
 
-	conn, exists := h.FpvConnection.GetConnection(req.DeviceID)
+	conn, exists := conn.FPVConnPool.GetConnection(req.DeviceID)
 	if !exists {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "FPV连接不存在"))
 		return

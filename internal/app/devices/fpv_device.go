@@ -22,15 +22,13 @@ type FPVDevice struct {
 	ctx                 context.Context
 	fpvWarningDataCache cache.FPVWarningDataCache
 	devicesCache        cache.DevicesCache
-	fpvConnection       *conn_.FpvConnection
 }
 
-func NewFPVDevice(ctx context.Context, fpvWarningDataCache cache.FPVWarningDataCache, devicesCache cache.DevicesCache, fpvConnection *conn_.FpvConnection) *FPVDevice {
+func NewFPVDevice(ctx context.Context, fpvWarningDataCache cache.FPVWarningDataCache, devicesCache cache.DevicesCache) *FPVDevice {
 	return &FPVDevice{
 		ctx:                 ctx,
 		fpvWarningDataCache: fpvWarningDataCache,
 		devicesCache:        devicesCache,
-		fpvConnection:       fpvConnection,
 	}
 }
 
@@ -69,8 +67,8 @@ func (s *FPVDevice) handleConnection(module string, conn net.Conn) {
 	}()
 
 	c := conn_.NewConn(device.ID, conn)
-	s.fpvConnection.AddConnection(c)
-	defer s.fpvConnection.RemoveConnection(c)
+	conn_.FPVConnPool.AddConnection(c)
+	defer conn_.FPVConnPool.RemoveConnection(c)
 
 	// 发送给客户端AT 指令
 	at := []byte{0x41, 0x54, 0x0D, 0x0A} // 对应 "AT\r\n"

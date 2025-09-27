@@ -37,10 +37,12 @@ type DirectionHandler struct {
 
 // Before 定向状态前回调
 func (h *DirectionHandler) Before(ctx context.Context, e *fsm.Event) {
+
 }
 
 // Enter 定向状态进入回调
 func (h *DirectionHandler) Enter(ctx context.Context, e *fsm.Event) {
+
 }
 
 // 频谱仪状态处理器

@@ -3,7 +3,7 @@ package fpv_fsm
 import (
 	"context"
 	"fmt"
-	conn_ "uav_defender/internal/app/devices/conn"
+	"uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/pkg/global"
 	"uav_defender/internal/pkg/utils"
 
@@ -32,8 +32,7 @@ func (h *OfflineHandler) Enter(ctx context.Context, e *fsm.Event) {
 }
 
 type GazingHandler struct {
-	fpvConnection *conn_.FpvConnection
-	recorder      *utils.RtspRecorder
+	recorder *utils.RtspRecorder
 }
 
 // Before 凝视状态前回调
@@ -60,7 +59,7 @@ func (h *GazingHandler) Before(ctx context.Context, e *fsm.Event) {
 		return
 	}
 
-	conn, exists := h.fpvConnection.GetConnection(deviceID)
+	conn, exists := conn.FPVConnPool.GetConnection(deviceID)
 	if !exists {
 		e.Cancel(fmt.Errorf("FPV 连接不存在"))
 		return

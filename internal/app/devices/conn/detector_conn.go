@@ -10,6 +10,10 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	DetectorConnPool = NewDetectorConnection()
+)
+
 // DetectorConnection 检测器UDP连接池
 type DetectorConnection struct {
 	Connections      map[uint]Conn      // UDP连接映射，key为设备ID

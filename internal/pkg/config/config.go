@@ -35,6 +35,7 @@ type Configuration struct {
 	ParsePort        int     `yaml:"parsePort"`
 	StrikePort       int     `yaml:"strikePort"`
 	SimilarThreshold float64 `yaml:"similarThreshold"`
+	LockFrequency    int     `yaml:"lockFrequency"`
 }
 
 type JWT struct {

@@ -15,8 +15,8 @@ type DetectorData struct {
 	ID          string            `json:"id"`
 	GpioS       []int64           `json:"gpio_s"`
 	// 方向角
-	Orientation   float64 `json:"orientation"`
-	OrientationTS int64   `json:"orientation_ts"`
+	Orientation   float64           `json:"orientation"`
+	OrientationTS models.CustomTime `json:"orientation_ts"`
 
 	// 更新GpioS的时间
 	TS int64 `json:"ts"`

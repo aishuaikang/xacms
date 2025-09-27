@@ -1,18 +1,8 @@
 package conn
 
-import (
-	"sync"
-)
+import "sync"
 
-type ParseConnection struct {
-	Connection
-}
-
-func NewParseConnection() *ParseConnection {
-	return &ParseConnection{
-		Connection: Connection{
-			Connections:      make(map[uint]Conn),
-			ConnectionsMutex: sync.RWMutex{},
-		},
-	}
+var ParseConnPool = Connection{
+	Connections:      make(map[uint]Conn),
+	ConnectionsMutex: sync.RWMutex{},
 }

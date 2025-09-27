@@ -6,7 +6,6 @@ import (
 	"context"
 	"uav_defender/internal/app"
 	"uav_defender/internal/app/devices"
-	"uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/cache"
 	"uav_defender/internal/pkg/utils"
 	"uav_defender/internal/routes"
@@ -26,7 +25,6 @@ func wireServer(ctx context.Context, db *gorm.DB, validator *utils.ValidationMid
 		devices.DevicesSet,
 		cache.CacheSet,
 		tasks.TaskSet,
-		conn.ConnSet,
 	)
 	return nil
 }

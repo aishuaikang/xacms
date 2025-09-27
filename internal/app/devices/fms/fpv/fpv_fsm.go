@@ -2,7 +2,6 @@ package fpv_fsm
 
 import (
 	"context"
-	"uav_defender/internal/app/devices/conn"
 	"uav_defender/internal/pkg/utils"
 
 	"github.com/looplab/fsm"
@@ -16,7 +15,7 @@ type FPVFsm struct {
 }
 
 // NewFPVFsm 创建新的FPV状态机实例
-func NewFPVFsm(fpvConnection *conn.FpvConnection) *FPVFsm {
+func NewFPVFsm() *FPVFsm {
 
 	recorder := utils.NewRtspRecorder()
 
@@ -25,8 +24,7 @@ func NewFPVFsm(fpvConnection *conn.FpvConnection) *FPVFsm {
 			recorder: recorder,
 		},
 		gazingHandler: &GazingHandler{
-			fpvConnection: fpvConnection,
-			recorder:      recorder,
+			recorder: recorder,
 		},
 		scanningHandler: &ScanningHandler{
 			recorder: recorder,

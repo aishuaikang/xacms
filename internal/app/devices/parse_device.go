@@ -28,18 +28,15 @@ type ParseDevice struct {
 	parseCache        cache.ParseCache
 	devicesCache      cache.DevicesCache
 
-	parseConnection *conn_.ParseConnection
-
 	whitelistService services.WhitelistService
 }
 
-func NewParseDevice(ctx context.Context, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseCache, devicesCache cache.DevicesCache, parseConnection *conn_.ParseConnection, whitelistService services.WhitelistService) *ParseDevice {
+func NewParseDevice(ctx context.Context, decryptTokenCache cache.DecryptTokenCache, parseDataCache cache.ParseCache, devicesCache cache.DevicesCache, whitelistService services.WhitelistService) *ParseDevice {
 	parseDevice := &ParseDevice{
 		ctx:               ctx,
 		decryptTokenCache: decryptTokenCache,
 		devicesCache:      devicesCache,
 		parseCache:        parseDataCache,
-		parseConnection:   parseConnection,
 		whitelistService:  whitelistService,
 	}
 
@@ -79,8 +76,8 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 	}()
 
 	c := conn_.NewConn(device.ID, conn)
-	s.parseConnection.AddConnection(c)
-	defer s.parseConnection.RemoveConnection(c)
+	conn_.ParseConnPool.AddConnection(c)
+	defer conn_.ParseConnPool.RemoveConnection(c)
 
 	scanner := bufio.NewReader(conn)
 	var buffer bytes.Buffer
@@ -118,18 +115,18 @@ func (s *ParseDevice) handleConnection(module string, conn net.Conn) {
 			// 提取完整的行
 			fullLine := bytes.TrimSpace(buffer.Next(index + 2)) // 包括 \r\n
 
-			parseData, err := s.parseParseData(fullLine, device)
+			parseData, err := s.parseParseData(fullLine, parseIP)
 			if err != nil {
 				global.Logger.Warn("解析数据失败", zap.String("module", module), zap.String("address", addr), zap.Error(err))
 				continue
 			}
-			s.updateParseDataList(*parseData, device)
+			s.updateParseDataList(*parseData)
 		}
 	}
 }
 
 // updateParseDataList 更新解析数据列表
-func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *cache.DeviceInfo) {
+func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData) {
 	// 查找符合条件的定位数据
 	var parseDataIndex int = -1
 	var parseData dto.ParseData
@@ -179,27 +176,23 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 
 		parseData.Model = newParseData.Model
 		parseData.DroneType = newParseData.DroneType
-
-		isValidDroneGPS := utils.IsValidCoord(parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude)
-
-		if isValidDroneGPS {
-			// 检查是否需要添加新轨迹点
-			newPoint := models.Trajectory{
-				Latitude:  newParseData.DroneGPS.Latitude,
-				Longitude: newParseData.DroneGPS.Longitude,
-				Height:    newParseData.Height,
-			}
-			if len(parseData.Trajectories) == 0 {
-				parseData.Trajectories = models.Trajectories{newPoint}
-			} else {
-				lastTrajectory := parseData.Trajectories[len(parseData.Trajectories)-1]
-				// 只有当新点与最后一个点不同才添加，避免重复点
-				if newPoint.Latitude != lastTrajectory.Latitude || newPoint.Longitude != lastTrajectory.Longitude {
-					parseData.Trajectories = append(parseData.Trajectories, newPoint)
-				}
-			}
-
-		}
+		parseData.LdResult = newParseData.LdResult
+		parseData.IntrusionTime = newParseData.IntrusionTime
+		parseData.Trajectories = newParseData.Trajectories
+		parseData.Speed = newParseData.Speed
+		parseData.Altitude = newParseData.Altitude
+		parseData.EastV = newParseData.EastV
+		parseData.NorthV = newParseData.NorthV
+		parseData.UpV = newParseData.UpV
+		parseData.Freq = newParseData.Freq
+		parseData.RSSI = newParseData.RSSI
+		parseData.Distance = newParseData.Distance
+		parseData.Png = newParseData.Png
+		parseData.HasInWhiteList = newParseData.HasInWhiteList
+		parseData.Mac = newParseData.Mac
+		parseData.Sign = newParseData.Sign
+		parseData.TargetId = newParseData.TargetId
+		parseData.Serial = newParseData.Serial
 
 		// 更新已有的定位数据
 		s.parseCache.UpdateParseDataAtIndex(parseDataIndex, parseData)
@@ -216,7 +209,11 @@ func (s *ParseDevice) updateParseDataList(newParseData dto.ParseData, device *ca
 }
 
 // parseParseData
-func (s *ParseDevice) parseParseData(message []byte, device *cache.DeviceInfo) (*dto.ParseData, error) {
+func (s *ParseDevice) parseParseData(message []byte, parseIP string) (*dto.ParseData, error) {
+	device, ok := s.devicesCache.GetDeviceByParseIP(parseIP)
+	if !ok {
+		return nil, fmt.Errorf("未找到匹配的设备，无法解析数据")
+	}
 
 	var parseData dto.ParseData
 	parseData.DeviceID = device.ID
@@ -292,6 +289,25 @@ func (s *ParseDevice) parseParseData(message []byte, device *cache.DeviceInfo) (
 	isValidDeviceGPS := utils.IsValidCoordPtr(device.Longitude, device.Latitude)
 
 	isValidDroneGPS := utils.IsValidCoord(parseData.DroneGPS.Longitude, parseData.DroneGPS.Latitude)
+
+	if isValidDroneGPS {
+		// 检查是否需要添加新轨迹点
+		newPoint := models.Trajectory{
+			Latitude:  parseData.DroneGPS.Latitude,
+			Longitude: parseData.DroneGPS.Longitude,
+			Height:    parseData.Height,
+		}
+		if len(parseData.Trajectories) == 0 {
+			parseData.Trajectories = models.Trajectories{newPoint}
+		} else {
+			lastTrajectory := parseData.Trajectories[len(parseData.Trajectories)-1]
+			// 只有当新点与最后一个点不同才添加，避免重复点
+			if newPoint.Latitude != lastTrajectory.Latitude || newPoint.Longitude != lastTrajectory.Longitude {
+				parseData.Trajectories = append(parseData.Trajectories, newPoint)
+			}
+		}
+
+	}
 
 	// 判断设备是否配置了经纬度并且设备经纬度和无人机经纬度是否有效
 	if isValidDeviceGPS && isValidDroneGPS {
