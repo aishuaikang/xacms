@@ -19,7 +19,7 @@ go.work
 tmp/
 
 # IDE specific files
-.vscode
+# .vscode
 .idea
 
 # .env file
@@ -28,9 +28,15 @@ tmp/
 # Project build
 main
 *templ.go
+dist/
 
 # OS X generated file
 .DS_Store
 
 logs/
 videos/
+
+
+
+
+__debug_bin*

@@ -30,6 +30,10 @@ func (h *UserRouter) RegisterRoutes(router *gin.RouterGroup) {
 	userGroup.PUT("/:id", h.UpdateUser)
 	userGroup.DELETE("/:id", h.DeleteUser)
 	userGroup.POST("/:id/role", h.AssignRole)
+	userGroup.POST("/:id/password", h.ChangePassword)
+
+	// 获取所有用户列表
+	userGroup.GET("/all", h.GetUsersAll)
 }
 
 // GetUsers 获取用户列表
@@ -46,6 +50,20 @@ func (h *UserRouter) GetUsers(c *gin.Context) {
 	if err != nil {
 		global.Logger.Error("获取用户列表失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取用户列表失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(users))
+}
+
+// GetUsersAll 获取所有用户列表
+func (h *UserRouter) GetUsersAll(c *gin.Context) {
+	var users []models.User
+	// 获取所有用户
+	err := h.CommonService.GetItems(&users)
+	if err != nil {
+		global.Logger.Error("获取所有用户失败", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "获取所有用户失败"))
 		return
 	}
 
@@ -76,7 +94,6 @@ func (h *UserRouter) CreateUser(c *gin.Context) {
 func (h *UserRouter) GetUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 ID 格式
 	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
@@ -85,7 +102,7 @@ func (h *UserRouter) GetUser(c *gin.Context) {
 
 	// 获取用户
 	var user models.User
-	if err := h.CommonService.GetItemByID(uint(userID), &user); err != nil {
+	if err := h.CommonService.GetItemByID(userID, &user); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "用户不存在"))
 			return
@@ -102,7 +119,6 @@ func (h *UserRouter) GetUser(c *gin.Context) {
 func (h *UserRouter) UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 ID 格式
 	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
@@ -117,7 +133,7 @@ func (h *UserRouter) UpdateUser(c *gin.Context) {
 	}
 
 	// 更新用户
-	user, err := h.UserService.UpdateUser(uint(userID), req)
+	user, err := h.UserService.UpdateUser(userID, req)
 	if err != nil {
 		global.Logger.Error("更新用户失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新用户失败"))
@@ -131,7 +147,6 @@ func (h *UserRouter) UpdateUser(c *gin.Context) {
 func (h *UserRouter) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 ID 格式
 	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
@@ -139,9 +154,8 @@ func (h *UserRouter) DeleteUser(c *gin.Context) {
 	}
 
 	// 删除用户
-	if err := h.CommonService.DeleteItemByID(&models.User{}, uint(userID)); err != nil {
-		global.Logger.Error("删除用户失败", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除用户失败"))
+	if err := h.UserService.DeleteUser(userID); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
@@ -152,7 +166,6 @@ func (h *UserRouter) DeleteUser(c *gin.Context) {
 func (h *UserRouter) AssignRole(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 ID 格式
 	userID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
@@ -167,7 +180,7 @@ func (h *UserRouter) AssignRole(c *gin.Context) {
 	}
 
 	// 分配角色
-	user, err := h.UserService.AssignRole(uint(userID), req)
+	user, err := h.UserService.AssignRole(userID, req)
 	if err != nil {
 		global.Logger.Error("分配角色失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "分配角色失败"))
@@ -175,4 +188,31 @@ func (h *UserRouter) AssignRole(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(user))
+}
+
+// ChangePassword 修改用户密码
+func (h *UserRouter) ChangePassword(c *gin.Context) {
+	id := c.Param("id")
+
+	userID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "用户ID格式无效"))
+		return
+	}
+
+	// 解析请求体
+	var req dto.ChangePasswordRequest
+	if err := h.CommonService.ValidateBody(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	// 修改密码
+	if err := h.UserService.ChangePassword(userID, req); err != nil {
+		global.Logger.Error("修改密码失败", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "修改密码失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(nil))
 }

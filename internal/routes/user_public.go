@@ -30,7 +30,7 @@ func (h *UserPublicRouter) Login(c *gin.Context) {
 
 	userInfo, err := h.UserService.Login(req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse(http.StatusUnauthorized, err.Error()))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
 

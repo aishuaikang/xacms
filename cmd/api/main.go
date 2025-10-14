@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
+	"uav_defender/internal/initdata"
 	"uav_defender/internal/pkg/config"
 	"uav_defender/internal/pkg/database"
 	"uav_defender/internal/pkg/global"
@@ -49,7 +51,7 @@ func main() {
 	cfg := config.InitConfig()
 	config.InitMediaMtxConfig()
 
-	logger := global.NewZapLogger(cfg.Log.Level, cfg.Log.Enabled)
+	logger := global.NewZapLogger(cfg.Log.Level, cfg.Environment, cfg.Log.DisableConsole)
 	defer logger.Sync() // 确保日志被刷新
 
 	db, err := database.NewDB(cfg)
@@ -57,6 +59,13 @@ func main() {
 		logger.Fatal("数据库连接失败", zap.Error(err))
 		return
 	}
+
+	if err := initdata.NewInitData(db).InitFromSQL(); err != nil {
+		fmt.Println(err)
+		logger.Fatal("初始化数据失败", zap.Error(err))
+		return
+	}
+
 	defer func() {
 		sqlDB, err := db.DB()
 		if err != nil {
@@ -68,7 +77,11 @@ func main() {
 		}
 	}()
 
-	server := wireServer(ctx, db, utils.NewValidationMiddleware())
+	// // 启动 Mochi MQTT 服务器
+	// mqttServer := mochi.InitMochiMQTT()
+	// defer mqttServer.Close()
+
+	server := wireServer(ctx, db, utils.NewValidationMiddleware(), cfg)
 
 	httpServer := &http.Server{
 		Addr:           ":" + strconv.Itoa(cfg.Server.Port),

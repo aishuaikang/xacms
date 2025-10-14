@@ -16,5 +16,5 @@ type UpdateRoleRequest struct {
 
 // AssignMenusRequest 分配菜单请求结构
 type AssignMenusRequest struct {
-	MenuIDs []uint `json:"menu_ids" validate:"required,dive"`
+	MenuIDs StringUint64Slice `json:"menu_ids" validate:"required,min=1"`
 }

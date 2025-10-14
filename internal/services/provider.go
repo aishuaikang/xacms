@@ -7,8 +7,4 @@ var ServicesSet = wire.NewSet(
 	NewRoleService,
 	NewMenuService,
 	NewCommonService,
-	NewDeviceService,
-	NewDronTargetService,
-	NewWhitelistService,
-	NewFPVService,
 )

@@ -3,17 +3,14 @@ package models
 import (
 	"database/sql/driver"
 	"fmt"
-	"uav_defender/internal/pkg/global"
 
 	"github.com/bytedance/sonic"
-	"go.uber.org/zap"
 )
 
 type ApiNames []string
 
 // Value 实现 driver.Valuer 接口，用于将 ApiNames 转换为数据库存储格式
 func (a *ApiNames) Value() (driver.Value, error) {
-	global.Logger.Error("无法将 ApiNames 转换为数据库存储格式", zap.Any("ApiNames", a))
 
 	jsonData, err := sonic.Marshal(a)
 	if err != nil {
@@ -25,18 +22,30 @@ func (a *ApiNames) Value() (driver.Value, error) {
 
 // Scan 实现 sql.Scanner 接口，用于将数据库中的值转换为 ApiIds
 func (a *ApiNames) Scan(value any) error {
-	v, ok := value.([]byte)
-	if !ok {
-		global.Logger.Error("无法将数据库中的值转换为 ApiNames", zap.Any("value", value))
+	// v, ok := value.([]byte)
+	// if !ok {
+	// 	global.Logger.Errorf("无法将数据库中的值转换为 ApiNames: %v", value)
+	// 	return fmt.Errorf("无法将数据库中的值转换为 ApiNames: %v", value)
+	// }
+
+	switch v := value.(type) {
+	case []byte:
+		// global.Logger.Infof("数据库中的值是字节数组: %s", string(v))
+		return sonic.Unmarshal(v, a)
+	case string:
+		// global.Logger.Infof("数据库中的值是字符串: %s", v)
+		return sonic.Unmarshal([]byte(v), a)
+	case nil:
+		*a = nil
+		return nil
+	default:
 		return fmt.Errorf("无法将数据库中的值转换为 ApiNames: %v", value)
 	}
-
-	return sonic.Unmarshal(v, a)
 }
 
 type Menu struct {
-	ID           uint      `json:"id" gorm:"primaryKey;autoIncrement;comment:唯一ID"`                        // 唯一ID
-	ParentID     *uint     `json:"parent_id" gorm:"index;comment:父级ID"`                                    // 父级ID
+	ID           uint64    `json:"id,string" gorm:"primaryKey;autoIncrement;comment:唯一ID"`                 // 唯一ID
+	ParentID     *uint64   `json:"parent_id,string" gorm:"comment:父级ID"`                                   // 父级ID
 	Name         string    `json:"name" gorm:"size:64;not null;comment:菜单名称"`                              // 菜单名称
 	RouteName    string    `json:"route_name" gorm:"size:64;not null;unique;comment:路由名称"`                 // 路由名称，唯一
 	RoutePath    string    `json:"route_path" gorm:"size:255;not null;comment:路由路径"`                       // 路由路径
@@ -46,7 +55,7 @@ type Menu struct {
 	IsTabs       bool      `json:"is_tabs" gorm:"type:boolean;not null;default:false;comment:是否添加到tabs"`   // 是否添加到tabs
 	Component    string    `json:"component" gorm:"size:255;not null;comment:组件路径"`                        // 组件路径
 	Icon         *string   `json:"icon" gorm:"size:64;comment:侧边栏图标"`                                      // 侧边栏图标
-	Order        uint      `json:"order" gorm:"not null;default:0;comment:菜单排序，越小越靠前"`                     // 菜单排序，越小越靠前
+	Order        uint      `json:"order" gorm:"type:int;not null;default:0;comment:排序"`                    // 排序
 
 	CommonModel
 }

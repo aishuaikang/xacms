@@ -1,12 +1,10 @@
 package dto
 
-import (
-	"uav_defender/internal/models"
-)
+import "uav_defender/internal/models"
 
 // CreateMenuRequest 创建菜单请求结构
 type CreateMenuRequest struct {
-	ParentID     *uint            `json:"parent_id" validate:"omitempty"`
+	ParentID     *uint64          `json:"parent_id,string" validate:"omitempty"`
 	Name         string           `json:"name" validate:"required,min=2,max=64"`
 	RouteName    string           `json:"route_name" validate:"required,min=2,max=64"`
 	RoutePath    string           `json:"route_path" validate:"required,min=1,max=255"`
@@ -21,7 +19,7 @@ type CreateMenuRequest struct {
 
 // UpdateMenuRequest 更新菜单请求结构
 type UpdateMenuRequest struct {
-	ParentID     *uint            `json:"parent_id" validate:"omitempty"`
+	ParentID     *uint64          `json:"parent_id,string" validate:"omitempty"`
 	Name         *string          `json:"name" validate:"omitempty,min=2,max=64"`
 	RouteName    *string          `json:"route_name" validate:"omitempty,min=2,max=64"`
 	RoutePath    *string          `json:"route_path" validate:"omitempty,min=1,max=255"`

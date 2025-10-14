@@ -5,24 +5,17 @@ type Executor interface {
 }
 
 // 任务管理器
-type Tasks struct {
+type TaskManager struct {
 	tasks []Executor
 }
 
-func NewTasks(decryptTokenTask *DecryptTokenTask, devicesTask *DevicesTask, parseTask *ParseTask, fpvTask *FPVTask, detectorTask *DetectorTask, parseSyncDetectorTask *ParseSyncDetectorTask) *Tasks {
-	return &Tasks{
-		tasks: []Executor{
-			decryptTokenTask,
-			devicesTask,
-			parseTask,
-			fpvTask,
-			detectorTask,
-			parseSyncDetectorTask,
-		},
+func NewTaskManager() *TaskManager {
+	return &TaskManager{
+		tasks: []Executor{},
 	}
 }
 
-func (t *Tasks) Execute() {
+func (t *TaskManager) Execute() {
 	for _, executor := range t.tasks {
 		executor.Execute()
 	}

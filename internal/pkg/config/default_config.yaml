@@ -1,0 +1,104 @@
+# 开发模式(彩色控制台) development=开发模式, production=生产模式(JSON格式+文件输出)
+# 环境配置: development, production
+environment: production
+
+# 设备SN
+# SL2+8位年月日+1位的0-9的数字，是测向类设备的SN
+# SL6+8位年月日+1位的0-9的数字，对应所有非测向设备的SN
+sn: SL6202509120
+
+# 设备版本号(SUD+年月日（8位数字）+.3位数字)
+version: SUD20250924.001
+
+log:
+    # DebugLevel -1
+    # InfoLevel 0
+    # WarnLevel 1
+    # ErrorLevel 2
+    # DPanicLevel 3
+    # PanicLevel 4
+    # FatalLevel 5
+    level: 1
+
+    # Silent 1
+    # Error 2
+    # Warn 3
+    # Info 4
+    databaseLevel: 3
+
+    # 是否禁用控制台输出 (true=禁用, false=启用)
+    disableConsole: true
+
+database:
+    name: "spbatc.db"
+
+server:
+    port: 8099
+
+jwt:
+    signingKey: "kR7mX9pQ2nV8jL4wE6tY3uF0sA5bC1dH"
+    expireTime: 7d
+
+configuration:
+    # 密码加密盐值
+    passwordSalt: "x9K2mP8qR5vN3jL7wE6tY1uF4sA0bC9d"
+
+    # 1关使用侦测设备默认的gps 2开使用专用的gps模块
+    # gpsSwitch: 1
+
+    streamMediaUrl: http://127.0.0.1:8889/
+
+    # 1测向开 2 侧向关
+    orientationSwitch: 2
+
+    # fpv模块
+    fpvTcpServer: 0.0.0.0:10000
+
+    # gps模块
+    # gpsTcpServer: 0.0.0.0:10001
+
+    # 解析模块
+    parserTcpServer: 0.0.0.0:10001
+
+    # 打击模块
+    strikerTcpServer: 0.0.0.0:10003
+
+    # 刷新时间(建议10秒以上）
+    alertsTTL: 70
+    palertsTTL: 60
+
+    # 扫频间隔(必须带.0)
+    similarThreshold: 15.0
+
+    # 锁频间隔
+    lockFrequency: 5
+
+    # 侧向策略 1-定向后侧向 2-直接侧向
+    lateralStrategy: 2
+
+    #侧率 1 关 2开
+    # lateralStrategySwitch: 2
+
+protocol:
+    # 指定设备ID
+    detectionID: 2002
+
+    # 第三方协议控制
+    tcp:
+        enabled: false
+        port: 9000
+
+    # 第三方协议上报
+    udp:
+        enabled: false
+        server_ip: 127.0.0.1
+        server_port: 9999
+
+        # 上报频率
+        report_interval: 5
+mqtt:
+    enabled: false
+    broker: "118.31.175.150"
+    port: 1883
+    username: "admin"
+    password: "zkzp1234"

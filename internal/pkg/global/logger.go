@@ -3,6 +3,7 @@ package global
 import (
 	"os"
 	"time"
+	"uav_defender/internal/pkg/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -13,7 +14,16 @@ var (
 	Logger *zap.Logger
 )
 
-func NewZapLogger(level zapcore.Level, enabled bool) *zap.Logger {
+// NewZapLogger 创建一个新的 Zap Logger
+// level: 日志级别 (DebugLevel, InfoLevel, WarnLevel, ErrorLevel)
+// environment: 环境模式 (development=开发模式, production=生产模式)
+// disableConsole: 是否禁用控制台输出
+//
+// 生产模式特点:
+// 1. 同时输出到 stdout (供 systemd/journald 捕获) 和文件
+// 2. 使用 JSON 格式便于日志收集和分析
+// 3. 按日志级别分文件存储，便于排查问题
+func NewZapLogger(level zapcore.Level, environment config.Environment, disableConsole bool) *zap.Logger {
 
 	// 编码器配置
 	encoderConfig := zap.NewProductionEncoderConfig()
@@ -23,19 +33,32 @@ func NewZapLogger(level zapcore.Level, enabled bool) *zap.Logger {
 
 	cores := []zapcore.Core{}
 
-	// 控制台输出（可选，开发环境用）
-	if enabled {
-		consoleEncoderConfig := encoderConfig
-		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-		consoleCore := zapcore.NewCore(
-			zapcore.NewConsoleEncoder(consoleEncoderConfig),
-			zapcore.AddSync(os.Stdout),
-			level,
-		)
-		cores = append(cores, consoleCore)
-	} else {
+	// 控制台输出（开发环境：彩色输出；生产环境：JSON格式输出到stdout供journald捕获）
+	// 如果 disableConsole=true，则完全跳过控制台输出
+	if !disableConsole {
+		if environment.IsDevelopment() {
+			// 开发环境：彩色控制台输出
+			consoleEncoderConfig := encoderConfig
+			consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+			consoleCore := zapcore.NewCore(
+				zapcore.NewConsoleEncoder(consoleEncoderConfig),
+				zapcore.AddSync(os.Stdout),
+				level,
+			)
+			cores = append(cores, consoleCore)
+		} else {
+			// 生产环境：JSON格式输出到stdout，供systemd/journald捕获
+			stdoutCore := zapcore.NewCore(
+				zapcore.NewJSONEncoder(encoderConfig),
+				zapcore.AddSync(os.Stdout),
+				level,
+			)
+			cores = append(cores, stdoutCore)
+		}
+	}
 
-		// 文件输出（生产环境用）
+	// 文件输出（生产环境用，同时输出到文件和控制台）
+	if !environment.IsDevelopment() {
 		maxSize := 100
 		// 日志文件切割
 		maxBackups := 10

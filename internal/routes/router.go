@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,12 +22,7 @@ func NewRouter(
 	userRouter *UserRouter,
 	menuRouter *MenuRouter,
 	roleRouter *RoleRouter,
-	deviceRouter *DeviceRouter,
-	droneTargetRouter *DroneTargetRouter,
-	sseRouter *SSERouter,
 	userPublicRouter *UserPublicRouter,
-	whitelistRouter *WhitelistRouter,
-	fpvRouter *FPVRouter,
 ) *Router {
 
 	return &Router{
@@ -33,11 +30,6 @@ func NewRouter(
 			userRouter,
 			menuRouter,
 			roleRouter,
-			deviceRouter,
-			droneTargetRouter,
-			whitelistRouter,
-			sseRouter,
-			fpvRouter,
 		},
 		publicRoutes: []Route{
 			userPublicRouter,
@@ -75,4 +67,30 @@ func (r *Router) RegisterRoutes(router *gin.RouterGroup) {
 		module.RegisterRoutes(protectedRoutes)
 	}
 
+}
+
+// isUniqueConstraintError 检查是否为唯一约束错误
+func isUniqueConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 检查常见的唯一约束错误消息
+	errorMsg := strings.ToLower(err.Error())
+	uniqueConstraintIndicators := []string{
+		"unique constraint",
+		"duplicate entry",
+		"duplicate key",
+		"1062",  // MySQL 重复键错误代码
+		"23505", // PostgreSQL 唯一约束错误代码
+		"2067",  // SQLite 唯一约束错误代码
+	}
+
+	for _, indicator := range uniqueConstraintIndicators {
+		if strings.Contains(errorMsg, strings.ToLower(indicator)) {
+			return true
+		}
+	}
+
+	return false
 }

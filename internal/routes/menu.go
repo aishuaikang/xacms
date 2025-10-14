@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"uav_defender/internal/dto"
@@ -10,8 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-
-	"github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
 )
 
@@ -60,12 +59,12 @@ func (h *MenuRouter) CreateMenu(c *gin.Context) {
 	// 创建菜单
 	menu, err := h.MenuService.CreateMenu(&req)
 	if err != nil {
-		if sqliteErr, ok := err.(sqlite3.Error); ok {
-			if sqliteErr.Code == sqlite3.ErrConstraint {
-				c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单已存在"))
-				return
-			}
+		// 使用通用的唯一约束错误检查
+		if isUniqueConstraintError(err) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单已存在"))
+			return
 		}
+
 		global.Logger.Error("创建菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "创建菜单失败"))
 		return
@@ -78,7 +77,6 @@ func (h *MenuRouter) CreateMenu(c *gin.Context) {
 func (h *MenuRouter) GetMenu(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 ID 格式
 	menuID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单ID格式无效"))
@@ -87,8 +85,8 @@ func (h *MenuRouter) GetMenu(c *gin.Context) {
 
 	// 获取菜单
 	var menu models.Menu
-	if err := h.CommonService.GetItemByID(uint(menuID), &menu); err != nil {
-		if err == gorm.ErrRecordNotFound {
+	if err := h.CommonService.GetItemByID(menuID, &menu); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, dto.ErrorResponse(http.StatusNotFound, "菜单不存在"))
 			return
 		}
@@ -104,7 +102,6 @@ func (h *MenuRouter) GetMenu(c *gin.Context) {
 func (h *MenuRouter) UpdateMenu(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 ID 格式
 	menuID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单ID格式无效"))
@@ -119,14 +116,14 @@ func (h *MenuRouter) UpdateMenu(c *gin.Context) {
 	}
 
 	// 更新菜单
-	menu, err := h.MenuService.UpdateMenu(uint(menuID), &req)
+	menu, err := h.MenuService.UpdateMenu(menuID, &req)
 	if err != nil {
-		if sqliteErr, ok := err.(sqlite3.Error); ok {
-			if sqliteErr.Code == sqlite3.ErrConstraint {
-				c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单已存在"))
-				return
-			}
+		// 使用通用的唯一约束错误检查
+		if isUniqueConstraintError(err) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单已存在"))
+			return
 		}
+
 		global.Logger.Error("更新菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "更新菜单失败"))
 		return
@@ -139,7 +136,6 @@ func (h *MenuRouter) UpdateMenu(c *gin.Context) {
 func (h *MenuRouter) DeleteMenu(c *gin.Context) {
 	id := c.Param("id")
 
-	// 验证 ID 格式
 	menuID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(http.StatusBadRequest, "菜单ID格式无效"))
@@ -147,7 +143,7 @@ func (h *MenuRouter) DeleteMenu(c *gin.Context) {
 	}
 
 	// 删除菜单
-	if err := h.CommonService.DeleteItemByID(&models.Menu{}, uint(menuID)); err != nil {
+	if err := h.CommonService.DeleteItemByID(&models.Menu{}, menuID); err != nil {
 		global.Logger.Error("删除菜单失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(http.StatusInternalServerError, "删除菜单失败"))
 		return
